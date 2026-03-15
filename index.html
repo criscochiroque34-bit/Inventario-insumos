@@ -9,6 +9,7 @@
 <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.23.0/babel.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/recharts@2.10.0/umd/Recharts.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -27,7 +28,6 @@ input,select{font-family:'DM Sans',sans-serif;font-size:13px;background:var(--bg
 input:focus,select:focus{border-color:var(--green)}
 select option{background:var(--bg3)}
 button{font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border:none;outline:none;border-radius:var(--radius-sm);transition:all .15s}
-/* LAYOUT */
 .app{display:flex;height:100vh;overflow:hidden}
 .sidebar{width:200px;min-width:200px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column}
 .brand{display:flex;align-items:center;gap:10px;padding:1.25rem;border-bottom:1px solid var(--border)}
@@ -41,22 +41,18 @@ button{font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border:non
 .sidebar-foot{padding:.75rem .5rem 1rem;border-top:1px solid var(--border)}
 .main{flex:1;overflow-y:auto;background:var(--bg)}
 .bottom-nav{display:none}
-/* PAGE */
 .page{padding:1.5rem;max-width:1100px}
 .ph{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.5rem}
 .pt{font-size:22px;font-weight:500}.ps{font-size:13px;color:var(--text2);margin-top:3px}
-/* METRICS */
 .metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:1.5rem}
 .metrics3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:1.25rem}
 .metric{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.25rem;display:flex;flex-direction:column;gap:6px}
 .ml{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--text2)}
 .mv{font-size:28px;font-weight:500}
 .cr{color:var(--red)!important}.ca{color:var(--amber)!important}.cg{color:var(--green)!important}
-/* CARDS */
 .card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:1rem}
 .card-red{border-left:3px solid var(--red);background:linear-gradient(90deg,rgba(255,80,80,.04),var(--bg2) 40%)}
 .card-amber{border-left:3px solid var(--amber);background:linear-gradient(90deg,rgba(240,165,0,.04),var(--bg2) 40%)}
-.card-green{border-left:3px solid var(--green)}
 .section{margin-bottom:1.5rem}
 .stitle{font-size:12px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.75rem;display:flex;align-items:center;gap:8px}
 .sdot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
@@ -66,7 +62,6 @@ button{font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border:non
 .acode{font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;display:block;margin-bottom:8px}
 .astats{display:flex;gap:1.5rem;font-size:12px;color:var(--text2);margin-bottom:8px}
 .astats strong{color:var(--text);font-weight:500}
-/* BADGES */
 .dbadge{font-size:11px;font-weight:600;padding:3px 10px;border-radius:99px;white-space:nowrap}
 .dbadge.r{background:var(--red-dim);color:var(--red)}
 .dbadge.a{background:var(--amber-dim);color:var(--amber)}
@@ -75,17 +70,14 @@ button{font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border:non
 .badge.critico{background:var(--red-dim);color:var(--red)}
 .badge.alerta{background:var(--amber-dim);color:var(--amber)}
 .badge.stock{background:var(--green-dim);color:var(--green)}
-/* BAR */
 .bwrap{height:4px;background:var(--bg4);border-radius:99px;overflow:hidden}
 .bfill{height:100%;border-radius:99px}
-/* COMPRA */
-.cbtn{display:flex;align-items:center;gap:8px;background:var(--green);color:#000;font-weight:600;padding:10px 18px;border-radius:var(--radius);font-size:14px;width:100%;margin-bottom:0}
+.cbtn{display:flex;align-items:center;gap:8px;background:var(--green);color:#000;font-weight:600;padding:10px 18px;border-radius:var(--radius);font-size:14px;width:100%}
 .cbtn:hover{opacity:.9}
 .ccard{background:var(--bg2);border:1px solid var(--border2);border-radius:0 0 var(--radius) var(--radius);padding:1rem;margin-bottom:1.5rem}
 .chead{display:grid;grid-template-columns:2fr 80px 60px 80px;padding:6px 8px;background:var(--bg3);border-radius:var(--radius-sm);font-size:10px;text-transform:uppercase;color:var(--text3);gap:8px;margin-bottom:4px}
 .crow{display:grid;grid-template-columns:2fr 80px 60px 80px;padding:8px;border-bottom:1px solid var(--border);gap:8px;align-items:center}
 .crow:last-child{border-bottom:none}
-/* TABLE */
 .twrap{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
 .thead{display:grid;padding:8px 1rem;background:var(--bg3);font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);gap:12px;align-items:center}
 .trow{display:grid;padding:10px 1rem;border-top:1px solid var(--border);gap:12px;align-items:center;transition:background .1s}
@@ -104,7 +96,6 @@ button{font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border:non
 .bdel{background:transparent;color:var(--text3);padding:4px 6px;border-radius:4px;font-size:12px}
 .bdel:hover{background:var(--red-dim);color:var(--red)}
 .empty{padding:2rem;text-align:center;color:var(--text3);font-size:13px}
-/* FORM */
 .fcard{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);padding:1.25rem;margin-bottom:1.25rem}
 .ftitle{font-size:14px;font-weight:500;margin-bottom:1rem}
 .fgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1rem}
@@ -112,38 +103,33 @@ button{font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border:non
 .field{display:flex;flex-direction:column;gap:5px}
 .field label{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--text2)}
 .factions{display:flex;gap:8px}
-/* FILTERS */
 .filters{display:flex;gap:10px;align-items:center;margin-bottom:1rem;flex-wrap:wrap}
 .search{min-width:180px;max-width:260px;flex:1}
 .tabs{display:flex;gap:3px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:3px;flex-wrap:wrap}
 .tab{background:transparent;color:var(--text2);padding:4px 10px;border-radius:4px;font-size:12px}
 .tab:hover{color:var(--text)}.tab.on{background:var(--bg4);color:var(--text)}
-/* BTNS */
 .bp{background:var(--green);color:#000;font-weight:500;padding:8px 16px;border-radius:var(--radius-sm)}
 .bp:hover{opacity:.85}
 .bs{background:var(--bg3);color:var(--text);border:1px solid var(--border2);padding:8px 16px;border-radius:var(--radius-sm)}
 .bs:hover{background:var(--bg4)}
 .bexp{width:100%;padding:8px 12px;background:transparent;color:var(--text3);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;text-align:left}
 .bexp:hover{background:var(--bg3);color:var(--text2)}
-/* MOBILE CARDS */
 .clist{display:none}
 .pcard{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:8px}
 .pcard.ccritico{border-left:3px solid var(--red)}.pcard.calerta{border-left:3px solid var(--amber)}.pcard.cstock{border-left:3px solid var(--green)}
 .ctop{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:10px}
 .cbot{display:flex;justify-content:space-between;align-items:center}
 .sval{font-size:22px;font-weight:500;font-family:'DM Mono',monospace}
-/* FAB */
 .fab{position:fixed;bottom:80px;right:20px;width:52px;height:52px;border-radius:50%;background:var(--green);color:#000;font-size:22px;font-weight:700;display:flex;align-items:center;justify-content:center;z-index:90;box-shadow:0 4px 16px rgba(0,201,125,.3)}
 .fab:hover{transform:scale(1.05)}
-/* MODAL */
 .modal{position:fixed;bottom:90px;right:16px;width:320px;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);padding:1.25rem;z-index:95;box-shadow:0 8px 32px rgba(0,0,0,.5)}
 .mtitle{font-size:14px;font-weight:500;margin-bottom:1rem}
 .mform{display:flex;flex-direction:column;gap:10px;margin-bottom:1rem}
 .mrow{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .mactions{display:flex;gap:8px}
-/* SAVED */
-.smsg{background:var(--green-dim);color:var(--green);border:1px solid rgba(0,201,125,.2);border-radius:var(--radius-sm);padding:8px 14px;font-size:13px;margin-bottom:1rem}
-/* CONTROL */
+.smsg{border-radius:var(--radius-sm);padding:8px 14px;font-size:13px;margin-bottom:1rem}
+.smsg.ok{background:var(--green-dim);color:var(--green);border:1px solid rgba(0,201,125,.2)}
+.smsg.err{background:var(--red-dim);color:var(--red);border:1px solid rgba(255,80,80,.2)}
 .cfgcard{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.25rem;margin-bottom:1.25rem}
 .cfgrow{display:flex;gap:1.5rem;align-items:flex-end;flex-wrap:wrap}
 .hint{font-size:12px;color:var(--text3);margin-left:auto;align-self:center}
@@ -154,7 +140,6 @@ button{font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border:non
 .dz{font-family:'DM Mono',monospace;font-size:13px;color:var(--text3)}
 .foot{display:flex;justify-content:flex-end;align-items:center;gap:1rem;margin-bottom:2rem}
 .qitem{display:flex;align-items:center;gap:1rem;padding:10px 1rem;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:4px}
-/* CHARTS */
 .ptabs{display:flex;gap:4px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:3px;margin-bottom:1.25rem;width:fit-content}
 .ptab{background:transparent;color:var(--text2);padding:6px 14px;border-radius:4px;font-size:13px}
 .ptab:hover{color:var(--text)}.ptab.on{background:var(--bg4);color:var(--text);font-weight:500}
@@ -170,10 +155,12 @@ button{font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border:non
 .cthead{display:grid;grid-template-columns:2fr 80px 80px 80px;padding:8px 1rem;background:var(--bg3);font-size:10px;text-transform:uppercase;color:var(--text3);gap:8px}
 .ctrow{display:grid;grid-template-columns:2fr 80px 80px 80px;padding:10px 1rem;border-top:1px solid var(--border);gap:8px;align-items:center}
 .ctrow:hover{background:var(--bg3)}
-/* INGRESOS */
 .iempty{padding:3rem 2rem;text-align:center;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius)}
 .iicon{font-size:32px;display:block;margin-bottom:1rem;color:var(--text3)}
-/* RESPONSIVE */
+/* LOADING */
+.loading{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;gap:1rem}
+.spinner{width:32px;height:32px;border:3px solid var(--border2);border-top-color:var(--green);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
 @media(max-width:768px){
   .app{flex-direction:column;height:100dvh}
   .sidebar{display:none}
@@ -181,8 +168,7 @@ button{font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border:non
   .bottom-nav{display:flex;position:fixed;bottom:0;left:0;right:0;height:60px;background:var(--bg2);border-top:1px solid var(--border);align-items:center;justify-content:space-around;z-index:100}
   .bnbtn{display:flex;flex-direction:column;align-items:center;gap:3px;flex:1;padding:6px 4px;background:transparent;color:var(--text3);position:relative}
   .bnbtn.on .bnico,.bnbtn.on .bnlbl{color:var(--green)}
-  .bnico{font-size:18px;color:var(--text3)}
-  .bnlbl{font-size:9px;color:var(--text3)}
+  .bnico{font-size:18px;color:var(--text3)}.bnlbl{font-size:9px;color:var(--text3)}
   .bnbadge{position:absolute;top:2px;right:calc(50% - 18px);background:var(--red);color:#fff;font-size:7px;width:13px;height:13px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600}
   .metrics{grid-template-columns:repeat(2,1fr);gap:8px}
   .metrics3{grid-template-columns:repeat(2,1fr)}
@@ -206,55 +192,69 @@ button{font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border:non
 <body>
 <div id="root"></div>
 <script type="text/babel" data-presets="react">
-const {useState,useEffect,createContext,useContext}=React;
+const {useState,useEffect,createContext,useContext,useCallback}=React;
 const RC=window.Recharts||{};
 const {BarChart,Bar,LineChart,Line,XAxis,YAxis,Tooltip,ResponsiveContainer,ReferenceLine,CartesianGrid}=RC;
 
-const SP=[
-  {id:1,criticidad:'Alto',codigo:'P45677',nombre:'Etiqueta térmico directo (PQ)',descripcion:'et 50x50mm TD VERDE CLARO 100PL',flujo:'Vans',unidad:'Rollo',conversion:'Rollo x 100 Etiq'},
-  {id:2,criticidad:'Alto',codigo:'P45835',nombre:'Etiqueta térmico directo (GD)',descripcion:'Etiqueta rollo de (100) 120mm',flujo:'Masterbox',unidad:'Rollo',conversion:'Rollo x 100 Etiq'},
-  {id:3,criticidad:'Alto',codigo:'STRPRETR04503003',nombre:'Stretch film blanco',descripcion:'T18 x 20 MIC x 2kg OLPACK BLANCO',flujo:'Todos',unidad:'Rollo',conversion:'Rollo'},
-  {id:4,criticidad:'Alto',codigo:'CSIACRTR00483007',nombre:'Cinta embalaje',descripcion:'45 mc x 48 mm x 100 mts',flujo:'Todos',unidad:'Rollo',conversion:'Rollo x 100 MTS'},
-  {id:5,criticidad:'Alto',codigo:'PR12837',nombre:'Papel bulky',descripcion:'49 GR A-4',flujo:'Todos',unidad:'Unid',conversion:'PQ x 500 hojas'},
-  {id:6,criticidad:'Alto',codigo:'17758',nombre:'Guías de remisión',descripcion:'SERIE 002',flujo:'General',unidad:'Paquete',conversion:'PQ (c/ux249)'},
-  {id:7,criticidad:'Alto',codigo:'CPK-F3',nombre:'Cinta de agua linio (marrón)',descripcion:'75mm x 100 mts',flujo:'Masterbox',unidad:'Rollo',conversion:'Rollo x 100 MTS'},
-];
-const SQ=[
-  {id:1,fecha:'2026-01-01',label:'Q1 Ene',inventario:{1:280,2:490,3:35,4:245,5:180,6:30,7:50}},
-  {id:2,fecha:'2026-01-16',label:'Q2 Ene',inventario:{1:244,2:460,3:28,4:230,5:160,6:26,7:42}},
-  {id:3,fecha:'2026-02-01',label:'Q1 Feb',inventario:{1:310,2:500,3:22,4:270,5:210,6:40,7:38}},
-  {id:4,fecha:'2026-02-16',label:'Q2 Feb',inventario:{1:265,2:472,3:18,4:248,5:175,6:28,7:35}},
-  {id:5,fecha:'2026-03-01',label:'Q1 Mar',inventario:{1:244,2:457,3:15,4:220,5:133,6:23,7:30}},
-];
-const SI=[
-  {id:1,productoId:4,cantidad:50,fecha:'2026-03-12',nota:'Proveedor ABC'},
-  {id:2,productoId:5,cantidad:100,fecha:'2026-03-10',nota:''},
-  {id:3,productoId:3,cantidad:20,fecha:'2026-03-05',nota:'Urgente'},
-];
+// ── SUPABASE ──
+const SB_URL='https://vjsgyatreowdclpsssem.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZqc2d5YXRyZW93ZGNscHNzc2VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1ODY1OTMsImV4cCI6MjA4OTE2MjU5M30.Yoy_zj55dBFltOSvAIS9WFDb0aKtwMMwiwaRsanb6p4';
+const sb=supabase.createClient(SB_URL,SB_KEY);
 
+// ── CONTEXT ──
 const Ctx=createContext(null);
 function Store({children}){
-  const [products,setProducts]=useState(()=>{try{const s=localStorage.getItem('ip');return s?JSON.parse(s):SP}catch{return SP}});
-  const [quincenas,setQuincenas]=useState(()=>{try{const s=localStorage.getItem('iq');return s?JSON.parse(s):SQ}catch{return SQ}});
-  const [ingresos,setIngresos]=useState(()=>{try{const s=localStorage.getItem('ii');return s?JSON.parse(s):SI}catch{return SI}});
-  useEffect(()=>{localStorage.setItem('ip',JSON.stringify(products))},[products]);
-  useEffect(()=>{localStorage.setItem('iq',JSON.stringify(quincenas))},[quincenas]);
-  useEffect(()=>{localStorage.setItem('ii',JSON.stringify(ingresos))},[ingresos]);
+  const [products,setProducts]=useState([]);
+  const [quincenas,setQuincenas]=useState([]);
+  const [qItems,setQItems]=useState([]);
+  const [ingresos,setIngresos]=useState([]);
+  const [loading,setLoading]=useState(true);
+  const [error,setError]=useState(null);
+
+  const load=useCallback(async()=>{
+    setLoading(true);
+    try{
+      const [p,q,qi,i]=await Promise.all([
+        sb.from('products').select('*').order('id'),
+        sb.from('quincenas').select('*').order('fecha'),
+        sb.from('quincena_items').select('*'),
+        sb.from('ingresos').select('*').order('fecha',{ascending:false}),
+      ]);
+      if(p.error)throw p.error;
+      if(q.error)throw q.error;
+      if(qi.error)throw qi.error;
+      if(i.error)throw i.error;
+      setProducts(p.data||[]);
+      setQuincenas(q.data||[]);
+      setQItems(qi.data||[]);
+      setIngresos(i.data||[]);
+    }catch(e){setError(e.message);}
+    setLoading(false);
+  },[]);
+
+  useEffect(()=>{load();},[load]);
+
+  // Build quincenas with inventario map
+  const quincenasWithInv=quincenas.map(q=>{
+    const inv={};
+    qItems.filter(i=>i.quincena_id===q.id).forEach(i=>{inv[i.product_id]=i.cantidad;});
+    return{...q,inventario:inv};
+  });
 
   function getStock(pid){
-    if(!quincenas.length)return 0;
-    const u=[...quincenas].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha))[0];
+    if(!quincenasWithInv.length)return 0;
+    const u=[...quincenasWithInv].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha))[0];
     const base=u.inventario[pid]??0;
-    const ing=ingresos.filter(i=>i.productoId===pid&&new Date(i.fecha)>=new Date(u.fecha)).reduce((s,i)=>s+i.cantidad,0);
+    const ing=ingresos.filter(i=>i.product_id===pid&&new Date(i.fecha)>=new Date(u.fecha)).reduce((s,i)=>s+i.cantidad,0);
     return base+ing;
   }
   function getConsumo(pid){
-    if(quincenas.length<2)return 0;
-    const s=[...quincenas].sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
+    if(quincenasWithInv.length<2)return 0;
+    const s=[...quincenasWithInv].sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
     const cs=[];
     for(let i=1;i<s.length;i++){
       const p=s[i-1].inventario[pid]??0,c=s[i].inventario[pid]??0;
-      const ing=ingresos.filter(x=>x.productoId===pid&&new Date(x.fecha)>=new Date(s[i-1].fecha)&&new Date(x.fecha)<new Date(s[i].fecha)).reduce((t,x)=>t+x.cantidad,0);
+      const ing=ingresos.filter(x=>x.product_id===pid&&new Date(x.fecha)>=new Date(s[i-1].fecha)&&new Date(x.fecha)<new Date(s[i].fecha)).reduce((t,x)=>t+x.cantidad,0);
       const v=p+ing-c;if(v>0)cs.push(v);
     }
     return cs.length?Math.round(cs.reduce((a,b)=>a+b)/cs.length):0;
@@ -267,10 +267,29 @@ function Store({children}){
       return{...p,stock,consumo,pedir:Math.max(0,consumo*2-stock),dias:getDias(p.id),estado:getEstado(p.id)};
     }).sort((a,b)=>a.dias-b.dias);
   }
-  function addQ(label,fecha,inv){setQuincenas(p=>[...p,{id:Date.now(),fecha,label,inventario:inv}])}
-  function addIng(pid,cant,fecha,nota){setIngresos(p=>[...p,{id:Date.now(),productoId:parseInt(pid),cantidad:parseInt(cant),fecha,nota}])}
-  function addProd(d){setProducts(p=>[...p,{...d,id:Date.now()}])}
-  function delProd(id){if(confirm('¿Eliminar este producto?'))setProducts(p=>p.filter(x=>x.id!==id))}
+
+  async function addProd(d){
+    const {error}=await sb.from('products').insert([d]);
+    if(error)return error.message;
+    await load();return null;
+  }
+  async function delProd(id){
+    if(!confirm('¿Eliminar este producto?'))return;
+    await sb.from('products').delete().eq('id',id);
+    await load();
+  }
+  async function addQ(label,fecha,inv){
+    const {data,error}=await sb.from('quincenas').insert([{label,fecha}]).select().single();
+    if(error)return error.message;
+    const items=Object.entries(inv).map(([pid,cantidad])=>({quincena_id:data.id,product_id:parseInt(pid),cantidad}));
+    if(items.length){const {error:e2}=await sb.from('quincena_items').insert(items);if(e2)return e2.message;}
+    await load();return null;
+  }
+  async function addIng(pid,cant,fecha,nota){
+    const {error}=await sb.from('ingresos').insert([{product_id:parseInt(pid),cantidad:parseInt(cant),fecha,nota}]);
+    if(error)return error.message;
+    await load();return null;
+  }
   function csvInventario(){
     const rows=[['Criticidad','Código','Nombre','Flujo','Unidad','Stock','Días','Estado']];
     products.forEach(p=>{const e=getEstado(p.id);rows.push([p.criticidad,p.codigo,p.nombre,p.flujo,p.unidad,getStock(p.id),getDias(p.id)===999?'Sin hist.':getDias(p.id),e==='critico'?'Crítico':e==='alerta'?'Alerta':'En stock'])});
@@ -285,15 +304,19 @@ function Store({children}){
     const csv=rows.map(r=>r.map(c=>`"${c}"`).join(',')).join('\n');
     const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);a.download=`${name}-${new Date().toISOString().slice(0,10)}.csv`;a.click();
   }
-  return <Ctx.Provider value={{products,quincenas,ingresos,getStock,getConsumo,getDias,getEstado,getLista,addQ,addIng,addProd,delProd,csvInventario,csvLista}}>{children}</Ctx.Provider>;
+
+  return <Ctx.Provider value={{products,quincenas:quincenasWithInv,ingresos,loading,error,getStock,getConsumo,getDias,getEstado,getLista,addProd,delProd,addQ,addIng,csvInventario,csvLista}}>{children}</Ctx.Provider>;
 }
 const useApp=()=>useContext(Ctx);
 
+// ── HELPERS ──
 function DBadge({d}){const c=d<=10?'r':d<=20?'a':'g';return <span className={`dbadge ${c}`}>{d===999?'—':`${d}d`}</span>}
 function Barra({d}){const p=Math.min(100,Math.round(d/30*100)),col=d<=10?'#ff5050':d<=20?'#f0a500':'#00c97d';return <div className="bwrap"><div className="bfill" style={{width:`${p}%`,background:col}}/></div>}
 const lbl=e=>e==='critico'?'Crítico':e==='alerta'?'Alerta':'En stock';
 const TT={background:'#1e1e1e',border:'1px solid rgba(255,255,255,0.1)',borderRadius:8,fontSize:12,color:'#f0f0f0'};
+function Msg({text,type}){return text?<div className={`smsg ${type||'ok'}`}>{text}</div>:null}
 
+// ── DASHBOARD ──
 function Dashboard(){
   const {products,getStock,getConsumo,getDias,getEstado,getLista,csvLista}=useApp();
   const [show,setShow]=useState(false);
@@ -311,7 +334,8 @@ function Dashboard(){
     </div>
     {lista.length>0&&<div style={{marginBottom:'1.5rem'}}>
       <button className="cbtn" onClick={()=>setShow(v=>!v)}>
-        <span>🛒</span> Necesito comprar <span style={{background:'rgba(0,0,0,.2)',padding:'1px 8px',borderRadius:99,fontSize:12}}>{lista.length}</span>
+        <span>🛒</span> Necesito comprar
+        <span style={{background:'rgba(0,0,0,.2)',padding:'1px 8px',borderRadius:99,fontSize:12}}>{lista.length}</span>
         <span style={{marginLeft:'auto',fontSize:10}}>{show?'▲':'▼'}</span>
       </button>
       {show&&<div className="ccard">
@@ -364,40 +388,48 @@ function Dashboard(){
   </div>;
 }
 
+// ── INVENTARIO ──
 function Inventario(){
   const {products,getStock,getDias,getEstado,addProd,delProd,addIng}=useApp();
   const [bus,setBus]=useState('');const [fil,setFil]=useState('Todos');
   const [sf,setSf]=useState(false);const [si,setSi]=useState(false);
   const [form,setForm]=useState({criticidad:'Alto',codigo:'',nombre:'',descripcion:'',flujo:'',unidad:'',conversion:'',stockInicial:''});
   const [ing,setIng]=useState({productoId:'',cantidad:'',fecha:new Date().toISOString().slice(0,10),nota:''});
-  const [msg,setMsg]=useState('');
+  const [msg,setMsg]=useState({text:'',type:'ok'});
+  const [saving,setSaving]=useState(false);
   const flujos=['Todos',...new Set(products.map(p=>p.flujo).filter(Boolean))];
   const filtered=products.filter(p=>{
     const mf=fil==='Todos'||p.flujo.toLowerCase()===fil.toLowerCase();
     const mb=!bus||p.nombre.toLowerCase().includes(bus.toLowerCase())||p.codigo.toLowerCase().includes(bus.toLowerCase());
     return mf&&mb;
   });
-  function ok(m){setMsg(m);setTimeout(()=>setMsg(''),2500)}
-  function saveProd(){
+  function ok(t,type='ok'){setMsg({text:t,type});setTimeout(()=>setMsg({text:'',type:'ok'}),3000)}
+  async function saveProd(){
     if(!form.codigo||!form.nombre)return;
-    const nid=Date.now();
-    addProd({criticidad:form.criticidad,codigo:form.codigo,nombre:form.nombre,descripcion:form.descripcion,flujo:form.flujo,unidad:form.unidad,conversion:form.conversion});
-    if(form.stockInicial&&parseInt(form.stockInicial)>0)setTimeout(()=>addIng(nid,form.stockInicial,new Date().toISOString().slice(0,10),'Stock inicial'),100);
-    setForm({criticidad:'Alto',codigo:'',nombre:'',descripcion:'',flujo:'',unidad:'',conversion:'',stockInicial:''});
-    setSf(false);ok('Producto guardado');
+    setSaving(true);
+    const err=await addProd({criticidad:form.criticidad,codigo:form.codigo,nombre:form.nombre,descripcion:form.descripcion,flujo:form.flujo,unidad:form.unidad,conversion:form.conversion});
+    if(err){ok(err,'err');}else{
+      setForm({criticidad:'Alto',codigo:'',nombre:'',descripcion:'',flujo:'',unidad:'',conversion:'',stockInicial:''});
+      setSf(false);ok('Producto guardado');
+    }
+    setSaving(false);
   }
-  function saveIng(){
+  async function saveIng(){
     if(!ing.productoId||!ing.cantidad||parseInt(ing.cantidad)<=0)return;
-    addIng(ing.productoId,ing.cantidad,ing.fecha,ing.nota);
-    setIng({productoId:'',cantidad:'',fecha:new Date().toISOString().slice(0,10),nota:''});
-    setSi(false);ok('Ingreso registrado');
+    setSaving(true);
+    const err=await addIng(ing.productoId,ing.cantidad,ing.fecha,ing.nota);
+    if(err){ok(err,'err');}else{
+      setIng({productoId:'',cantidad:'',fecha:new Date().toISOString().slice(0,10),nota:''});
+      setSi(false);ok('Ingreso registrado');
+    }
+    setSaving(false);
   }
   return <div className="page" style={{position:'relative'}}>
     <div className="ph">
       <div><h1 className="pt">Inventario</h1><p className="ps">{products.length} productos</p></div>
       <button className="bp" onClick={()=>{setSf(v=>!v);setSi(false)}}>{sf?'Cancelar':'+ Nuevo producto'}</button>
     </div>
-    {msg&&<div className="smsg">✓ {msg}</div>}
+    <Msg text={msg.text} type={msg.type}/>
     {sf&&<div className="fcard">
       <div className="ftitle">Nuevo producto</div>
       <div className="fgrid">
@@ -410,7 +442,7 @@ function Inventario(){
         <div className="field"><label>Conversión</label><input value={form.conversion} onChange={e=>setForm(f=>({...f,conversion:e.target.value}))} placeholder="Rollo x 100 Etiq"/></div>
         <div className="field"><label>Stock inicial</label><input type="number" min="0" value={form.stockInicial} onChange={e=>setForm(f=>({...f,stockInicial:e.target.value}))} placeholder="0"/></div>
       </div>
-      <div className="factions"><button className="bp" onClick={saveProd}>Guardar</button><button className="bs" onClick={()=>setSf(false)}>Cancelar</button></div>
+      <div className="factions"><button className="bp" onClick={saveProd} disabled={saving}>{saving?'Guardando...':'Guardar'}</button><button className="bs" onClick={()=>setSf(false)}>Cancelar</button></div>
     </div>}
     <div className="filters">
       <input className="search" value={bus} onChange={e=>setBus(e.target.value)} placeholder="Buscar..."/>
@@ -453,11 +485,12 @@ function Inventario(){
         </div>
         <div className="field"><label>Nota</label><input value={ing.nota} onChange={e=>setIng(f=>({...f,nota:e.target.value}))} placeholder="Proveedor..."/></div>
       </div>
-      <div className="mactions"><button className="bp" onClick={saveIng}>Registrar</button><button className="bs" onClick={()=>setSi(false)}>Cancelar</button></div>
+      <div className="mactions"><button className="bp" onClick={saveIng} disabled={saving}>{saving?'Guardando...':'Registrar'}</button><button className="bs" onClick={()=>setSi(false)}>Cancelar</button></div>
     </div>}
   </div>;
 }
 
+// ── CONTROL ──
 function Control(){
   const {products,quincenas,addQ,getStock}=useApp();
   const hoy=new Date().toISOString().slice(0,10);
@@ -465,11 +498,16 @@ function Control(){
   const [label,setLabel]=useState(`Q${m} ${mes[0].toUpperCase()+mes.slice(1)}`);
   const [fecha,setFecha]=useState(hoy);
   const [counts,setCounts]=useState({});
-  const [saved,setSaved]=useState(false);
+  const [msg,setMsg]=useState({text:'',type:'ok'});
+  const [saving,setSaving]=useState(false);
   const uq=quincenas.length?[...quincenas].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha))[0]:null;
-  function guardar(){
+  async function guardar(){
+    setSaving(true);
     const inv={};products.forEach(p=>{const v=counts[p.id];inv[p.id]=v!==undefined&&v!==''?parseInt(v):getStock(p.id);});
-    addQ(label,fecha,inv);setSaved(true);setTimeout(()=>setSaved(false),3000);setCounts({});
+    const err=await addQ(label,fecha,inv);
+    if(err){setMsg({text:err,type:'err'});}else{setMsg({text:'Control guardado correctamente',type:'ok'});setCounts({});}
+    setTimeout(()=>setMsg({text:'',type:'ok'}),3000);
+    setSaving(false);
   }
   return <div className="page">
     <div className="ph"><div><h1 className="pt">Control</h1><p className="ps">Solo ingresa el stock contado. Vacíos mantienen valor anterior.</p></div></div>
@@ -478,6 +516,7 @@ function Control(){
       <div className="field" style={{minWidth:0}}><label>Fecha</label><input type="date" value={fecha} onChange={e=>setFecha(e.target.value)} style={{width:155}}/></div>
       {uq&&<span className="hint">Último: <strong>{uq.label}</strong></span>}
     </div></div>
+    <Msg text={msg.text} type={msg.type}/>
     <div className="twrap t-ctrl">
       <div className="thead"><span>Producto</span><span>Anterior</span><span>Conteo hoy</span><span>Diferencia</span></div>
       {products.map(p=>{
@@ -493,8 +532,7 @@ function Control(){
       })}
     </div>
     <div className="foot">
-      {saved&&<span style={{fontSize:13,color:'var(--green)'}}>✓ Control guardado</span>}
-      <button className="bp bpsave" onClick={guardar}>Guardar conteo de {label}</button>
+      <button className="bp bpsave" onClick={guardar} disabled={saving}>{saving?'Guardando...':'Guardar conteo de '+label}</button>
     </div>
     {quincenas.length>0&&<div>
       <div className="stitle" style={{marginBottom:'.75rem'}}>Historial</div>
@@ -509,6 +547,7 @@ function Control(){
   </div>;
 }
 
+// ── INGRESOS ──
 function Ingresos(){
   const {products,ingresos}=useApp();
   const sorted=[...ingresos].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
@@ -517,7 +556,7 @@ function Ingresos(){
     {!sorted.length?<div className="iempty"><span className="iicon">↑</span><p style={{fontSize:13,color:'var(--text2)',marginBottom:6}}>No hay ingresos registrados aún.</p><p style={{fontSize:13,color:'var(--text2)'}}>Ve a <strong style={{color:'var(--green)'}}>Inventario</strong> y usa el botón flotante ↑</p></div>
     :<div className="twrap t-ing">
       <div className="thead"><span>Fecha</span><span>Producto</span><span>Cantidad</span><span>Nota</span></div>
-      {sorted.map(i=>{const p=products.find(x=>x.id===i.productoId);return(
+      {sorted.map(i=>{const p=products.find(x=>x.id===i.product_id);return(
         <div key={i.id} className="trow">
           <span style={{fontSize:12,color:'var(--text2)'}}>{new Date(i.fecha).toLocaleDateString('es',{day:'2-digit',month:'short',year:'numeric'})}</span>
           <span>{p?<><span className="pname">{p.nombre}</span><span className="pdesc">{p.codigo}</span></>:<span className="pdesc">Eliminado</span>}</span>
@@ -529,8 +568,9 @@ function Ingresos(){
   </div>;
 }
 
+// ── GRÁFICOS ──
 function Graficos(){
-  const {products,quincenas,getStock,getConsumo,getDias,getEstado}=useApp();
+  const {products,quincenas,ingresos,getStock,getConsumo,getDias,getEstado}=useApp();
   const [sid,setSid]=useState(products[0]?.id??null);
   const [tab,setTab]=useState('c');
   const sq=[...quincenas].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
@@ -546,8 +586,7 @@ function Graficos(){
   const qAobj=quincenas.find(q=>q.id===parseInt(qa)),qBobj=quincenas.find(q=>q.id===parseInt(qb));
   const comp=(qAobj&&qBobj)?products.map(p=>{
     const ca=Math.max(0,(qAobj.inventario[p.id]??0)-(qBobj.inventario[p.id]??0));
-    const cb=getConsumo(p.id);
-    const diff=ca===0?0:Math.round(((cb-ca)/ca)*100);
+    const cb=getConsumo(p.id);const diff=ca===0?0:Math.round(((cb-ca)/ca)*100);
     return{n:p.nombre,ca,cb,diff};
   }):[];
   const td=comp.length?Math.round(comp.reduce((s,p)=>s+p.diff,0)/comp.length):0;
@@ -561,7 +600,7 @@ function Graficos(){
     {tab==='c'&&<>
       <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:'1rem'}}>
         <label style={{fontSize:12,color:'var(--text2)'}}>Producto</label>
-        <select value={sid??''} onChange={e=>setSid(parseInt(e.target.value))} style={{minWidth:220}}>{products.map(p=><option key={p.id} value={p.id}>{p.nombre}</option>)}</select>
+        <select value={sid??''} onChange={e=>setSid(parseInt(e.target.value))} style={{minWidth:220,width:'auto'}}>{products.map(p=><option key={p.id} value={p.id}>{p.nombre}</option>)}</select>
       </div>
       {prod&&<>
         <div className="metrics3">
@@ -596,14 +635,14 @@ function Graficos(){
               {avg>0&&<ReferenceLine y={avg} stroke="#f0a500" strokeDasharray="4 3" strokeWidth={1}/>}
             </LineChart></ResponsiveContainer>}
           </div>
-        </>:<div className="nodata">Gráficos no disponibles — verifica conexión a internet</div>}
+        </>:<div className="nodata">Cargando gráficos...</div>}
       </>}
     </>}
     {tab==='k'&&<>
       <div className="csrow">
-        <div className="field"><label style={{fontSize:11,textTransform:'uppercase',letterSpacing:'.05em',color:'var(--text2)'}}>Quincena actual</label><select value={qa??''} onChange={e=>setQa(e.target.value)} style={{minWidth:150}}>{sq.map(q=><option key={q.id} value={q.id}>{q.label}</option>)}</select></div>
+        <div className="field"><label style={{fontSize:11,textTransform:'uppercase',letterSpacing:'.05em',color:'var(--text2)'}}>Quincena actual</label><select value={qa??''} onChange={e=>setQa(e.target.value)} style={{minWidth:150,width:'auto'}}>{sq.map(q=><option key={q.id} value={q.id}>{q.label}</option>)}</select></div>
         <span className="vs">vs</span>
-        <div className="field"><label style={{fontSize:11,textTransform:'uppercase',letterSpacing:'.05em',color:'var(--text2)'}}>Quincena anterior</label><select value={qb??''} onChange={e=>setQb(e.target.value)} style={{minWidth:150}}>{sq.map(q=><option key={q.id} value={q.id}>{q.label}</option>)}</select></div>
+        <div className="field"><label style={{fontSize:11,textTransform:'uppercase',letterSpacing:'.05em',color:'var(--text2)'}}>Quincena anterior</label><select value={qb??''} onChange={e=>setQb(e.target.value)} style={{minWidth:150,width:'auto'}}>{sq.map(q=><option key={q.id} value={q.id}>{q.label}</option>)}</select></div>
       </div>
       {quincenas.length<2?<div className="nodata">Necesitas al menos 2 controles registrados para comparar</div>
       :<>
@@ -616,9 +655,7 @@ function Graficos(){
           <div className="cthead"><span>Producto</span><span>Anterior</span><span>Actual</span><span>Variación</span></div>
           {[...comp].sort((a,b)=>b.diff-a.diff).map((p,i)=>(
             <div key={i} className="ctrow">
-              <span className="pname">{p.n}</span>
-              <span className="mono">{p.ca}</span>
-              <span className="mono">{p.cb}</span>
+              <span className="pname">{p.n}</span><span className="mono">{p.ca}</span><span className="mono">{p.cb}</span>
               <span className={`mono${p.diff>0?' cr':p.diff<0?' cg':''}`}>{p.diff>0?'+':''}{p.diff}%</span>
             </div>
           ))}
@@ -628,14 +665,17 @@ function Graficos(){
   </div>;
 }
 
+// ── APP ──
 const PAGES=[{id:'dashboard',label:'Dashboard',icon:'▦'},{id:'inventario',label:'Inventario',icon:'≡'},{id:'control',label:'Control',icon:'⊞'},{id:'ingresos',label:'Ingresos',icon:'↑'},{id:'graficos',label:'Gráficos',icon:'∿'}];
 function App(){
   const [page,setPage]=useState('dashboard');
   return <Store><Main page={page} setPage={setPage}/></Store>;
 }
 function Main({page,setPage}){
-  const {getEstado,products,csvInventario}=useApp();
+  const {getEstado,products,csvInventario,loading,error}=useApp();
   const nc=products.filter(p=>getEstado(p.id)==='critico').length;
+  if(loading)return <div className="loading"><div className="spinner"/><span style={{fontSize:13,color:'var(--text2)'}}>Cargando inventario...</span></div>;
+  if(error)return <div className="loading"><span style={{fontSize:14,color:'var(--red)'}}>Error: {error}</span></div>;
   return <div className="app">
     <aside className="sidebar">
       <div className="brand"><span className="brand-icon">⬡</span><span className="brand-name">Inventario</span></div>
