@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Inventario Logística</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.23.0/babel.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/recharts@2.10.0/umd/Recharts.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f0f0f;--bg2:#161616;--bg3:#1e1e1e;--bg4:#272727;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.12);
+  --text:#f0f0f0;--text2:#999;--text3:#555;
+  --green:#00c97d;--green-dim:rgba(0,201,125,0.12);
+  --amber:#f0a500;--amber-dim:rgba(240,165,0,0.12);
+  --red:#ff5050;--red-dim:rgba(255,80,80,0.12);
+  --radius:10px;--radius-sm:6px;
+}
+html,body,#root{height:100%}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:2px}
+input,select{font-family:'DM Sans',sans-serif;font-size:13px;background:var(--bg3);border:1px solid var(--border2);color:var(--text);border-radius:var(--radius-sm);padding:7px 10px;outline:none;transition:border-color .15s;width:100%}
+input:focus,select:focus{border-color:var(--green)}
+select option{background:var(--bg3)}
+button{font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border:none;outline:none;border-radius:var(--radius-sm);transition:all .15s}
+/* LAYOUT */
+.app{display:flex;height:100vh;overflow:hidden}
+.sidebar{width:200px;min-width:200px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column}
+.brand{display:flex;align-items:center;gap:10px;padding:1.25rem;border-bottom:1px solid var(--border)}
+.brand-icon{font-size:20px;color:var(--green)}.brand-name{font-size:15px;font-weight:500}
+.nav{display:flex;flex-direction:column;gap:2px;padding:.75rem .5rem;flex:1}
+.nav-btn{display:flex;align-items:center;gap:9px;padding:8px 12px;border-radius:var(--radius-sm);background:transparent;color:var(--text2);font-size:13px;text-align:left;width:100%}
+.nav-btn:hover{background:var(--bg3);color:var(--text)}
+.nav-btn.active{background:var(--bg4);color:var(--text);font-weight:500}
+.nav-icon{font-size:15px;width:18px;text-align:center;flex-shrink:0}
+.nbadge{margin-left:auto;background:var(--red);color:#fff;font-size:10px;font-weight:600;padding:1px 6px;border-radius:99px}
+.sidebar-foot{padding:.75rem .5rem 1rem;border-top:1px solid var(--border)}
+.main{flex:1;overflow-y:auto;background:var(--bg)}
+.bottom-nav{display:none}
+/* PAGE */
+.page{padding:1.5rem;max-width:1100px}
+.ph{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.5rem}
+.pt{font-size:22px;font-weight:500}.ps{font-size:13px;color:var(--text2);margin-top:3px}
+/* METRICS */
+.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:1.5rem}
+.metrics3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:1.25rem}
+.metric{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.25rem;display:flex;flex-direction:column;gap:6px}
+.ml{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--text2)}
+.mv{font-size:28px;font-weight:500}
+.cr{color:var(--red)!important}.ca{color:var(--amber)!important}.cg{color:var(--green)!important}
+/* CARDS */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:1rem}
+.card-red{border-left:3px solid var(--red);background:linear-gradient(90deg,rgba(255,80,80,.04),var(--bg2) 40%)}
+.card-amber{border-left:3px solid var(--amber);background:linear-gradient(90deg,rgba(240,165,0,.04),var(--bg2) 40%)}
+.card-green{border-left:3px solid var(--green)}
+.section{margin-bottom:1.5rem}
+.stitle{font-size:12px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.75rem;display:flex;align-items:center;gap:8px}
+.sdot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.alert-list{display:flex;flex-direction:column;gap:8px}
+.atop{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:3px}
+.aname{font-size:14px;font-weight:500}
+.acode{font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;display:block;margin-bottom:8px}
+.astats{display:flex;gap:1.5rem;font-size:12px;color:var(--text2);margin-bottom:8px}
+.astats strong{color:var(--text);font-weight:500}
+/* BADGES */
+.dbadge{font-size:11px;font-weight:600;padding:3px 10px;border-radius:99px;white-space:nowrap}
+.dbadge.r{background:var(--red-dim);color:var(--red)}
+.dbadge.a{background:var(--amber-dim);color:var(--amber)}
+.dbadge.g{background:var(--green-dim);color:var(--green)}
+.badge{font-size:11px;font-weight:500;padding:3px 10px;border-radius:99px;display:inline-block}
+.badge.critico{background:var(--red-dim);color:var(--red)}
+.badge.alerta{background:var(--amber-dim);color:var(--amber)}
+.badge.stock{background:var(--green-dim);color:var(--green)}
+/* BAR */
+.bwrap{height:4px;background:var(--bg4);border-radius:99px;overflow:hidden}
+.bfill{height:100%;border-radius:99px}
+/* COMPRA */
+.cbtn{display:flex;align-items:center;gap:8px;background:var(--green);color:#000;font-weight:600;padding:10px 18px;border-radius:var(--radius);font-size:14px;width:100%;margin-bottom:0}
+.cbtn:hover{opacity:.9}
+.ccard{background:var(--bg2);border:1px solid var(--border2);border-radius:0 0 var(--radius) var(--radius);padding:1rem;margin-bottom:1.5rem}
+.chead{display:grid;grid-template-columns:2fr 80px 60px 80px;padding:6px 8px;background:var(--bg3);border-radius:var(--radius-sm);font-size:10px;text-transform:uppercase;color:var(--text3);gap:8px;margin-bottom:4px}
+.crow{display:grid;grid-template-columns:2fr 80px 60px 80px;padding:8px;border-bottom:1px solid var(--border);gap:8px;align-items:center}
+.crow:last-child{border-bottom:none}
+/* TABLE */
+.twrap{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.thead{display:grid;padding:8px 1rem;background:var(--bg3);font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);gap:12px;align-items:center}
+.trow{display:grid;padding:10px 1rem;border-top:1px solid var(--border);gap:12px;align-items:center;transition:background .1s}
+.trow:hover{background:var(--bg3)}
+.t-dash .thead,.t-dash .trow{grid-template-columns:2.5fr 1fr 80px 90px}
+.t-inv .thead,.t-inv .trow{grid-template-columns:40px 100px 2fr 80px 100px 70px 60px 80px 34px}
+.t-ctrl .thead,.t-ctrl .trow{grid-template-columns:2fr 100px 130px 100px}
+.t-ing .thead,.t-ing .trow{grid-template-columns:110px 2fr 110px 1fr}
+.pname{display:block;font-size:13px;font-weight:500}
+.pdesc{display:block;font-size:11px;color:var(--text3);margin-top:2px}
+.mono{font-family:'DM Mono',monospace;font-size:13px}
+.mono small{font-size:10px;color:var(--text2)}
+.chip{font-size:11px;background:var(--bg4);padding:3px 8px;border-radius:99px;color:var(--text2);display:inline-block}
+.cbadge{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;font-size:11px;font-weight:600}
+.cA{background:var(--red-dim);color:var(--red)}.cM{background:var(--amber-dim);color:var(--amber)}.cB{background:var(--green-dim);color:var(--green)}
+.bdel{background:transparent;color:var(--text3);padding:4px 6px;border-radius:4px;font-size:12px}
+.bdel:hover{background:var(--red-dim);color:var(--red)}
+.empty{padding:2rem;text-align:center;color:var(--text3);font-size:13px}
+/* FORM */
+.fcard{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);padding:1.25rem;margin-bottom:1.25rem}
+.ftitle{font-size:14px;font-weight:500;margin-bottom:1rem}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1rem}
+.s2{grid-column:span 2}
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--text2)}
+.factions{display:flex;gap:8px}
+/* FILTERS */
+.filters{display:flex;gap:10px;align-items:center;margin-bottom:1rem;flex-wrap:wrap}
+.search{min-width:180px;max-width:260px;flex:1}
+.tabs{display:flex;gap:3px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:3px;flex-wrap:wrap}
+.tab{background:transparent;color:var(--text2);padding:4px 10px;border-radius:4px;font-size:12px}
+.tab:hover{color:var(--text)}.tab.on{background:var(--bg4);color:var(--text)}
+/* BTNS */
+.bp{background:var(--green);color:#000;font-weight:500;padding:8px 16px;border-radius:var(--radius-sm)}
+.bp:hover{opacity:.85}
+.bs{background:var(--bg3);color:var(--text);border:1px solid var(--border2);padding:8px 16px;border-radius:var(--radius-sm)}
+.bs:hover{background:var(--bg4)}
+.bexp{width:100%;padding:8px 12px;background:transparent;color:var(--text3);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;text-align:left}
+.bexp:hover{background:var(--bg3);color:var(--text2)}
+/* MOBILE CARDS */
+.clist{display:none}
+.pcard{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:8px}
+.pcard.ccritico{border-left:3px solid var(--red)}.pcard.calerta{border-left:3px solid var(--amber)}.pcard.cstock{border-left:3px solid var(--green)}
+.ctop{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:10px}
+.cbot{display:flex;justify-content:space-between;align-items:center}
+.sval{font-size:22px;font-weight:500;font-family:'DM Mono',monospace}
+/* FAB */
+.fab{position:fixed;bottom:80px;right:20px;width:52px;height:52px;border-radius:50%;background:var(--green);color:#000;font-size:22px;font-weight:700;display:flex;align-items:center;justify-content:center;z-index:90;box-shadow:0 4px 16px rgba(0,201,125,.3)}
+.fab:hover{transform:scale(1.05)}
+/* MODAL */
+.modal{position:fixed;bottom:90px;right:16px;width:320px;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);padding:1.25rem;z-index:95;box-shadow:0 8px 32px rgba(0,0,0,.5)}
+.mtitle{font-size:14px;font-weight:500;margin-bottom:1rem}
+.mform{display:flex;flex-direction:column;gap:10px;margin-bottom:1rem}
+.mrow{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mactions{display:flex;gap:8px}
+/* SAVED */
+.smsg{background:var(--green-dim);color:var(--green);border:1px solid rgba(0,201,125,.2);border-radius:var(--radius-sm);padding:8px 14px;font-size:13px;margin-bottom:1rem}
+/* CONTROL */
+.cfgcard{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.25rem;margin-bottom:1.25rem}
+.cfgrow{display:flex;gap:1.5rem;align-items:flex-end;flex-wrap:wrap}
+.hint{font-size:12px;color:var(--text3);margin-left:auto;align-self:center}
+.hint strong{color:var(--text2)}
+.cinput{width:100px;font-family:'DM Mono',monospace;font-size:14px;text-align:center;font-weight:500}
+.dn{font-family:'DM Mono',monospace;font-size:13px;font-weight:500;color:var(--red)}
+.dp{font-family:'DM Mono',monospace;font-size:13px;font-weight:500;color:var(--green)}
+.dz{font-family:'DM Mono',monospace;font-size:13px;color:var(--text3)}
+.foot{display:flex;justify-content:flex-end;align-items:center;gap:1rem;margin-bottom:2rem}
+.qitem{display:flex;align-items:center;gap:1rem;padding:10px 1rem;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:4px}
+/* CHARTS */
+.ptabs{display:flex;gap:4px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:3px;margin-bottom:1.25rem;width:fit-content}
+.ptab{background:transparent;color:var(--text2);padding:6px 14px;border-radius:4px;font-size:13px}
+.ptab:hover{color:var(--text)}.ptab.on{background:var(--bg4);color:var(--text);font-weight:500}
+.chcard{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;margin-bottom:1rem}
+.chtitle{font-size:12px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:1rem}
+.chrow{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem}
+.legend{display:flex;gap:12px;font-size:11px;color:var(--text2)}
+.ldot{width:10px;height:3px;border-radius:2px;display:inline-block;margin-right:4px}
+.nodata{padding:2rem;text-align:center;color:var(--text3);font-size:13px}
+.csrow{display:flex;align-items:center;gap:1rem;margin-bottom:1.25rem;flex-wrap:wrap}
+.vs{font-size:14px;font-weight:500;color:var(--text3);padding-top:18px}
+.ctab{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-top:1rem}
+.cthead{display:grid;grid-template-columns:2fr 80px 80px 80px;padding:8px 1rem;background:var(--bg3);font-size:10px;text-transform:uppercase;color:var(--text3);gap:8px}
+.ctrow{display:grid;grid-template-columns:2fr 80px 80px 80px;padding:10px 1rem;border-top:1px solid var(--border);gap:8px;align-items:center}
+.ctrow:hover{background:var(--bg3)}
+/* INGRESOS */
+.iempty{padding:3rem 2rem;text-align:center;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius)}
+.iicon{font-size:32px;display:block;margin-bottom:1rem;color:var(--text3)}
+/* RESPONSIVE */
+@media(max-width:768px){
+  .app{flex-direction:column;height:100dvh}
+  .sidebar{display:none}
+  .main{flex:1;overflow-y:auto;padding-bottom:70px}
+  .bottom-nav{display:flex;position:fixed;bottom:0;left:0;right:0;height:60px;background:var(--bg2);border-top:1px solid var(--border);align-items:center;justify-content:space-around;z-index:100}
+  .bnbtn{display:flex;flex-direction:column;align-items:center;gap:3px;flex:1;padding:6px 4px;background:transparent;color:var(--text3);position:relative}
+  .bnbtn.on .bnico,.bnbtn.on .bnlbl{color:var(--green)}
+  .bnico{font-size:18px;color:var(--text3)}
+  .bnlbl{font-size:9px;color:var(--text3)}
+  .bnbadge{position:absolute;top:2px;right:calc(50% - 18px);background:var(--red);color:#fff;font-size:7px;width:13px;height:13px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600}
+  .metrics{grid-template-columns:repeat(2,1fr);gap:8px}
+  .metrics3{grid-template-columns:repeat(2,1fr)}
+  .mv{font-size:22px}
+  .fgrid{grid-template-columns:1fr}.s2{grid-column:span 1}
+  .twrap{display:none}.clist{display:block}
+  .fab{bottom:70px}
+  .modal{left:12px;right:12px;width:auto;bottom:70px}
+  .t-ctrl .thead,.t-ctrl .trow{grid-template-columns:1fr 80px 100px}
+  .t-ctrl .thead span:nth-child(4),.t-ctrl .trow span:nth-child(4){display:none}
+  .foot{flex-direction:column;align-items:stretch}
+  .bpsave{width:100%;text-align:center;padding:12px;font-size:15px}
+  .ptabs{width:100%}.ptab{flex:1;text-align:center;font-size:12px}
+  .t-ing .thead,.t-ing .trow{grid-template-columns:90px 1fr 90px}
+  .t-ing .thead span:last-child,.t-ing .trow span:last-child{display:none}
+  .chead{grid-template-columns:2fr 60px 50px 60px}.crow{grid-template-columns:2fr 60px 50px 60px}
+  .page{padding:1rem}
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-presets="react">
+const {useState,useEffect,createContext,useContext}=React;
+const RC=window.Recharts||{};
+const {BarChart,Bar,LineChart,Line,XAxis,YAxis,Tooltip,ResponsiveContainer,ReferenceLine,CartesianGrid}=RC;
+
+const SP=[
+  {id:1,criticidad:'Alto',codigo:'P45677',nombre:'Etiqueta térmico directo (PQ)',descripcion:'et 50x50mm TD VERDE CLARO 100PL',flujo:'Vans',unidad:'Rollo',conversion:'Rollo x 100 Etiq'},
+  {id:2,criticidad:'Alto',codigo:'P45835',nombre:'Etiqueta térmico directo (GD)',descripcion:'Etiqueta rollo de (100) 120mm',flujo:'Masterbox',unidad:'Rollo',conversion:'Rollo x 100 Etiq'},
+  {id:3,criticidad:'Alto',codigo:'STRPRETR04503003',nombre:'Stretch film blanco',descripcion:'T18 x 20 MIC x 2kg OLPACK BLANCO',flujo:'Todos',unidad:'Rollo',conversion:'Rollo'},
+  {id:4,criticidad:'Alto',codigo:'CSIACRTR00483007',nombre:'Cinta embalaje',descripcion:'45 mc x 48 mm x 100 mts',flujo:'Todos',unidad:'Rollo',conversion:'Rollo x 100 MTS'},
+  {id:5,criticidad:'Alto',codigo:'PR12837',nombre:'Papel bulky',descripcion:'49 GR A-4',flujo:'Todos',unidad:'Unid',conversion:'PQ x 500 hojas'},
+  {id:6,criticidad:'Alto',codigo:'17758',nombre:'Guías de remisión',descripcion:'SERIE 002',flujo:'General',unidad:'Paquete',conversion:'PQ (c/ux249)'},
+  {id:7,criticidad:'Alto',codigo:'CPK-F3',nombre:'Cinta de agua linio (marrón)',descripcion:'75mm x 100 mts',flujo:'Masterbox',unidad:'Rollo',conversion:'Rollo x 100 MTS'},
+];
+const SQ=[
+  {id:1,fecha:'2026-01-01',label:'Q1 Ene',inventario:{1:280,2:490,3:35,4:245,5:180,6:30,7:50}},
+  {id:2,fecha:'2026-01-16',label:'Q2 Ene',inventario:{1:244,2:460,3:28,4:230,5:160,6:26,7:42}},
+  {id:3,fecha:'2026-02-01',label:'Q1 Feb',inventario:{1:310,2:500,3:22,4:270,5:210,6:40,7:38}},
+  {id:4,fecha:'2026-02-16',label:'Q2 Feb',inventario:{1:265,2:472,3:18,4:248,5:175,6:28,7:35}},
+  {id:5,fecha:'2026-03-01',label:'Q1 Mar',inventario:{1:244,2:457,3:15,4:220,5:133,6:23,7:30}},
+];
+const SI=[
+  {id:1,productoId:4,cantidad:50,fecha:'2026-03-12',nota:'Proveedor ABC'},
+  {id:2,productoId:5,cantidad:100,fecha:'2026-03-10',nota:''},
+  {id:3,productoId:3,cantidad:20,fecha:'2026-03-05',nota:'Urgente'},
+];
+
+const Ctx=createContext(null);
+function Store({children}){
+  const [products,setProducts]=useState(()=>{try{const s=localStorage.getItem('ip');return s?JSON.parse(s):SP}catch{return SP}});
+  const [quincenas,setQuincenas]=useState(()=>{try{const s=localStorage.getItem('iq');return s?JSON.parse(s):SQ}catch{return SQ}});
+  const [ingresos,setIngresos]=useState(()=>{try{const s=localStorage.getItem('ii');return s?JSON.parse(s):SI}catch{return SI}});
+  useEffect(()=>{localStorage.setItem('ip',JSON.stringify(products))},[products]);
+  useEffect(()=>{localStorage.setItem('iq',JSON.stringify(quincenas))},[quincenas]);
+  useEffect(()=>{localStorage.setItem('ii',JSON.stringify(ingresos))},[ingresos]);
+
+  function getStock(pid){
+    if(!quincenas.length)return 0;
+    const u=[...quincenas].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha))[0];
+    const base=u.inventario[pid]??0;
+    const ing=ingresos.filter(i=>i.productoId===pid&&new Date(i.fecha)>=new Date(u.fecha)).reduce((s,i)=>s+i.cantidad,0);
+    return base+ing;
+  }
+  function getConsumo(pid){
+    if(quincenas.length<2)return 0;
+    const s=[...quincenas].sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
+    const cs=[];
+    for(let i=1;i<s.length;i++){
+      const p=s[i-1].inventario[pid]??0,c=s[i].inventario[pid]??0;
+      const ing=ingresos.filter(x=>x.productoId===pid&&new Date(x.fecha)>=new Date(s[i-1].fecha)&&new Date(x.fecha)<new Date(s[i].fecha)).reduce((t,x)=>t+x.cantidad,0);
+      const v=p+ing-c;if(v>0)cs.push(v);
+    }
+    return cs.length?Math.round(cs.reduce((a,b)=>a+b)/cs.length):0;
+  }
+  function getDias(pid){const c=getConsumo(pid);if(!c)return 999;return Math.round((getStock(pid)/c)*15)}
+  function getEstado(pid){const d=getDias(pid);return d<=10?'critico':d<=20?'alerta':'stock'}
+  function getLista(){
+    return products.filter(p=>getEstado(p.id)!=='stock').map(p=>{
+      const stock=getStock(p.id),consumo=getConsumo(p.id);
+      return{...p,stock,consumo,pedir:Math.max(0,consumo*2-stock),dias:getDias(p.id),estado:getEstado(p.id)};
+    }).sort((a,b)=>a.dias-b.dias);
+  }
+  function addQ(label,fecha,inv){setQuincenas(p=>[...p,{id:Date.now(),fecha,label,inventario:inv}])}
+  function addIng(pid,cant,fecha,nota){setIngresos(p=>[...p,{id:Date.now(),productoId:parseInt(pid),cantidad:parseInt(cant),fecha,nota}])}
+  function addProd(d){setProducts(p=>[...p,{...d,id:Date.now()}])}
+  function delProd(id){if(confirm('¿Eliminar este producto?'))setProducts(p=>p.filter(x=>x.id!==id))}
+  function csvInventario(){
+    const rows=[['Criticidad','Código','Nombre','Flujo','Unidad','Stock','Días','Estado']];
+    products.forEach(p=>{const e=getEstado(p.id);rows.push([p.criticidad,p.codigo,p.nombre,p.flujo,p.unidad,getStock(p.id),getDias(p.id)===999?'Sin hist.':getDias(p.id),e==='critico'?'Crítico':e==='alerta'?'Alerta':'En stock'])});
+    dl(rows,'inventario');
+  }
+  function csvLista(){
+    const rows=[['Código','Nombre','Stock','Consume/Q','Pedir','Unidad','Días']];
+    getLista().forEach(p=>rows.push([p.codigo,p.nombre,p.stock,p.consumo,p.pedir,p.unidad,p.dias]));
+    dl(rows,'lista-compra');
+  }
+  function dl(rows,name){
+    const csv=rows.map(r=>r.map(c=>`"${c}"`).join(',')).join('\n');
+    const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);a.download=`${name}-${new Date().toISOString().slice(0,10)}.csv`;a.click();
+  }
+  return <Ctx.Provider value={{products,quincenas,ingresos,getStock,getConsumo,getDias,getEstado,getLista,addQ,addIng,addProd,delProd,csvInventario,csvLista}}>{children}</Ctx.Provider>;
+}
+const useApp=()=>useContext(Ctx);
+
+function DBadge({d}){const c=d<=10?'r':d<=20?'a':'g';return <span className={`dbadge ${c}`}>{d===999?'—':`${d}d`}</span>}
+function Barra({d}){const p=Math.min(100,Math.round(d/30*100)),col=d<=10?'#ff5050':d<=20?'#f0a500':'#00c97d';return <div className="bwrap"><div className="bfill" style={{width:`${p}%`,background:col}}/></div>}
+const lbl=e=>e==='critico'?'Crítico':e==='alerta'?'Alerta':'En stock';
+const TT={background:'#1e1e1e',border:'1px solid rgba(255,255,255,0.1)',borderRadius:8,fontSize:12,color:'#f0f0f0'};
+
+function Dashboard(){
+  const {products,getStock,getConsumo,getDias,getEstado,getLista,csvLista}=useApp();
+  const [show,setShow]=useState(false);
+  const cr=products.filter(p=>getEstado(p.id)==='critico');
+  const al=products.filter(p=>getEstado(p.id)==='alerta');
+  const ok=products.filter(p=>getEstado(p.id)==='stock');
+  const lista=getLista();
+  return <div className="page">
+    <div className="ph"><div><h1 className="pt">Dashboard</h1><p className="ps">Resumen del inventario actual</p></div></div>
+    <div className="metrics">
+      <div className="metric"><span className="ml">Total</span><span className="mv">{products.length}</span></div>
+      <div className="metric" style={{borderColor:'rgba(255,80,80,.2)'}}><span className="ml">Críticos</span><span className="mv cr">{cr.length}</span></div>
+      <div className="metric" style={{borderColor:'rgba(240,165,0,.2)'}}><span className="ml">Alertas</span><span className="mv ca">{al.length}</span></div>
+      <div className="metric" style={{borderColor:'rgba(0,201,125,.2)'}}><span className="ml">En stock</span><span className="mv cg">{ok.length}</span></div>
+    </div>
+    {lista.length>0&&<div style={{marginBottom:'1.5rem'}}>
+      <button className="cbtn" onClick={()=>setShow(v=>!v)}>
+        <span>🛒</span> Necesito comprar <span style={{background:'rgba(0,0,0,.2)',padding:'1px 8px',borderRadius:99,fontSize:12}}>{lista.length}</span>
+        <span style={{marginLeft:'auto',fontSize:10}}>{show?'▲':'▼'}</span>
+      </button>
+      {show&&<div className="ccard">
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'.75rem'}}>
+          <span style={{fontSize:12,color:'var(--text2)'}}>Orden sugerida — cubre 2 quincenas</span>
+          <button className="bs" style={{fontSize:11,padding:'4px 10px'}} onClick={csvLista}>↓ CSV</button>
+        </div>
+        <div className="chead"><span>Producto</span><span>Stock</span><span>/Q</span><span>Pedir</span></div>
+        {lista.map(p=><div key={p.id} className="crow">
+          <span><span className="pname">{p.nombre}</span><span className="pdesc">{p.codigo}</span></span>
+          <span className="mono">{p.stock}<small> {p.unidad}</small></span>
+          <span className="mono">~{p.consumo}</span>
+          <span className="mono cg">+{p.pedir}<small> {p.unidad}</small></span>
+        </div>)}
+      </div>}
+    </div>}
+    {cr.length>0&&<div className="section">
+      <h2 className="stitle"><span className="sdot" style={{background:'var(--red)'}}/>Críticos</h2>
+      <div className="alert-list">{cr.map(p=><div key={p.id} className="card card-red">
+        <div className="atop"><span className="aname">{p.nombre}</span><DBadge d={getDias(p.id)}/></div>
+        <span className="acode">{p.codigo} · {p.flujo}</span>
+        <div className="astats"><span>Stock: <strong>{getStock(p.id)} {p.unidad}s</strong></span><span>Consume: <strong>~{getConsumo(p.id)}/Q</strong></span></div>
+        <Barra d={getDias(p.id)}/>
+      </div>)}</div>
+    </div>}
+    {al.length>0&&<div className="section">
+      <h2 className="stitle"><span className="sdot" style={{background:'var(--amber)'}}/>Alertas</h2>
+      <div className="alert-list">{al.map(p=><div key={p.id} className="card card-amber">
+        <div className="atop"><span className="aname">{p.nombre}</span><DBadge d={getDias(p.id)}/></div>
+        <span className="acode">{p.codigo} · {p.flujo}</span>
+        <div className="astats"><span>Stock: <strong>{getStock(p.id)} {p.unidad}s</strong></span><span>Consume: <strong>~{getConsumo(p.id)}/Q</strong></span></div>
+        <Barra d={getDias(p.id)}/>
+      </div>)}</div>
+    </div>}
+    <div className="section">
+      <h2 className="stitle">Todos los productos</h2>
+      <div className="twrap t-dash">
+        <div className="thead"><span>Producto</span><span>Stock</span><span>Días</span><span>Estado</span></div>
+        {[...products].sort((a,b)=>getDias(a.id)-getDias(b.id)).map(p=>{
+          const e=getEstado(p.id),d=getDias(p.id);
+          return <div key={p.id} className="trow">
+            <span><span className="pname">{p.nombre}</span><span className="pdesc">{p.codigo} · {p.flujo}</span></span>
+            <span className="mono">{getStock(p.id)}<small> {p.unidad}</small></span>
+            <span className="mono">{d===999?'—':`${d}d`}</span>
+            <span><span className={`badge ${e}`}>{lbl(e)}</span></span>
+          </div>;
+        })}
+      </div>
+    </div>
+  </div>;
+}
+
+function Inventario(){
+  const {products,getStock,getDias,getEstado,addProd,delProd,addIng}=useApp();
+  const [bus,setBus]=useState('');const [fil,setFil]=useState('Todos');
+  const [sf,setSf]=useState(false);const [si,setSi]=useState(false);
+  const [form,setForm]=useState({criticidad:'Alto',codigo:'',nombre:'',descripcion:'',flujo:'',unidad:'',conversion:'',stockInicial:''});
+  const [ing,setIng]=useState({productoId:'',cantidad:'',fecha:new Date().toISOString().slice(0,10),nota:''});
+  const [msg,setMsg]=useState('');
+  const flujos=['Todos',...new Set(products.map(p=>p.flujo).filter(Boolean))];
+  const filtered=products.filter(p=>{
+    const mf=fil==='Todos'||p.flujo.toLowerCase()===fil.toLowerCase();
+    const mb=!bus||p.nombre.toLowerCase().includes(bus.toLowerCase())||p.codigo.toLowerCase().includes(bus.toLowerCase());
+    return mf&&mb;
+  });
+  function ok(m){setMsg(m);setTimeout(()=>setMsg(''),2500)}
+  function saveProd(){
+    if(!form.codigo||!form.nombre)return;
+    const nid=Date.now();
+    addProd({criticidad:form.criticidad,codigo:form.codigo,nombre:form.nombre,descripcion:form.descripcion,flujo:form.flujo,unidad:form.unidad,conversion:form.conversion});
+    if(form.stockInicial&&parseInt(form.stockInicial)>0)setTimeout(()=>addIng(nid,form.stockInicial,new Date().toISOString().slice(0,10),'Stock inicial'),100);
+    setForm({criticidad:'Alto',codigo:'',nombre:'',descripcion:'',flujo:'',unidad:'',conversion:'',stockInicial:''});
+    setSf(false);ok('Producto guardado');
+  }
+  function saveIng(){
+    if(!ing.productoId||!ing.cantidad||parseInt(ing.cantidad)<=0)return;
+    addIng(ing.productoId,ing.cantidad,ing.fecha,ing.nota);
+    setIng({productoId:'',cantidad:'',fecha:new Date().toISOString().slice(0,10),nota:''});
+    setSi(false);ok('Ingreso registrado');
+  }
+  return <div className="page" style={{position:'relative'}}>
+    <div className="ph">
+      <div><h1 className="pt">Inventario</h1><p className="ps">{products.length} productos</p></div>
+      <button className="bp" onClick={()=>{setSf(v=>!v);setSi(false)}}>{sf?'Cancelar':'+ Nuevo producto'}</button>
+    </div>
+    {msg&&<div className="smsg">✓ {msg}</div>}
+    {sf&&<div className="fcard">
+      <div className="ftitle">Nuevo producto</div>
+      <div className="fgrid">
+        <div className="field"><label>Criticidad</label><select value={form.criticidad} onChange={e=>setForm(f=>({...f,criticidad:e.target.value}))}><option>Alto</option><option>Medio</option><option>Bajo</option></select></div>
+        <div className="field"><label>Código *</label><input value={form.codigo} onChange={e=>setForm(f=>({...f,codigo:e.target.value}))} placeholder="P12345"/></div>
+        <div className="field s2"><label>Nombre *</label><input value={form.nombre} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Nombre del producto"/></div>
+        <div className="field s2"><label>Descripción</label><input value={form.descripcion} onChange={e=>setForm(f=>({...f,descripcion:e.target.value}))} placeholder="Descripción"/></div>
+        <div className="field"><label>Flujo</label><input value={form.flujo} onChange={e=>setForm(f=>({...f,flujo:e.target.value}))} placeholder="Vans, Masterbox..."/></div>
+        <div className="field"><label>Unidad</label><input value={form.unidad} onChange={e=>setForm(f=>({...f,unidad:e.target.value}))} placeholder="Rollo, Unid..."/></div>
+        <div className="field"><label>Conversión</label><input value={form.conversion} onChange={e=>setForm(f=>({...f,conversion:e.target.value}))} placeholder="Rollo x 100 Etiq"/></div>
+        <div className="field"><label>Stock inicial</label><input type="number" min="0" value={form.stockInicial} onChange={e=>setForm(f=>({...f,stockInicial:e.target.value}))} placeholder="0"/></div>
+      </div>
+      <div className="factions"><button className="bp" onClick={saveProd}>Guardar</button><button className="bs" onClick={()=>setSf(false)}>Cancelar</button></div>
+    </div>}
+    <div className="filters">
+      <input className="search" value={bus} onChange={e=>setBus(e.target.value)} placeholder="Buscar..."/>
+      <div className="tabs">{flujos.map(f=><button key={f} className={`tab${fil===f?' on':''}`} onClick={()=>setFil(f)}>{f}</button>)}</div>
+    </div>
+    <div className="twrap t-inv">
+      <div className="thead"><span>Crit.</span><span>Código</span><span>Nombre</span><span>Flujo</span><span>Unidad</span><span>Stock</span><span>Días</span><span>Estado</span><span></span></div>
+      {filtered.map(p=>{const s=getStock(p.id),d=getDias(p.id),e=getEstado(p.id);return(
+        <div key={p.id} className="trow">
+          <span><span className={`cbadge c${p.criticidad[0]}`}>{p.criticidad[0]}</span></span>
+          <span className="mono" style={{fontSize:11,color:'var(--text2)'}}>{p.codigo}</span>
+          <span><span className="pname">{p.nombre}</span><span className="pdesc">{p.descripcion}</span></span>
+          <span><span className="chip">{p.flujo}</span></span>
+          <span><span className="pname">{p.unidad}</span><span className="pdesc">{p.conversion}</span></span>
+          <span className={`mono ${e}`}>{s}</span>
+          <span className="mono">{d===999?'—':`${d}d`}</span>
+          <span><span className={`badge ${e}`}>{lbl(e)}</span></span>
+          <span><button className="bdel" onClick={()=>delProd(p.id)}>✕</button></span>
+        </div>
+      );})}
+      {!filtered.length&&<div className="empty">No se encontraron productos</div>}
+    </div>
+    <div className="clist">
+      {filtered.map(p=>{const s=getStock(p.id),d=getDias(p.id),e=getEstado(p.id);return(
+        <div key={p.id} className={`pcard c${e}`}>
+          <div className="ctop"><div><span className="pname">{p.nombre}</span><span className="pdesc">{p.codigo} · {p.flujo}</span></div><span className={`badge ${e}`}>{lbl(e)}</span></div>
+          <div className="cbot"><div style={{display:'flex',alignItems:'baseline',gap:4}}><span className={`sval ${e}`}>{s}</span><span style={{fontSize:11,color:'var(--text2)'}}> {p.unidad}s</span></div><span style={{fontSize:11,color:'var(--text2)'}}>{d===999?'Sin historial':`~${d} días`}</span></div>
+        </div>
+      );})}
+      {!filtered.length&&<div className="empty">No se encontraron productos</div>}
+    </div>
+    <button className="fab" onClick={()=>{setSi(v=>!v);setSf(false)}}>{si?'✕':'↑'}</button>
+    {si&&<div className="modal">
+      <div className="mtitle">Registrar ingreso</div>
+      <div className="mform">
+        <div className="field"><label>Producto *</label><select value={ing.productoId} onChange={e=>setIng(f=>({...f,productoId:e.target.value}))}><option value="">Seleccionar...</option>{products.map(p=><option key={p.id} value={p.id}>{p.nombre}</option>)}</select></div>
+        <div className="mrow">
+          <div className="field"><label>Cantidad *</label><input type="number" min="1" value={ing.cantidad} onChange={e=>setIng(f=>({...f,cantidad:e.target.value}))} placeholder="0"/></div>
+          <div className="field"><label>Fecha</label><input type="date" value={ing.fecha} onChange={e=>setIng(f=>({...f,fecha:e.target.value}))}/></div>
+        </div>
+        <div className="field"><label>Nota</label><input value={ing.nota} onChange={e=>setIng(f=>({...f,nota:e.target.value}))} placeholder="Proveedor..."/></div>
+      </div>
+      <div className="mactions"><button className="bp" onClick={saveIng}>Registrar</button><button className="bs" onClick={()=>setSi(false)}>Cancelar</button></div>
+    </div>}
+  </div>;
+}
+
+function Control(){
+  const {products,quincenas,addQ,getStock}=useApp();
+  const hoy=new Date().toISOString().slice(0,10);
+  const m=new Date().getDate()<=15?1:2,mes=new Date().toLocaleString('es',{month:'short'});
+  const [label,setLabel]=useState(`Q${m} ${mes[0].toUpperCase()+mes.slice(1)}`);
+  const [fecha,setFecha]=useState(hoy);
+  const [counts,setCounts]=useState({});
+  const [saved,setSaved]=useState(false);
+  const uq=quincenas.length?[...quincenas].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha))[0]:null;
+  function guardar(){
+    const inv={};products.forEach(p=>{const v=counts[p.id];inv[p.id]=v!==undefined&&v!==''?parseInt(v):getStock(p.id);});
+    addQ(label,fecha,inv);setSaved(true);setTimeout(()=>setSaved(false),3000);setCounts({});
+  }
+  return <div className="page">
+    <div className="ph"><div><h1 className="pt">Control</h1><p className="ps">Solo ingresa el stock contado. Vacíos mantienen valor anterior.</p></div></div>
+    <div className="cfgcard"><div className="cfgrow">
+      <div className="field" style={{minWidth:0}}><label>Etiqueta</label><input value={label} onChange={e=>setLabel(e.target.value)} style={{width:130}}/></div>
+      <div className="field" style={{minWidth:0}}><label>Fecha</label><input type="date" value={fecha} onChange={e=>setFecha(e.target.value)} style={{width:155}}/></div>
+      {uq&&<span className="hint">Último: <strong>{uq.label}</strong></span>}
+    </div></div>
+    <div className="twrap t-ctrl">
+      <div className="thead"><span>Producto</span><span>Anterior</span><span>Conteo hoy</span><span>Diferencia</span></div>
+      {products.map(p=>{
+        const ant=uq?(uq.inventario[p.id]??'—'):'—';
+        const con=counts[p.id];
+        const diff=con!==undefined&&con!==''&&ant!=='—'?parseInt(con)-parseInt(ant):null;
+        return <div key={p.id} className="trow">
+          <span><span className="pname">{p.nombre}</span><span className="pdesc">{p.unidad} · {p.flujo}</span></span>
+          <span className="mono" style={{fontSize:15,fontWeight:500}}>{ant}</span>
+          <span><input type="number" min="0" placeholder={ant!=='—'?String(ant):'0'} value={counts[p.id]??''} onChange={e=>setCounts(v=>({...v,[p.id]:e.target.value}))} className="cinput"/></span>
+          <span>{diff!==null?<span className={diff<0?'dn':diff>0?'dp':'dz'}>{diff>0?'+':''}{diff}</span>:<span className="dz">—</span>}</span>
+        </div>;
+      })}
+    </div>
+    <div className="foot">
+      {saved&&<span style={{fontSize:13,color:'var(--green)'}}>✓ Control guardado</span>}
+      <button className="bp bpsave" onClick={guardar}>Guardar conteo de {label}</button>
+    </div>
+    {quincenas.length>0&&<div>
+      <div className="stitle" style={{marginBottom:'.75rem'}}>Historial</div>
+      {[...quincenas].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha)).map(q=>(
+        <div key={q.id} className="qitem">
+          <span style={{fontWeight:500,fontSize:13,minWidth:70}}>{q.label}</span>
+          <span style={{fontSize:12,color:'var(--text2)'}}>{new Date(q.fecha).toLocaleDateString('es',{day:'2-digit',month:'short',year:'numeric'})}</span>
+          <span style={{fontSize:12,color:'var(--text3)',marginLeft:'auto'}}>{Object.keys(q.inventario).length} productos</span>
+        </div>
+      ))}
+    </div>}
+  </div>;
+}
+
+function Ingresos(){
+  const {products,ingresos}=useApp();
+  const sorted=[...ingresos].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
+  return <div className="page">
+    <div className="ph"><div><h1 className="pt">Ingresos</h1><p className="ps">Historial · Registra ingresos desde el botón <strong style={{color:'var(--green)'}}>↑</strong> en Inventario</p></div></div>
+    {!sorted.length?<div className="iempty"><span className="iicon">↑</span><p style={{fontSize:13,color:'var(--text2)',marginBottom:6}}>No hay ingresos registrados aún.</p><p style={{fontSize:13,color:'var(--text2)'}}>Ve a <strong style={{color:'var(--green)'}}>Inventario</strong> y usa el botón flotante ↑</p></div>
+    :<div className="twrap t-ing">
+      <div className="thead"><span>Fecha</span><span>Producto</span><span>Cantidad</span><span>Nota</span></div>
+      {sorted.map(i=>{const p=products.find(x=>x.id===i.productoId);return(
+        <div key={i.id} className="trow">
+          <span style={{fontSize:12,color:'var(--text2)'}}>{new Date(i.fecha).toLocaleDateString('es',{day:'2-digit',month:'short',year:'numeric'})}</span>
+          <span>{p?<><span className="pname">{p.nombre}</span><span className="pdesc">{p.codigo}</span></>:<span className="pdesc">Eliminado</span>}</span>
+          <span style={{display:'flex',alignItems:'baseline',gap:5}}><span className="mono cg">+{i.cantidad}</span><span style={{fontSize:11,color:'var(--text3)'}}>{p?.unidad}</span></span>
+          <span style={{fontSize:12,color:'var(--text2)'}}>{i.nota||'—'}</span>
+        </div>
+      );})}
+    </div>}
+  </div>;
+}
+
+function Graficos(){
+  const {products,quincenas,getStock,getConsumo,getDias,getEstado}=useApp();
+  const [sid,setSid]=useState(products[0]?.id??null);
+  const [tab,setTab]=useState('c');
+  const sq=[...quincenas].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
+  const [qa,setQa]=useState(sq[0]?.id??null);
+  const [qb,setQb]=useState(sq[1]?.id??null);
+  const prod=products.find(p=>p.id===sid);
+  const avg=getConsumo(sid),stock=getStock(sid),dias=getDias(sid),est=getEstado(sid);
+  const qs=[...quincenas].sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
+  const cd=[];for(let i=1;i<qs.length;i++){const p=qs[i-1].inventario[sid]??0,c=qs[i].inventario[sid]??0;cd.push({q:qs[i].label,v:Math.max(0,p-c)});}
+  const sr=qs.map(q=>({q:q.label,s:q.inventario[sid]??0}));
+  let s=stock;const py=['Q2 Mar','Q1 Abr','Q2 Abr','Q1 May'].map(l=>{s=Math.max(0,s-avg);return{q:l,p:s};});
+  const comb=[...sr.slice(-3).map(d=>({q:d.q,r:d.s})),{q:py[0]?.q,r:stock,p:stock},...py.map(d=>({q:d.q,p:d.p}))];
+  const qAobj=quincenas.find(q=>q.id===parseInt(qa)),qBobj=quincenas.find(q=>q.id===parseInt(qb));
+  const comp=(qAobj&&qBobj)?products.map(p=>{
+    const ca=Math.max(0,(qAobj.inventario[p.id]??0)-(qBobj.inventario[p.id]??0));
+    const cb=getConsumo(p.id);
+    const diff=ca===0?0:Math.round(((cb-ca)/ca)*100);
+    return{n:p.nombre,ca,cb,diff};
+  }):[];
+  const td=comp.length?Math.round(comp.reduce((s,p)=>s+p.diff,0)/comp.length):0;
+  const hasRC=BarChart&&Bar&&LineChart&&Line&&XAxis&&YAxis&&ResponsiveContainer;
+  return <div className="page">
+    <div className="ph"><div><h1 className="pt">Gráficos</h1><p className="ps">Análisis de consumo y proyección</p></div></div>
+    <div className="ptabs">
+      <button className={`ptab${tab==='c'?' on':''}`} onClick={()=>setTab('c')}>Consumo y proyección</button>
+      <button className={`ptab${tab==='k'?' on':''}`} onClick={()=>setTab('k')}>Comparativo</button>
+    </div>
+    {tab==='c'&&<>
+      <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:'1rem'}}>
+        <label style={{fontSize:12,color:'var(--text2)'}}>Producto</label>
+        <select value={sid??''} onChange={e=>setSid(parseInt(e.target.value))} style={{minWidth:220}}>{products.map(p=><option key={p.id} value={p.id}>{p.nombre}</option>)}</select>
+      </div>
+      {prod&&<>
+        <div className="metrics3">
+          <div className="metric"><span className="ml">Stock actual</span><span className={`mv ${est}`}>{stock}<small style={{fontSize:12,fontWeight:400,color:'var(--text2)'}}> {prod.unidad}s</small></span></div>
+          <div className="metric"><span className="ml">Consume prom/Q</span><span className="mv">{avg}<small style={{fontSize:12,fontWeight:400,color:'var(--text2)'}}> {prod.unidad}s</small></span></div>
+          <div className="metric"><span className="ml">Días restantes</span><span className={`mv ${est}`}>{dias===999?'—':`${dias}d`}</span></div>
+        </div>
+        {hasRC?<>
+          <div className="chcard">
+            <div className="chtitle">Consumo por quincena</div>
+            {cd.length<1?<div className="nodata">Necesitas al menos 2 controles registrados</div>
+            :<ResponsiveContainer width="100%" height={180}><BarChart data={cd} barSize={26}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false}/>
+              <XAxis dataKey="q" tick={{fontSize:11,fill:'#555'}} axisLine={false} tickLine={false}/>
+              <YAxis tick={{fontSize:11,fill:'#555'}} axisLine={false} tickLine={false} width={28}/>
+              <Tooltip contentStyle={TT} cursor={{fill:'rgba(255,255,255,0.03)'}}/>
+              <Bar dataKey="v" name={`Consumo (${prod.unidad}s)`} fill="#00c97d" radius={[4,4,0,0]} opacity={0.85}/>
+            </BarChart></ResponsiveContainer>}
+          </div>
+          <div className="chcard">
+            <div className="chrow"><div className="chtitle">Stock real vs proyección</div>
+              <div className="legend"><span><span className="ldot" style={{background:'#00c97d'}}/>Real</span><span><span className="ldot" style={{background:'#4d9eff'}}/>Proyección</span></div>
+            </div>
+            {sr.length<1?<div className="nodata">Necesitas al menos un control registrado</div>
+            :<ResponsiveContainer width="100%" height={200}><LineChart data={comb}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false}/>
+              <XAxis dataKey="q" tick={{fontSize:11,fill:'#555'}} axisLine={false} tickLine={false}/>
+              <YAxis tick={{fontSize:11,fill:'#555'}} axisLine={false} tickLine={false} width={32}/>
+              <Tooltip contentStyle={TT}/>
+              <Line dataKey="r" name="Real" stroke="#00c97d" strokeWidth={2} dot={{r:4,fill:'#00c97d'}} connectNulls={false}/>
+              <Line dataKey="p" name="Proyección" stroke="#4d9eff" strokeWidth={2} strokeDasharray="5 4" dot={{r:3,fill:'#4d9eff',strokeWidth:0}} connectNulls={false}/>
+              {avg>0&&<ReferenceLine y={avg} stroke="#f0a500" strokeDasharray="4 3" strokeWidth={1}/>}
+            </LineChart></ResponsiveContainer>}
+          </div>
+        </>:<div className="nodata">Gráficos no disponibles — verifica conexión a internet</div>}
+      </>}
+    </>}
+    {tab==='k'&&<>
+      <div className="csrow">
+        <div className="field"><label style={{fontSize:11,textTransform:'uppercase',letterSpacing:'.05em',color:'var(--text2)'}}>Quincena actual</label><select value={qa??''} onChange={e=>setQa(e.target.value)} style={{minWidth:150}}>{sq.map(q=><option key={q.id} value={q.id}>{q.label}</option>)}</select></div>
+        <span className="vs">vs</span>
+        <div className="field"><label style={{fontSize:11,textTransform:'uppercase',letterSpacing:'.05em',color:'var(--text2)'}}>Quincena anterior</label><select value={qb??''} onChange={e=>setQb(e.target.value)} style={{minWidth:150}}>{sq.map(q=><option key={q.id} value={q.id}>{q.label}</option>)}</select></div>
+      </div>
+      {quincenas.length<2?<div className="nodata">Necesitas al menos 2 controles registrados para comparar</div>
+      :<>
+        <div className="metrics3">
+          <div className="metric"><span className="ml">Variación prom.</span><span className={`mv${td>0?' cr':td<0?' cg':''}`}>{td>0?'+':''}{td}%</span></div>
+          <div className="metric"><span className="ml">Subieron</span><span className="mv cr">{comp.filter(p=>p.diff>0).length}</span></div>
+          <div className="metric"><span className="ml">Bajaron</span><span className="mv cg">{comp.filter(p=>p.diff<0).length}</span></div>
+        </div>
+        <div className="ctab">
+          <div className="cthead"><span>Producto</span><span>Anterior</span><span>Actual</span><span>Variación</span></div>
+          {[...comp].sort((a,b)=>b.diff-a.diff).map((p,i)=>(
+            <div key={i} className="ctrow">
+              <span className="pname">{p.n}</span>
+              <span className="mono">{p.ca}</span>
+              <span className="mono">{p.cb}</span>
+              <span className={`mono${p.diff>0?' cr':p.diff<0?' cg':''}`}>{p.diff>0?'+':''}{p.diff}%</span>
+            </div>
+          ))}
+        </div>
+      </>}
+    </>}
+  </div>;
+}
+
+const PAGES=[{id:'dashboard',label:'Dashboard',icon:'▦'},{id:'inventario',label:'Inventario',icon:'≡'},{id:'control',label:'Control',icon:'⊞'},{id:'ingresos',label:'Ingresos',icon:'↑'},{id:'graficos',label:'Gráficos',icon:'∿'}];
+function App(){
+  const [page,setPage]=useState('dashboard');
+  return <Store><Main page={page} setPage={setPage}/></Store>;
+}
+function Main({page,setPage}){
+  const {getEstado,products,csvInventario}=useApp();
+  const nc=products.filter(p=>getEstado(p.id)==='critico').length;
+  return <div className="app">
+    <aside className="sidebar">
+      <div className="brand"><span className="brand-icon">⬡</span><span className="brand-name">Inventario</span></div>
+      <nav className="nav">
+        {PAGES.map(p=><button key={p.id} className={`nav-btn${page===p.id?' active':''}`} onClick={()=>setPage(p.id)}>
+          <span className="nav-icon">{p.icon}</span><span>{p.label}</span>
+          {p.id==='dashboard'&&nc>0&&<span className="nbadge">{nc}</span>}
+        </button>)}
+      </nav>
+      <div className="sidebar-foot"><button className="bexp" onClick={csvInventario}>↓ Exportar CSV</button></div>
+    </aside>
+    <main className="main">
+      {page==='dashboard'&&<Dashboard/>}
+      {page==='inventario'&&<Inventario/>}
+      {page==='control'&&<Control/>}
+      {page==='ingresos'&&<Ingresos/>}
+      {page==='graficos'&&<Graficos/>}
+    </main>
+    <nav className="bottom-nav">
+      {PAGES.map(p=><button key={p.id} className={`bnbtn${page===p.id?' on':''}`} onClick={()=>setPage(p.id)}>
+        <div style={{position:'relative',display:'inline-block'}}>
+          <span className="bnico">{p.icon}</span>
+          {p.id==='dashboard'&&nc>0&&<span className="bnbadge">{nc}</span>}
+        </div>
+        <span className="bnlbl">{p.label}</span>
+      </button>)}
+    </nav>
+  </div>;
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
