@@ -8,7 +8,6 @@
 <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.23.0/babel.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/prop-types@15.8.1/prop-types.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/recharts@2.10.0/umd/Recharts.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
@@ -96,6 +95,9 @@ button{font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border:non
 .cA{background:var(--red-dim);color:var(--red)}.cM{background:var(--amber-dim);color:var(--amber)}.cB{background:var(--green-dim);color:var(--green)}
 .bdel{background:transparent;color:var(--text3);padding:4px 6px;border-radius:4px;font-size:12px}
 .bdel:hover{background:var(--red-dim);color:var(--red)}
+.bedit{background:transparent;color:var(--text3);padding:4px 6px;border-radius:4px;font-size:12px}
+.bedit:hover{background:var(--blue-dim,rgba(77,158,255,0.1));color:#4d9eff}
+.row-actions{display:flex;gap:2px}
 .empty{padding:2rem;text-align:center;color:var(--text3);font-size:13px}
 .fcard{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);padding:1.25rem;margin-bottom:1.25rem}
 .ftitle{font-size:14px;font-weight:500;margin-bottom:1rem}
@@ -274,6 +276,11 @@ function Store({children}){
     if(error)return error.message;
     await load();return null;
   }
+  async function updateProd(id,d){
+    const {error}=await sb.from('products').update(d).eq('id',id);
+    if(error)return error.message;
+    await load();return null;
+  }
   async function delProd(id){
     if(!confirm('¿Eliminar este producto?'))return;
     await sb.from('products').delete().eq('id',id);
@@ -306,7 +313,7 @@ function Store({children}){
     const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);a.download=`${name}-${new Date().toISOString().slice(0,10)}.csv`;a.click();
   }
 
-  return <Ctx.Provider value={{products,quincenas:quincenasWithInv,ingresos,loading,error,getStock,getConsumo,getDias,getEstado,getLista,addProd,delProd,addQ,addIng,csvInventario,csvLista}}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{products,quincenas:quincenasWithInv,ingresos,loading,error,getStock,getConsumo,getDias,getEstado,getLista,addProd,updateProd,delProd,addQ,addIng,csvInventario,csvLista}}>{children}</Ctx.Provider>;
 }
 const useApp=()=>useContext(Ctx);
 
@@ -391,10 +398,12 @@ function Dashboard(){
 
 // ── INVENTARIO ──
 function Inventario(){
-  const {products,getStock,getDias,getEstado,addProd,delProd,addIng}=useApp();
+  const {products,getStock,getDias,getEstado,addProd,updateProd,delProd,addIng}=useApp();
   const [bus,setBus]=useState('');const [fil,setFil]=useState('Todos');
   const [sf,setSf]=useState(false);const [si,setSi]=useState(false);
-  const [form,setForm]=useState({criticidad:'Alto',codigo:'',nombre:'',descripcion:'',flujo:'',unidad:'',conversion:'',stockInicial:''});
+  const [editId,setEditId]=useState(null);
+  const emptyForm={criticidad:'Alto',codigo:'',nombre:'',descripcion:'',flujo:'',unidad:'',conversion:'',stockInicial:''};
+  const [form,setForm]=useState(emptyForm);
   const [ing,setIng]=useState({productoId:'',cantidad:'',fecha:new Date().toISOString().slice(0,10),nota:''});
   const [msg,setMsg]=useState({text:'',type:'ok'});
   const [saving,setSaving]=useState(false);
@@ -405,13 +414,23 @@ function Inventario(){
     return mf&&mb;
   });
   function ok(t,type='ok'){setMsg({text:t,type});setTimeout(()=>setMsg({text:'',type:'ok'}),3000)}
+  function openEdit(p){
+    setEditId(p.id);
+    setForm({criticidad:p.criticidad,codigo:p.codigo,nombre:p.nombre,descripcion:p.descripcion||'',flujo:p.flujo||'',unidad:p.unidad||'',conversion:p.conversion||'',stockInicial:''});
+    setSf(true);setSi(false);
+  }
+  function openNew(){
+    setEditId(null);setForm(emptyForm);setSf(v=>!v);setSi(false);
+  }
   async function saveProd(){
     if(!form.codigo||!form.nombre)return;
     setSaving(true);
-    const err=await addProd({criticidad:form.criticidad,codigo:form.codigo,nombre:form.nombre,descripcion:form.descripcion,flujo:form.flujo,unidad:form.unidad,conversion:form.conversion});
-    if(err){ok(err,'err');}else{
-      setForm({criticidad:'Alto',codigo:'',nombre:'',descripcion:'',flujo:'',unidad:'',conversion:'',stockInicial:''});
-      setSf(false);ok('Producto guardado');
+    if(editId){
+      const err=await updateProd(editId,{criticidad:form.criticidad,codigo:form.codigo,nombre:form.nombre,descripcion:form.descripcion,flujo:form.flujo,unidad:form.unidad,conversion:form.conversion});
+      if(err){ok(err,'err');}else{setSf(false);setEditId(null);ok('Producto actualizado ✓');}
+    }else{
+      const err=await addProd({criticidad:form.criticidad,codigo:form.codigo,nombre:form.nombre,descripcion:form.descripcion,flujo:form.flujo,unidad:form.unidad,conversion:form.conversion});
+      if(err){ok(err,'err');}else{setForm(emptyForm);setSf(false);ok('Producto guardado ✓');}
     }
     setSaving(false);
   }
@@ -421,18 +440,18 @@ function Inventario(){
     const err=await addIng(ing.productoId,ing.cantidad,ing.fecha,ing.nota);
     if(err){ok(err,'err');}else{
       setIng({productoId:'',cantidad:'',fecha:new Date().toISOString().slice(0,10),nota:''});
-      setSi(false);ok('Ingreso registrado');
+      setSi(false);ok('Ingreso registrado ✓');
     }
     setSaving(false);
   }
   return <div className="page" style={{position:'relative'}}>
     <div className="ph">
       <div><h1 className="pt">Inventario</h1><p className="ps">{products.length} productos</p></div>
-      <button className="bp" onClick={()=>{setSf(v=>!v);setSi(false)}}>{sf?'Cancelar':'+ Nuevo producto'}</button>
+      <button className="bp" onClick={openNew}>{sf&&!editId?'Cancelar':'+ Nuevo producto'}</button>
     </div>
     <Msg text={msg.text} type={msg.type}/>
-    {sf&&<div className="fcard">
-      <div className="ftitle">Nuevo producto</div>
+    {sf&&<div className="fcard" style={{borderColor:editId?'rgba(77,158,255,0.3)':'var(--border2)'}}>
+      <div className="ftitle">{editId?'✏️ Editar producto':'Nuevo producto'}</div>
       <div className="fgrid">
         <div className="field"><label>Criticidad</label><select value={form.criticidad} onChange={e=>setForm(f=>({...f,criticidad:e.target.value}))}><option>Alto</option><option>Medio</option><option>Bajo</option></select></div>
         <div className="field"><label>Código *</label><input value={form.codigo} onChange={e=>setForm(f=>({...f,codigo:e.target.value}))} placeholder="P12345"/></div>
@@ -441,9 +460,12 @@ function Inventario(){
         <div className="field"><label>Flujo</label><input value={form.flujo} onChange={e=>setForm(f=>({...f,flujo:e.target.value}))} placeholder="Vans, Masterbox..."/></div>
         <div className="field"><label>Unidad</label><input value={form.unidad} onChange={e=>setForm(f=>({...f,unidad:e.target.value}))} placeholder="Rollo, Unid..."/></div>
         <div className="field"><label>Conversión</label><input value={form.conversion} onChange={e=>setForm(f=>({...f,conversion:e.target.value}))} placeholder="Rollo x 100 Etiq"/></div>
-        <div className="field"><label>Stock inicial</label><input type="number" min="0" value={form.stockInicial} onChange={e=>setForm(f=>({...f,stockInicial:e.target.value}))} placeholder="0"/></div>
+        {!editId&&<div className="field"><label>Stock inicial</label><input type="number" min="0" value={form.stockInicial} onChange={e=>setForm(f=>({...f,stockInicial:e.target.value}))} placeholder="0"/></div>}
       </div>
-      <div className="factions"><button className="bp" onClick={saveProd} disabled={saving}>{saving?'Guardando...':'Guardar'}</button><button className="bs" onClick={()=>setSf(false)}>Cancelar</button></div>
+      <div className="factions">
+        <button className="bp" onClick={saveProd} disabled={saving}>{saving?'Guardando...':(editId?'Guardar cambios':'Guardar producto')}</button>
+        <button className="bs" onClick={()=>{setSf(false);setEditId(null);}}>Cancelar</button>
+      </div>
     </div>}
     <div className="filters">
       <input className="search" value={bus} onChange={e=>setBus(e.target.value)} placeholder="Buscar..."/>
@@ -461,7 +483,10 @@ function Inventario(){
           <span className={`mono ${e}`}>{s}</span>
           <span className="mono">{d===999?'—':`${d}d`}</span>
           <span><span className={`badge ${e}`}>{lbl(e)}</span></span>
-          <span><button className="bdel" onClick={()=>delProd(p.id)}>✕</button></span>
+          <span className="row-actions">
+            <button className="bedit" onClick={()=>openEdit(p)} title="Editar">✏️</button>
+            <button className="bdel" onClick={()=>delProd(p.id)} title="Eliminar">✕</button>
+          </span>
         </div>
       );})}
       {!filtered.length&&<div className="empty">No se encontraron productos</div>}
@@ -469,13 +494,19 @@ function Inventario(){
     <div className="clist">
       {filtered.map(p=>{const s=getStock(p.id),d=getDias(p.id),e=getEstado(p.id);return(
         <div key={p.id} className={`pcard c${e}`}>
-          <div className="ctop"><div><span className="pname">{p.nombre}</span><span className="pdesc">{p.codigo} · {p.flujo}</span></div><span className={`badge ${e}`}>{lbl(e)}</span></div>
+          <div className="ctop">
+            <div><span className="pname">{p.nombre}</span><span className="pdesc">{p.codigo} · {p.flujo}</span></div>
+            <div style={{display:'flex',alignItems:'center',gap:4}}>
+              <span className={`badge ${e}`}>{lbl(e)}</span>
+              <button className="bedit" onClick={()=>openEdit(p)} title="Editar">✏️</button>
+            </div>
+          </div>
           <div className="cbot"><div style={{display:'flex',alignItems:'baseline',gap:4}}><span className={`sval ${e}`}>{s}</span><span style={{fontSize:11,color:'var(--text2)'}}> {p.unidad}s</span></div><span style={{fontSize:11,color:'var(--text2)'}}>{d===999?'Sin historial':`~${d} días`}</span></div>
         </div>
       );})}
       {!filtered.length&&<div className="empty">No se encontraron productos</div>}
     </div>
-    <button className="fab" onClick={()=>{setSi(v=>!v);setSf(false)}}>{si?'✕':'↑'}</button>
+    <button className="fab" onClick={()=>{setSi(v=>!v);setSf(false);setEditId(null);}}>{si?'✕':'↑'}</button>
     {si&&<div className="modal">
       <div className="mtitle">Registrar ingreso</div>
       <div className="mform">
