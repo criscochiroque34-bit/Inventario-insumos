@@ -8,7 +8,6 @@
 <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.23.0/babel.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/recharts@2.10.0/umd/Recharts.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -19,6 +18,7 @@
   --green:#00c97d;--green-dim:rgba(0,201,125,0.12);
   --amber:#f0a500;--amber-dim:rgba(240,165,0,0.12);
   --red:#ff5050;--red-dim:rgba(255,80,80,0.12);
+  --blue:#4d9eff;--blue-dim:rgba(77,158,255,0.1);
   --radius:10px;--radius-sm:6px;
 }
 html,body,#root{height:100%}
@@ -28,6 +28,42 @@ input,select{font-family:'DM Sans',sans-serif;font-size:13px;background:var(--bg
 input:focus,select:focus{border-color:var(--green)}
 select option{background:var(--bg3)}
 button{font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border:none;outline:none;border-radius:var(--radius-sm);transition:all .15s}
+/* AUTH */
+.auth-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg);padding:1rem}
+.auth-card{width:100%;max-width:380px;background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:2rem}
+.auth-logo{display:flex;align-items:center;gap:10px;justify-content:center;margin-bottom:2rem}
+.auth-logo-icon{font-size:24px;color:var(--green)}
+.auth-logo-name{font-size:18px;font-weight:500}
+.auth-title{font-size:20px;font-weight:500;text-align:center;margin-bottom:6px}
+.auth-sub{font-size:12px;color:var(--text2);text-align:center;margin-bottom:1.5rem}
+.auth-field{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+.auth-field label{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--text2)}
+.auth-btn{width:100%;height:42px;background:var(--green);color:#000;font-weight:600;border-radius:8px;font-size:14px;margin-top:8px}
+.auth-btn:hover{opacity:.9}
+.auth-btn:disabled{opacity:.5;cursor:not-allowed}
+.auth-divider{display:flex;align-items:center;gap:8px;margin:1rem 0}
+.auth-divider-line{flex:1;height:1px;background:var(--border)}
+.auth-divider-text{font-size:11px;color:var(--text3)}
+.auth-link-btn{width:100%;height:38px;background:transparent;color:var(--text2);border:1px solid var(--border2);border-radius:8px;font-size:13px}
+.auth-link-btn:hover{background:var(--bg3);color:var(--text)}
+.auth-switch{text-align:center;font-size:12px;color:var(--text3);margin-top:1rem}
+.auth-switch span{color:var(--green);cursor:pointer}
+.auth-switch span:hover{text-decoration:underline}
+.auth-err{background:var(--red-dim);color:var(--red);border:1px solid rgba(255,80,80,.2);border-radius:var(--radius-sm);padding:8px 12px;font-size:12px;margin-bottom:1rem}
+.auth-ok{background:var(--green-dim);color:var(--green);border:1px solid rgba(0,201,125,.2);border-radius:var(--radius-sm);padding:8px 12px;font-size:12px;margin-bottom:1rem}
+/* PENDING */
+.pending-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg);padding:1rem}
+.pending-card{width:100%;max-width:380px;background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:2rem;text-align:center}
+.pending-icon{font-size:48px;display:block;margin-bottom:1rem}
+.pending-title{font-size:18px;font-weight:500;margin-bottom:8px}
+.pending-badge{display:inline-flex;align-items:center;gap:6px;background:var(--amber-dim);color:var(--amber);font-size:11px;font-weight:500;padding:6px 14px;border-radius:99px;margin-bottom:1rem}
+.pending-dot{width:6px;height:6px;border-radius:50%;background:var(--amber)}
+.pending-sub{font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:1.5rem}
+.pending-info{background:var(--bg3);border-radius:8px;padding:12px;font-size:12px;color:var(--text3);line-height:1.7;text-align:left}
+.pending-info strong{color:var(--text2)}
+.pending-logout{margin-top:1.5rem;background:transparent;color:var(--text3);font-size:12px;border:1px solid var(--border);padding:6px 16px;border-radius:var(--radius-sm)}
+.pending-logout:hover{color:var(--text);background:var(--bg3)}
+/* APP LAYOUT */
 .app{display:flex;height:100vh;overflow:hidden}
 .sidebar{width:200px;min-width:200px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column}
 .brand{display:flex;align-items:center;gap:10px;padding:1.25rem;border-bottom:1px solid var(--border)}
@@ -38,9 +74,14 @@ button{font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border:non
 .nav-btn.active{background:var(--bg4);color:var(--text);font-weight:500}
 .nav-icon{font-size:15px;width:18px;text-align:center;flex-shrink:0}
 .nbadge{margin-left:auto;background:var(--red);color:#fff;font-size:10px;font-weight:600;padding:1px 6px;border-radius:99px}
-.sidebar-foot{padding:.75rem .5rem 1rem;border-top:1px solid var(--border)}
+.sidebar-foot{padding:.75rem .5rem 1rem;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:6px}
+.bexp{width:100%;padding:8px 12px;background:transparent;color:var(--text3);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;text-align:left}
+.bexp:hover{background:var(--bg3);color:var(--text2)}
+.user-info{padding:6px 12px;font-size:11px;color:var(--text3);display:flex;align-items:center;gap:6px}
+.user-dot{width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0}
 .main{flex:1;overflow-y:auto;background:var(--bg)}
 .bottom-nav{display:none}
+/* PAGES */
 .page{padding:1.5rem;max-width:1100px}
 .ph{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.5rem}
 .pt{font-size:22px;font-weight:500}.ps{font-size:13px;color:var(--text2);margin-top:3px}
@@ -63,13 +104,9 @@ button{font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border:non
 .astats{display:flex;gap:1.5rem;font-size:12px;color:var(--text2);margin-bottom:8px}
 .astats strong{color:var(--text);font-weight:500}
 .dbadge{font-size:11px;font-weight:600;padding:3px 10px;border-radius:99px;white-space:nowrap}
-.dbadge.r{background:var(--red-dim);color:var(--red)}
-.dbadge.a{background:var(--amber-dim);color:var(--amber)}
-.dbadge.g{background:var(--green-dim);color:var(--green)}
+.dbadge.r{background:var(--red-dim);color:var(--red)}.dbadge.a{background:var(--amber-dim);color:var(--amber)}.dbadge.g{background:var(--green-dim);color:var(--green)}
 .badge{font-size:11px;font-weight:500;padding:3px 10px;border-radius:99px;display:inline-block}
-.badge.critico{background:var(--red-dim);color:var(--red)}
-.badge.alerta{background:var(--amber-dim);color:var(--amber)}
-.badge.stock{background:var(--green-dim);color:var(--green)}
+.badge.critico{background:var(--red-dim);color:var(--red)}.badge.alerta{background:var(--amber-dim);color:var(--amber)}.badge.stock{background:var(--green-dim);color:var(--green)}
 .bwrap{height:4px;background:var(--bg4);border-radius:99px;overflow:hidden}
 .bfill{height:100%;border-radius:99px}
 .cbtn{display:flex;align-items:center;gap:8px;background:var(--green);color:#000;font-weight:600;padding:10px 18px;border-radius:var(--radius);font-size:14px;width:100%}
@@ -79,11 +116,11 @@ button{font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border:non
 .crow{display:grid;grid-template-columns:2fr 80px 60px 80px;padding:8px;border-bottom:1px solid var(--border);gap:8px;align-items:center}
 .crow:last-child{border-bottom:none}
 .twrap{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
-.thead{display:grid;padding:8px 1rem;background:var(--bg3);font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);gap:12px;align-items:center}
-.trow{display:grid;padding:10px 1rem;border-top:1px solid var(--border);gap:12px;align-items:center;transition:background .1s}
+.thead{display:grid;padding:8px 1rem;background:var(--bg3);font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);gap:10px;align-items:center}
+.trow{display:grid;padding:10px 1rem;border-top:1px solid var(--border);gap:10px;align-items:center;transition:background .1s}
 .trow:hover{background:var(--bg3)}
 .t-dash .thead,.t-dash .trow{grid-template-columns:2.5fr 1fr 80px 90px}
-.t-inv .thead,.t-inv .trow{grid-template-columns:40px 100px 2fr 80px 100px 70px 60px 80px 34px}
+.t-inv .thead,.t-inv .trow{grid-template-columns:36px 100px 2fr 70px 90px 60px 55px 75px 70px}
 .t-ctrl .thead,.t-ctrl .trow{grid-template-columns:2fr 100px 130px 100px}
 .t-ing .thead,.t-ing .trow{grid-template-columns:110px 2fr 110px 1fr}
 .pname{display:block;font-size:13px;font-weight:500}
@@ -93,11 +130,11 @@ button{font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border:non
 .chip{font-size:11px;background:var(--bg4);padding:3px 8px;border-radius:99px;color:var(--text2);display:inline-block}
 .cbadge{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;font-size:11px;font-weight:600}
 .cA{background:var(--red-dim);color:var(--red)}.cM{background:var(--amber-dim);color:var(--amber)}.cB{background:var(--green-dim);color:var(--green)}
-.bdel{background:transparent;color:var(--text3);padding:4px 6px;border-radius:4px;font-size:12px}
+.row-actions{display:flex;gap:2px;align-items:center}
+.bdel{background:transparent;color:var(--text3);padding:4px 6px;border-radius:4px;font-size:11px;line-height:1}
 .bdel:hover{background:var(--red-dim);color:var(--red)}
-.bedit{background:transparent;color:var(--text3);padding:4px 6px;border-radius:4px;font-size:12px}
-.bedit:hover{background:var(--blue-dim,rgba(77,158,255,0.1));color:#4d9eff}
-.row-actions{display:flex;gap:2px}
+.bedit{background:transparent;color:var(--text3);padding:4px 6px;border-radius:4px;font-size:11px;line-height:1}
+.bedit:hover{background:var(--blue-dim);color:var(--blue)}
 .empty{padding:2rem;text-align:center;color:var(--text3);font-size:13px}
 .fcard{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);padding:1.25rem;margin-bottom:1.25rem}
 .ftitle{font-size:14px;font-weight:500;margin-bottom:1rem}
@@ -112,11 +149,9 @@ button{font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border:non
 .tab{background:transparent;color:var(--text2);padding:4px 10px;border-radius:4px;font-size:12px}
 .tab:hover{color:var(--text)}.tab.on{background:var(--bg4);color:var(--text)}
 .bp{background:var(--green);color:#000;font-weight:500;padding:8px 16px;border-radius:var(--radius-sm)}
-.bp:hover{opacity:.85}
+.bp:hover{opacity:.85}.bp:disabled{opacity:.5;cursor:not-allowed}
 .bs{background:var(--bg3);color:var(--text);border:1px solid var(--border2);padding:8px 16px;border-radius:var(--radius-sm)}
 .bs:hover{background:var(--bg4)}
-.bexp{width:100%;padding:8px 12px;background:transparent;color:var(--text3);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;text-align:left}
-.bexp:hover{background:var(--bg3);color:var(--text2)}
 .clist{display:none}
 .pcard{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:8px}
 .pcard.ccritico{border-left:3px solid var(--red)}.pcard.calerta{border-left:3px solid var(--amber)}.pcard.cstock{border-left:3px solid var(--green)}
@@ -160,10 +195,12 @@ button{font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border:non
 .ctrow:hover{background:var(--bg3)}
 .iempty{padding:3rem 2rem;text-align:center;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius)}
 .iicon{font-size:32px;display:block;margin-bottom:1rem;color:var(--text3)}
-/* LOADING */
 .loading{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;gap:1rem}
 .spinner{width:32px;height:32px;border:3px solid var(--border2);border-top-color:var(--green);border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
+/* SVG CHARTS */
+.svg-chart{width:100%;overflow:visible}
+.chart-wrap{width:100%;overflow-x:auto}
 @media(max-width:768px){
   .app{flex-direction:column;height:100dvh}
   .sidebar{display:none}
@@ -195,18 +232,97 @@ button{font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border:non
 <body>
 <div id="root"></div>
 <script type="text/babel" data-presets="react">
-const {useState,useEffect,createContext,useContext,useCallback}=React;
-const RC=window.Recharts||{};
-const {BarChart,Bar,LineChart,Line,XAxis,YAxis,Tooltip,ResponsiveContainer,ReferenceLine,CartesianGrid}=RC;
+const {useState,useEffect,createContext,useContext,useCallback,useRef}=React;
 
-// ── SUPABASE ──
 const SB_URL='https://vjsgyatreowdclpsssem.supabase.co';
 const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZqc2d5YXRyZW93ZGNscHNzc2VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1ODY1OTMsImV4cCI6MjA4OTE2MjU5M30.Yoy_zj55dBFltOSvAIS9WFDb0aKtwMMwiwaRsanb6p4';
 const sb=supabase.createClient(SB_URL,SB_KEY);
 
-// ── CONTEXT ──
+// ── AUTH SCREENS ──
+function AuthScreen(){
+  const [mode,setMode]=useState('login');
+  const [nombre,setNombre]=useState('');
+  const [email,setEmail]=useState('');
+  const [pass,setPass]=useState('');
+  const [loading,setLoading]=useState(false);
+  const [err,setErr]=useState('');
+  const [ok,setOk]=useState('');
+
+  async function handleLogin(e){
+    e.preventDefault();setErr('');setLoading(true);
+    const {error}=await sb.auth.signInWithPassword({email,password:pass});
+    if(error)setErr(error.message);
+    setLoading(false);
+  }
+  async function handleRegister(e){
+    e.preventDefault();setErr('');setLoading(true);
+    const {data,error}=await sb.auth.signUp({email,password:pass});
+    if(error){setErr(error.message);setLoading(false);return;}
+    if(data.user){
+      await sb.from('user_profiles').insert([{id:data.user.id,nombre,email,status:'pending'}]);
+      setOk('Cuenta creada. Esperando aprobación del administrador.');
+      setMode('pending_msg');
+    }
+    setLoading(false);
+  }
+
+  if(mode==='pending_msg') return(
+    <div className="auth-wrap">
+      <div className="auth-card" style={{textAlign:'center'}}>
+        <span style={{fontSize:48,display:'block',marginBottom:'1rem'}}>⏳</span>
+        <div className="auth-title">Solicitud enviada</div>
+        <div className="auth-sub" style={{marginBottom:'1.5rem'}}>El administrador revisará tu solicitud y te dará acceso.</div>
+        <div style={{background:'var(--bg3)',borderRadius:8,padding:12,fontSize:12,color:'var(--text3)',textAlign:'left',lineHeight:1.7}}>
+          <strong style={{color:'var(--text2)'}}>¿Qué sigue?</strong><br/>
+          El admin entrará a Supabase → Authentication → Users y aprobará tu perfil en la tabla user_profiles.
+        </div>
+        <button className="auth-link-btn" style={{marginTop:'1.5rem'}} onClick={()=>setMode('login')}>Volver al inicio</button>
+      </div>
+    </div>
+  );
+
+  return(
+    <div className="auth-wrap">
+      <div className="auth-card">
+        <div className="auth-logo"><span className="auth-logo-icon">⬡</span><span className="auth-logo-name">Inventario</span></div>
+        <div className="auth-title">{mode==='login'?'Bienvenido':'Crear cuenta'}</div>
+        <div className="auth-sub">{mode==='login'?'Ingresa con tu cuenta para continuar':'Tu acceso será aprobado por el administrador'}</div>
+        {err&&<div className="auth-err">{err}</div>}
+        {ok&&<div className="auth-ok">{ok}</div>}
+        <form onSubmit={mode==='login'?handleLogin:handleRegister}>
+          {mode==='register'&&<div className="auth-field"><label>Nombre completo</label><input value={nombre} onChange={e=>setNombre(e.target.value)} placeholder="Juan Pérez" required/></div>}
+          <div className="auth-field"><label>Correo</label><input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="usuario@empresa.com" required/></div>
+          <div className="auth-field"><label>Contraseña</label><input type="password" value={pass} onChange={e=>setPass(e.target.value)} placeholder={mode==='login'?'Tu contraseña':'Mínimo 6 caracteres'} required/></div>
+          <button type="submit" className="auth-btn" disabled={loading}>{loading?'Cargando...':(mode==='login'?'Iniciar sesión':'Registrarme')}</button>
+        </form>
+        <div className="auth-divider"><div className="auth-divider-line"/><div className="auth-divider-text">o</div><div className="auth-divider-line"/></div>
+        <button className="auth-link-btn" onClick={()=>{setMode(mode==='login'?'register':'login');setErr('');setOk('');}}>
+          {mode==='login'?'Crear cuenta nueva':'Ya tengo cuenta'}
+        </button>
+        {mode==='register'&&<div className="auth-switch" style={{marginTop:'1rem'}}>¿Ya tienes cuenta? <span onClick={()=>setMode('login')}>Iniciar sesión</span></div>}
+      </div>
+    </div>
+  );
+}
+
+function PendingScreen({onLogout}){
+  return(
+    <div className="pending-wrap">
+      <div className="pending-card">
+        <span className="pending-icon">⏳</span>
+        <div className="pending-title">Acceso pendiente</div>
+        <div className="pending-badge"><div className="pending-dot"/>Esperando aprobación</div>
+        <div className="pending-sub">Tu solicitud fue enviada. El administrador revisará tu cuenta y te dará acceso en breve.</div>
+        <div className="pending-info"><strong>¿Cómo me aprueban?</strong><br/>El admin entra a Supabase → Table Editor → user_profiles → cambia tu status de "pending" a "approved".</div>
+        <button className="pending-logout" onClick={onLogout}>Cerrar sesión</button>
+      </div>
+    </div>
+  );
+}
+
+// ── STORE ──
 const Ctx=createContext(null);
-function Store({children}){
+function Store({user,userName,onLogout,children}){
   const [products,setProducts]=useState([]);
   const [quincenas,setQuincenas]=useState([]);
   const [qItems,setQItems]=useState([]);
@@ -215,7 +331,6 @@ function Store({children}){
   const [error,setError]=useState(null);
 
   const load=useCallback(async()=>{
-    setLoading(true);
     try{
       const [p,q,qi,i]=await Promise.all([
         sb.from('products').select('*').order('id'),
@@ -224,9 +339,6 @@ function Store({children}){
         sb.from('ingresos').select('*').order('fecha',{ascending:false}),
       ]);
       if(p.error)throw p.error;
-      if(q.error)throw q.error;
-      if(qi.error)throw qi.error;
-      if(i.error)throw i.error;
       setProducts(p.data||[]);
       setQuincenas(q.data||[]);
       setQItems(qi.data||[]);
@@ -237,7 +349,6 @@ function Store({children}){
 
   useEffect(()=>{load();},[load]);
 
-  // Build quincenas with inventario map
   const quincenasWithInv=quincenas.map(q=>{
     const inv={};
     qItems.filter(i=>i.quincena_id===q.id).forEach(i=>{inv[i.product_id]=i.cantidad;});
@@ -270,22 +381,9 @@ function Store({children}){
       return{...p,stock,consumo,pedir:Math.max(0,consumo*2-stock),dias:getDias(p.id),estado:getEstado(p.id)};
     }).sort((a,b)=>a.dias-b.dias);
   }
-
-  async function addProd(d){
-    const {error}=await sb.from('products').insert([d]);
-    if(error)return error.message;
-    await load();return null;
-  }
-  async function updateProd(id,d){
-    const {error}=await sb.from('products').update(d).eq('id',id);
-    if(error)return error.message;
-    await load();return null;
-  }
-  async function delProd(id){
-    if(!confirm('¿Eliminar este producto?'))return;
-    await sb.from('products').delete().eq('id',id);
-    await load();
-  }
+  async function addProd(d){const {error}=await sb.from('products').insert([d]);if(error)return error.message;await load();return null;}
+  async function updateProd(id,d){const {error}=await sb.from('products').update(d).eq('id',id);if(error)return error.message;await load();return null;}
+  async function delProd(id){if(!confirm('¿Eliminar este producto? Se perderá su historial.'))return;await sb.from('products').delete().eq('id',id);await load();}
   async function addQ(label,fecha,inv){
     const {data,error}=await sb.from('quincenas').insert([{label,fecha}]).select().single();
     if(error)return error.message;
@@ -293,27 +391,17 @@ function Store({children}){
     if(items.length){const {error:e2}=await sb.from('quincena_items').insert(items);if(e2)return e2.message;}
     await load();return null;
   }
-  async function addIng(pid,cant,fecha,nota){
-    const {error}=await sb.from('ingresos').insert([{product_id:parseInt(pid),cantidad:parseInt(cant),fecha,nota}]);
-    if(error)return error.message;
+  async function updateQ(qid,inv){
+    await sb.from('quincena_items').delete().eq('quincena_id',qid);
+    const items=Object.entries(inv).map(([pid,cantidad])=>({quincena_id:qid,product_id:parseInt(pid),cantidad}));
+    if(items.length){const {error}=await sb.from('quincena_items').insert(items);if(error)return error.message;}
     await load();return null;
   }
-  function csvInventario(){
-    const rows=[['Criticidad','Código','Nombre','Flujo','Unidad','Stock','Días','Estado']];
-    products.forEach(p=>{const e=getEstado(p.id);rows.push([p.criticidad,p.codigo,p.nombre,p.flujo,p.unidad,getStock(p.id),getDias(p.id)===999?'Sin hist.':getDias(p.id),e==='critico'?'Crítico':e==='alerta'?'Alerta':'En stock'])});
-    dl(rows,'inventario');
-  }
-  function csvLista(){
-    const rows=[['Código','Nombre','Stock','Consume/Q','Pedir','Unidad','Días']];
-    getLista().forEach(p=>rows.push([p.codigo,p.nombre,p.stock,p.consumo,p.pedir,p.unidad,p.dias]));
-    dl(rows,'lista-compra');
-  }
-  function dl(rows,name){
-    const csv=rows.map(r=>r.map(c=>`"${c}"`).join(',')).join('\n');
-    const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);a.download=`${name}-${new Date().toISOString().slice(0,10)}.csv`;a.click();
-  }
-
-  return <Ctx.Provider value={{products,quincenas:quincenasWithInv,ingresos,loading,error,getStock,getConsumo,getDias,getEstado,getLista,addProd,updateProd,delProd,addQ,addIng,csvInventario,csvLista}}>{children}</Ctx.Provider>;
+  async function addIng(pid,cant,fecha,nota){const {error}=await sb.from('ingresos').insert([{product_id:parseInt(pid),cantidad:parseInt(cant),fecha,nota}]);if(error)return error.message;await load();return null;}
+  function dl(rows,name){const csv=rows.map(r=>r.map(c=>`"${c}"`).join(',')).join('\n');const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);a.download=`${name}-${new Date().toISOString().slice(0,10)}.csv`;a.click();}
+  function csvInventario(){const rows=[['Criticidad','Código','Nombre','Flujo','Unidad','Stock','Días','Estado']];products.forEach(p=>{const e=getEstado(p.id);rows.push([p.criticidad,p.codigo,p.nombre,p.flujo,p.unidad,getStock(p.id),getDias(p.id)===999?'Sin hist.':getDias(p.id),e==='critico'?'Crítico':e==='alerta'?'Alerta':'En stock'])});dl(rows,'inventario');}
+  function csvLista(){const rows=[['Código','Nombre','Stock','Consume/Q','Pedir','Unidad','Días']];getLista().forEach(p=>rows.push([p.codigo,p.nombre,p.stock,p.consumo,p.pedir,p.unidad,p.dias]));dl(rows,'lista-compra');}
+  return <Ctx.Provider value={{products,quincenas:quincenasWithInv,ingresos,loading,error,userName,onLogout,getStock,getConsumo,getDias,getEstado,getLista,addProd,updateProd,delProd,addQ,updateQ,addIng,csvInventario,csvLista}}>{children}</Ctx.Provider>;
 }
 const useApp=()=>useContext(Ctx);
 
@@ -321,8 +409,73 @@ const useApp=()=>useContext(Ctx);
 function DBadge({d}){const c=d<=10?'r':d<=20?'a':'g';return <span className={`dbadge ${c}`}>{d===999?'—':`${d}d`}</span>}
 function Barra({d}){const p=Math.min(100,Math.round(d/30*100)),col=d<=10?'#ff5050':d<=20?'#f0a500':'#00c97d';return <div className="bwrap"><div className="bfill" style={{width:`${p}%`,background:col}}/></div>}
 const lbl=e=>e==='critico'?'Crítico':e==='alerta'?'Alerta':'En stock';
-const TT={background:'#1e1e1e',border:'1px solid rgba(255,255,255,0.1)',borderRadius:8,fontSize:12,color:'#f0f0f0'};
 function Msg({text,type}){return text?<div className={`smsg ${type||'ok'}`}>{text}</div>:null}
+
+// ── SVG BAR CHART ──
+function BarChartSVG({data,color='#00c97d',height=160}){
+  if(!data||!data.length)return <div className="nodata">Sin datos suficientes</div>;
+  const max=Math.max(...data.map(d=>d.v),1);
+  const W=500,H=height,pad={l:36,r:10,t:10,b:28};
+  const cW=W-pad.l-pad.r,cH=H-pad.t-pad.b;
+  const bW=Math.min(36,cW/data.length*0.6);
+  const gap=cW/data.length;
+  return(
+    <div className="chart-wrap">
+      <svg viewBox={`0 0 ${W} ${H}`} className="svg-chart" style={{height}}>
+        {[0,.25,.5,.75,1].map(t=>{
+          const y=pad.t+cH*(1-t);
+          return <g key={t}>
+            <line x1={pad.l} y1={y} x2={W-pad.r} y2={y} stroke="rgba(255,255,255,0.05)" strokeWidth="1"/>
+            <text x={pad.l-4} y={y+4} textAnchor="end" fontSize="9" fill="#555">{Math.round(max*t)}</text>
+          </g>;
+        })}
+        {data.map((d,i)=>{
+          const x=pad.l+gap*i+gap/2;
+          const bH=Math.max(2,(d.v/max)*cH);
+          const y=pad.t+cH-bH;
+          return <g key={i}>
+            <rect x={x-bW/2} y={y} width={bW} height={bH} fill={color} opacity="0.85" rx="3"/>
+            <text x={x} y={H-pad.b+14} textAnchor="middle" fontSize="9" fill="#555">{d.q}</text>
+            <text x={x} y={y-4} textAnchor="middle" fontSize="9" fill="#888">{d.v}</text>
+          </g>;
+        })}
+      </svg>
+    </div>
+  );
+}
+
+// ── SVG LINE CHART ──
+function LineChartSVG({data,height=180}){
+  if(!data||data.length<2)return <div className="nodata">Sin datos suficientes</div>;
+  const allVals=[...data.map(d=>d.r).filter(v=>v!=null),...data.map(d=>d.p).filter(v=>v!=null)];
+  const max=Math.max(...allVals,1);
+  const W=500,H=height,pad={l:40,r:10,t:10,b:28};
+  const cW=W-pad.l-pad.r,cH=H-pad.t-pad.b;
+  const xp=(i)=>pad.l+i*(cW/(data.length-1));
+  const yp=(v)=>pad.t+cH*(1-v/max);
+  const realPts=data.map((d,i)=>d.r!=null?`${xp(i)},${yp(d.r)}`:null).filter(Boolean);
+  const projPts=data.map((d,i)=>d.p!=null?`${xp(i)},${yp(d.p)}`:null).filter(Boolean);
+  return(
+    <div className="chart-wrap">
+      <svg viewBox={`0 0 ${W} ${H}`} className="svg-chart" style={{height}}>
+        {[0,.25,.5,.75,1].map(t=>{
+          const y=pad.t+cH*(1-t);
+          return <g key={t}>
+            <line x1={pad.l} y1={y} x2={W-pad.r} y2={y} stroke="rgba(255,255,255,0.05)" strokeWidth="1"/>
+            <text x={pad.l-4} y={y+4} textAnchor="end" fontSize="9" fill="#555">{Math.round(max*t)}</text>
+          </g>;
+        })}
+        {realPts.length>1&&<polyline points={realPts.join(' ')} fill="none" stroke="#00c97d" strokeWidth="2" strokeLinejoin="round"/>}
+        {projPts.length>1&&<polyline points={projPts.join(' ')} fill="none" stroke="#4d9eff" strokeWidth="2" strokeDasharray="6,4" strokeLinejoin="round"/>}
+        {data.map((d,i)=><g key={i}>
+          {d.r!=null&&<circle cx={xp(i)} cy={yp(d.r)} r="4" fill="#00c97d"/>}
+          {d.p!=null&&<circle cx={xp(i)} cy={yp(d.p)} r="3.5" fill="#0f0f0f" stroke="#4d9eff" strokeWidth="2"/>}
+          <text x={xp(i)} y={H-pad.b+14} textAnchor="middle" fontSize="9" fill="#555">{d.q}</text>
+        </g>)}
+      </svg>
+    </div>
+  );
+}
 
 // ── DASHBOARD ──
 function Dashboard(){
@@ -342,7 +495,7 @@ function Dashboard(){
     </div>
     {lista.length>0&&<div style={{marginBottom:'1.5rem'}}>
       <button className="cbtn" onClick={()=>setShow(v=>!v)}>
-        <span>🛒</span> Necesito comprar
+        <span>🛒</span>Necesito comprar
         <span style={{background:'rgba(0,0,0,.2)',padding:'1px 8px',borderRadius:99,fontSize:12}}>{lista.length}</span>
         <span style={{marginLeft:'auto',fontSize:10}}>{show?'▲':'▼'}</span>
       </button>
@@ -402,8 +555,8 @@ function Inventario(){
   const [bus,setBus]=useState('');const [fil,setFil]=useState('Todos');
   const [sf,setSf]=useState(false);const [si,setSi]=useState(false);
   const [editId,setEditId]=useState(null);
-  const emptyForm={criticidad:'Alto',codigo:'',nombre:'',descripcion:'',flujo:'',unidad:'',conversion:'',stockInicial:''};
-  const [form,setForm]=useState(emptyForm);
+  const empty={criticidad:'Alto',codigo:'',nombre:'',descripcion:'',flujo:'',unidad:'',conversion:'',stockInicial:''};
+  const [form,setForm]=useState(empty);
   const [ing,setIng]=useState({productoId:'',cantidad:'',fecha:new Date().toISOString().slice(0,10),nota:''});
   const [msg,setMsg]=useState({text:'',type:'ok'});
   const [saving,setSaving]=useState(false);
@@ -413,35 +566,24 @@ function Inventario(){
     const mb=!bus||p.nombre.toLowerCase().includes(bus.toLowerCase())||p.codigo.toLowerCase().includes(bus.toLowerCase());
     return mf&&mb;
   });
-  function ok(t,type='ok'){setMsg({text:t,type});setTimeout(()=>setMsg({text:'',type:'ok'}),3000)}
-  function openEdit(p){
-    setEditId(p.id);
-    setForm({criticidad:p.criticidad,codigo:p.codigo,nombre:p.nombre,descripcion:p.descripcion||'',flujo:p.flujo||'',unidad:p.unidad||'',conversion:p.conversion||'',stockInicial:''});
-    setSf(true);setSi(false);
-  }
-  function openNew(){
-    setEditId(null);setForm(emptyForm);setSf(v=>!v);setSi(false);
-  }
+  function showMsg(t,type='ok'){setMsg({text:t,type});setTimeout(()=>setMsg({text:'',type:'ok'}),3000)}
+  function openEdit(p){setEditId(p.id);setForm({criticidad:p.criticidad,codigo:p.codigo,nombre:p.nombre,descripcion:p.descripcion||'',flujo:p.flujo||'',unidad:p.unidad||'',conversion:p.conversion||'',stockInicial:''});setSf(true);setSi(false);}
+  function openNew(){setEditId(null);setForm(empty);setSf(v=>!v);setSi(false);}
   async function saveProd(){
-    if(!form.codigo||!form.nombre)return;
-    setSaving(true);
+    if(!form.codigo||!form.nombre)return;setSaving(true);
     if(editId){
       const err=await updateProd(editId,{criticidad:form.criticidad,codigo:form.codigo,nombre:form.nombre,descripcion:form.descripcion,flujo:form.flujo,unidad:form.unidad,conversion:form.conversion});
-      if(err){ok(err,'err');}else{setSf(false);setEditId(null);ok('Producto actualizado ✓');}
+      err?showMsg(err,'err'):(setSf(false),setEditId(null),showMsg('Producto actualizado ✓'));
     }else{
       const err=await addProd({criticidad:form.criticidad,codigo:form.codigo,nombre:form.nombre,descripcion:form.descripcion,flujo:form.flujo,unidad:form.unidad,conversion:form.conversion});
-      if(err){ok(err,'err');}else{setForm(emptyForm);setSf(false);ok('Producto guardado ✓');}
+      err?showMsg(err,'err'):(setForm(empty),setSf(false),showMsg('Producto guardado ✓'));
     }
     setSaving(false);
   }
   async function saveIng(){
-    if(!ing.productoId||!ing.cantidad||parseInt(ing.cantidad)<=0)return;
-    setSaving(true);
+    if(!ing.productoId||!ing.cantidad||parseInt(ing.cantidad)<=0)return;setSaving(true);
     const err=await addIng(ing.productoId,ing.cantidad,ing.fecha,ing.nota);
-    if(err){ok(err,'err');}else{
-      setIng({productoId:'',cantidad:'',fecha:new Date().toISOString().slice(0,10),nota:''});
-      setSi(false);ok('Ingreso registrado ✓');
-    }
+    err?showMsg(err,'err'):(setIng({productoId:'',cantidad:'',fecha:new Date().toISOString().slice(0,10),nota:''}),setSi(false),showMsg('Ingreso registrado ✓'));
     setSaving(false);
   }
   return <div className="page" style={{position:'relative'}}>
@@ -472,7 +614,7 @@ function Inventario(){
       <div className="tabs">{flujos.map(f=><button key={f} className={`tab${fil===f?' on':''}`} onClick={()=>setFil(f)}>{f}</button>)}</div>
     </div>
     <div className="twrap t-inv">
-      <div className="thead"><span>Crit.</span><span>Código</span><span>Nombre</span><span>Flujo</span><span>Unidad</span><span>Stock</span><span>Días</span><span>Estado</span><span></span></div>
+      <div className="thead"><span>Crit.</span><span>Código</span><span>Nombre</span><span>Flujo</span><span>Unidad</span><span>Stock</span><span>Días</span><span>Estado</span><span>Acc.</span></div>
       {filtered.map(p=>{const s=getStock(p.id),d=getDias(p.id),e=getEstado(p.id);return(
         <div key={p.id} className="trow">
           <span><span className={`cbadge c${p.criticidad[0]}`}>{p.criticidad[0]}</span></span>
@@ -484,8 +626,8 @@ function Inventario(){
           <span className="mono">{d===999?'—':`${d}d`}</span>
           <span><span className={`badge ${e}`}>{lbl(e)}</span></span>
           <span className="row-actions">
-            <button className="bedit" onClick={()=>openEdit(p)} title="Editar">✏️</button>
-            <button className="bdel" onClick={()=>delProd(p.id)} title="Eliminar">✕</button>
+            <button className="bedit" title="Editar" onClick={()=>openEdit(p)}>✏️</button>
+            <button className="bdel" title="Eliminar" onClick={()=>delProd(p.id)}>✕</button>
           </span>
         </div>
       );})}
@@ -498,7 +640,7 @@ function Inventario(){
             <div><span className="pname">{p.nombre}</span><span className="pdesc">{p.codigo} · {p.flujo}</span></div>
             <div style={{display:'flex',alignItems:'center',gap:4}}>
               <span className={`badge ${e}`}>{lbl(e)}</span>
-              <button className="bedit" onClick={()=>openEdit(p)} title="Editar">✏️</button>
+              <button className="bedit" onClick={()=>openEdit(p)}>✏️</button>
             </div>
           </div>
           <div className="cbot"><div style={{display:'flex',alignItems:'baseline',gap:4}}><span className={`sval ${e}`}>{s}</span><span style={{fontSize:11,color:'var(--text2)'}}> {p.unidad}s</span></div><span style={{fontSize:11,color:'var(--text2)'}}>{d===999?'Sin historial':`~${d} días`}</span></div>
@@ -524,7 +666,7 @@ function Inventario(){
 
 // ── CONTROL ──
 function Control(){
-  const {products,quincenas,addQ,getStock}=useApp();
+  const {products,quincenas,addQ,updateQ,getStock}=useApp();
   const hoy=new Date().toISOString().slice(0,10);
   const m=new Date().getDate()<=15?1:2,mes=new Date().toLocaleString('es',{month:'short'});
   const [label,setLabel]=useState(`Q${m} ${mes[0].toUpperCase()+mes.slice(1)}`);
@@ -532,47 +674,66 @@ function Control(){
   const [counts,setCounts]=useState({});
   const [msg,setMsg]=useState({text:'',type:'ok'});
   const [saving,setSaving]=useState(false);
+  const [editQ,setEditQ]=useState(null);
   const uq=quincenas.length?[...quincenas].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha))[0]:null;
+
+  function openEditQ(q){
+    setEditQ(q);
+    const c={};Object.entries(q.inventario).forEach(([k,v])=>{c[k]=v;});
+    setCounts(c);
+  }
+  function cancelEdit(){setEditQ(null);setCounts({});}
+
   async function guardar(){
     setSaving(true);
     const inv={};products.forEach(p=>{const v=counts[p.id];inv[p.id]=v!==undefined&&v!==''?parseInt(v):getStock(p.id);});
-    const err=await addQ(label,fecha,inv);
-    if(err){setMsg({text:err,type:'err'});}else{setMsg({text:'Control guardado correctamente',type:'ok'});setCounts({});}
+    let err;
+    if(editQ){err=await updateQ(editQ.id,inv);}
+    else{err=await addQ(label,fecha,inv);}
+    if(err){setMsg({text:err,type:'err'});}
+    else{setMsg({text:editQ?'Control actualizado ✓':'Control guardado ✓',type:'ok'});setCounts({});setEditQ(null);}
     setTimeout(()=>setMsg({text:'',type:'ok'}),3000);
     setSaving(false);
   }
+
+  const ref=uq&&!editQ?uq:null;
   return <div className="page">
-    <div className="ph"><div><h1 className="pt">Control</h1><p className="ps">Solo ingresa el stock contado. Vacíos mantienen valor anterior.</p></div></div>
-    <div className="cfgcard"><div className="cfgrow">
-      <div className="field" style={{minWidth:0}}><label>Etiqueta</label><input value={label} onChange={e=>setLabel(e.target.value)} style={{width:130}}/></div>
-      <div className="field" style={{minWidth:0}}><label>Fecha</label><input type="date" value={fecha} onChange={e=>setFecha(e.target.value)} style={{width:155}}/></div>
-      {uq&&<span className="hint">Último: <strong>{uq.label}</strong></span>}
-    </div></div>
+    <div className="ph"><div><h1 className="pt">Control</h1><p className="ps">{editQ?`Editando: ${editQ.label}`:'Solo ingresa el stock contado. Vacíos mantienen valor anterior.'}</p></div></div>
+    <div className="cfgcard">
+      <div className="cfgrow">
+        {!editQ&&<><div className="field" style={{minWidth:0}}><label>Etiqueta</label><input value={label} onChange={e=>setLabel(e.target.value)} style={{width:130}}/></div>
+        <div className="field" style={{minWidth:0}}><label>Fecha</label><input type="date" value={fecha} onChange={e=>setFecha(e.target.value)} style={{width:155}}/></div></>}
+        {editQ&&<span style={{fontSize:13,fontWeight:500}}>Editando conteo de <strong style={{color:'var(--green)'}}>{editQ.label}</strong></span>}
+        {ref&&<span className="hint">Último: <strong>{ref.label}</strong></span>}
+      </div>
+    </div>
     <Msg text={msg.text} type={msg.type}/>
     <div className="twrap t-ctrl">
-      <div className="thead"><span>Producto</span><span>Anterior</span><span>Conteo hoy</span><span>Diferencia</span></div>
+      <div className="thead"><span>Producto</span><span>Anterior</span><span>Conteo</span><span>Diferencia</span></div>
       {products.map(p=>{
-        const ant=uq?(uq.inventario[p.id]??'—'):'—';
+        const ant=ref?(ref.inventario[p.id]??'—'):'—';
         const con=counts[p.id];
         const diff=con!==undefined&&con!==''&&ant!=='—'?parseInt(con)-parseInt(ant):null;
         return <div key={p.id} className="trow">
           <span><span className="pname">{p.nombre}</span><span className="pdesc">{p.unidad} · {p.flujo}</span></span>
-          <span className="mono" style={{fontSize:15,fontWeight:500}}>{ant}</span>
-          <span><input type="number" min="0" placeholder={ant!=='—'?String(ant):'0'} value={counts[p.id]??''} onChange={e=>setCounts(v=>({...v,[p.id]:e.target.value}))} className="cinput"/></span>
+          <span className="mono" style={{fontSize:15,fontWeight:500}}>{editQ?(editQ.inventario[p.id]??'—'):ant}</span>
+          <span><input type="number" min="0" placeholder={editQ?(editQ.inventario[p.id]??'0'):ant!=='—'?String(ant):'0'} value={counts[p.id]??''} onChange={e=>setCounts(v=>({...v,[p.id]:e.target.value}))} className="cinput"/></span>
           <span>{diff!==null?<span className={diff<0?'dn':diff>0?'dp':'dz'}>{diff>0?'+':''}{diff}</span>:<span className="dz">—</span>}</span>
         </div>;
       })}
     </div>
     <div className="foot">
-      <button className="bp bpsave" onClick={guardar} disabled={saving}>{saving?'Guardando...':'Guardar conteo de '+label}</button>
+      {editQ&&<button className="bs" onClick={cancelEdit}>Cancelar edición</button>}
+      <button className="bp bpsave" onClick={guardar} disabled={saving}>{saving?'Guardando...':(editQ?`Actualizar ${editQ.label}`:`Guardar conteo de ${label}`)}</button>
     </div>
     {quincenas.length>0&&<div>
-      <div className="stitle" style={{marginBottom:'.75rem'}}>Historial</div>
+      <div className="stitle" style={{marginBottom:'.75rem'}}>Historial de controles</div>
       {[...quincenas].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha)).map(q=>(
         <div key={q.id} className="qitem">
           <span style={{fontWeight:500,fontSize:13,minWidth:70}}>{q.label}</span>
           <span style={{fontSize:12,color:'var(--text2)'}}>{new Date(q.fecha).toLocaleDateString('es',{day:'2-digit',month:'short',year:'numeric'})}</span>
           <span style={{fontSize:12,color:'var(--text3)',marginLeft:'auto'}}>{Object.keys(q.inventario).length} productos</span>
+          <button className="bedit" style={{marginLeft:8}} title="Editar este conteo" onClick={()=>openEditQ(q)}>✏️</button>
         </div>
       ))}
     </div>}
@@ -584,8 +745,8 @@ function Ingresos(){
   const {products,ingresos}=useApp();
   const sorted=[...ingresos].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
   return <div className="page">
-    <div className="ph"><div><h1 className="pt">Ingresos</h1><p className="ps">Historial · Registra ingresos desde el botón <strong style={{color:'var(--green)'}}>↑</strong> en Inventario</p></div></div>
-    {!sorted.length?<div className="iempty"><span className="iicon">↑</span><p style={{fontSize:13,color:'var(--text2)',marginBottom:6}}>No hay ingresos registrados aún.</p><p style={{fontSize:13,color:'var(--text2)'}}>Ve a <strong style={{color:'var(--green)'}}>Inventario</strong> y usa el botón flotante ↑</p></div>
+    <div className="ph"><div><h1 className="pt">Ingresos</h1><p className="ps">Historial · Registra ingresos con el botón <strong style={{color:'var(--green)'}}>↑</strong> en Inventario</p></div></div>
+    {!sorted.length?<div className="iempty"><span className="iicon">↑</span><p style={{fontSize:13,color:'var(--text2)',marginBottom:6}}>No hay ingresos registrados.</p><p style={{fontSize:13,color:'var(--text2)'}}>Ve a <strong style={{color:'var(--green)'}}>Inventario</strong> y usa el botón flotante ↑</p></div>
     :<div className="twrap t-ing">
       <div className="thead"><span>Fecha</span><span>Producto</span><span>Cantidad</span><span>Nota</span></div>
       {sorted.map(i=>{const p=products.find(x=>x.id===i.product_id);return(
@@ -602,7 +763,7 @@ function Ingresos(){
 
 // ── GRÁFICOS ──
 function Graficos(){
-  const {products,quincenas,ingresos,getStock,getConsumo,getDias,getEstado}=useApp();
+  const {products,quincenas,getStock,getConsumo,getDias,getEstado}=useApp();
   const [sid,setSid]=useState(products[0]?.id??null);
   const [tab,setTab]=useState('c');
   const sq=[...quincenas].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
@@ -613,7 +774,7 @@ function Graficos(){
   const qs=[...quincenas].sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
   const cd=[];for(let i=1;i<qs.length;i++){const p=qs[i-1].inventario[sid]??0,c=qs[i].inventario[sid]??0;cd.push({q:qs[i].label,v:Math.max(0,p-c)});}
   const sr=qs.map(q=>({q:q.label,s:q.inventario[sid]??0}));
-  let s=stock;const py=['Q2 Mar','Q1 Abr','Q2 Abr','Q1 May'].map(l=>{s=Math.max(0,s-avg);return{q:l,p:s};});
+  let s=stock;const py=['Próx.1','Próx.2','Próx.3','Próx.4'].map(l=>{s=Math.max(0,s-avg);return{q:l,p:s};});
   const comb=[...sr.slice(-3).map(d=>({q:d.q,r:d.s})),{q:py[0]?.q,r:stock,p:stock},...py.map(d=>({q:d.q,p:d.p}))];
   const qAobj=quincenas.find(q=>q.id===parseInt(qa)),qBobj=quincenas.find(q=>q.id===parseInt(qb));
   const comp=(qAobj&&qBobj)?products.map(p=>{
@@ -622,7 +783,6 @@ function Graficos(){
     return{n:p.nombre,ca,cb,diff};
   }):[];
   const td=comp.length?Math.round(comp.reduce((s,p)=>s+p.diff,0)/comp.length):0;
-  const hasRC=BarChart&&Bar&&LineChart&&Line&&XAxis&&YAxis&&ResponsiveContainer;
   return <div className="page">
     <div className="ph"><div><h1 className="pt">Gráficos</h1><p className="ps">Análisis de consumo y proyección</p></div></div>
     <div className="ptabs">
@@ -640,34 +800,17 @@ function Graficos(){
           <div className="metric"><span className="ml">Consume prom/Q</span><span className="mv">{avg}<small style={{fontSize:12,fontWeight:400,color:'var(--text2)'}}> {prod.unidad}s</small></span></div>
           <div className="metric"><span className="ml">Días restantes</span><span className={`mv ${est}`}>{dias===999?'—':`${dias}d`}</span></div>
         </div>
-        {hasRC?<>
-          <div className="chcard">
-            <div className="chtitle">Consumo por quincena</div>
-            {cd.length<1?<div className="nodata">Necesitas al menos 2 controles registrados</div>
-            :<ResponsiveContainer width="100%" height={180}><BarChart data={cd} barSize={26}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false}/>
-              <XAxis dataKey="q" tick={{fontSize:11,fill:'#555'}} axisLine={false} tickLine={false}/>
-              <YAxis tick={{fontSize:11,fill:'#555'}} axisLine={false} tickLine={false} width={28}/>
-              <Tooltip contentStyle={TT} cursor={{fill:'rgba(255,255,255,0.03)'}}/>
-              <Bar dataKey="v" name={`Consumo (${prod.unidad}s)`} fill="#00c97d" radius={[4,4,0,0]} opacity={0.85}/>
-            </BarChart></ResponsiveContainer>}
+        <div className="chcard">
+          <div className="chtitle">Consumo por quincena</div>
+          <BarChartSVG data={cd} color="#00c97d" height={160}/>
+        </div>
+        <div className="chcard">
+          <div className="chrow">
+            <div className="chtitle">Stock real vs proyección</div>
+            <div className="legend"><span><span className="ldot" style={{background:'#00c97d'}}/>Real</span><span><span className="ldot" style={{background:'#4d9eff'}}/>Proyección</span></div>
           </div>
-          <div className="chcard">
-            <div className="chrow"><div className="chtitle">Stock real vs proyección</div>
-              <div className="legend"><span><span className="ldot" style={{background:'#00c97d'}}/>Real</span><span><span className="ldot" style={{background:'#4d9eff'}}/>Proyección</span></div>
-            </div>
-            {sr.length<1?<div className="nodata">Necesitas al menos un control registrado</div>
-            :<ResponsiveContainer width="100%" height={200}><LineChart data={comb}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false}/>
-              <XAxis dataKey="q" tick={{fontSize:11,fill:'#555'}} axisLine={false} tickLine={false}/>
-              <YAxis tick={{fontSize:11,fill:'#555'}} axisLine={false} tickLine={false} width={32}/>
-              <Tooltip contentStyle={TT}/>
-              <Line dataKey="r" name="Real" stroke="#00c97d" strokeWidth={2} dot={{r:4,fill:'#00c97d'}} connectNulls={false}/>
-              <Line dataKey="p" name="Proyección" stroke="#4d9eff" strokeWidth={2} strokeDasharray="5 4" dot={{r:3,fill:'#4d9eff',strokeWidth:0}} connectNulls={false}/>
-              {avg>0&&<ReferenceLine y={avg} stroke="#f0a500" strokeDasharray="4 3" strokeWidth={1}/>}
-            </LineChart></ResponsiveContainer>}
-          </div>
-        </>:<div className="nodata">Cargando gráficos...</div>}
+          <LineChartSVG data={comb} height={180}/>
+        </div>
       </>}
     </>}
     {tab==='k'&&<>
@@ -676,8 +819,7 @@ function Graficos(){
         <span className="vs">vs</span>
         <div className="field"><label style={{fontSize:11,textTransform:'uppercase',letterSpacing:'.05em',color:'var(--text2)'}}>Quincena anterior</label><select value={qb??''} onChange={e=>setQb(e.target.value)} style={{minWidth:150,width:'auto'}}>{sq.map(q=><option key={q.id} value={q.id}>{q.label}</option>)}</select></div>
       </div>
-      {quincenas.length<2?<div className="nodata">Necesitas al menos 2 controles registrados para comparar</div>
-      :<>
+      {quincenas.length<2?<div className="nodata">Necesitas al menos 2 controles registrados</div>:<>
         <div className="metrics3">
           <div className="metric"><span className="ml">Variación prom.</span><span className={`mv${td>0?' cr':td<0?' cg':''}`}>{td>0?'+':''}{td}%</span></div>
           <div className="metric"><span className="ml">Subieron</span><span className="mv cr">{comp.filter(p=>p.diff>0).length}</span></div>
@@ -697,17 +839,24 @@ function Graficos(){
   </div>;
 }
 
-// ── APP ──
+// ── APP ROOT ──
 const PAGES=[{id:'dashboard',label:'Dashboard',icon:'▦'},{id:'inventario',label:'Inventario',icon:'≡'},{id:'control',label:'Control',icon:'⊞'},{id:'ingresos',label:'Ingresos',icon:'↑'},{id:'graficos',label:'Gráficos',icon:'∿'}];
-function App(){
+
+function AppMain({user,profile,onLogout}){
   const [page,setPage]=useState('dashboard');
-  return <Store><Main page={page} setPage={setPage}/></Store>;
+  const userName=profile?.nombre||user.email;
+  return(
+    <Store user={user} userName={userName} onLogout={onLogout}>
+      <AppInner page={page} setPage={setPage} onLogout={onLogout} userName={userName}/>
+    </Store>
+  );
 }
-function Main({page,setPage}){
+
+function AppInner({page,setPage,onLogout,userName}){
   const {getEstado,products,csvInventario,loading,error}=useApp();
   const nc=products.filter(p=>getEstado(p.id)==='critico').length;
   if(loading)return <div className="loading"><div className="spinner"/><span style={{fontSize:13,color:'var(--text2)'}}>Cargando inventario...</span></div>;
-  if(error)return <div className="loading"><span style={{fontSize:14,color:'var(--red)'}}>Error: {error}</span></div>;
+  if(error)return <div className="loading"><span style={{fontSize:14,color:'var(--red)'}}>Error: {error}</span><button className="bs" style={{marginTop:8}} onClick={()=>window.location.reload()}>Reintentar</button></div>;
   return <div className="app">
     <aside className="sidebar">
       <div className="brand"><span className="brand-icon">⬡</span><span className="brand-name">Inventario</span></div>
@@ -717,7 +866,11 @@ function Main({page,setPage}){
           {p.id==='dashboard'&&nc>0&&<span className="nbadge">{nc}</span>}
         </button>)}
       </nav>
-      <div className="sidebar-foot"><button className="bexp" onClick={csvInventario}>↓ Exportar CSV</button></div>
+      <div className="sidebar-foot">
+        <div className="user-info"><span className="user-dot"/><span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{userName}</span></div>
+        <button className="bexp" onClick={csvInventario}>↓ Exportar CSV</button>
+        <button className="bexp" onClick={onLogout}>Cerrar sesión</button>
+      </div>
     </aside>
     <main className="main">
       {page==='dashboard'&&<Dashboard/>}
@@ -737,7 +890,32 @@ function Main({page,setPage}){
     </nav>
   </div>;
 }
-ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+
+function Root(){
+  const [session,setSession]=useState(undefined);
+  const [profile,setProfile]=useState(null);
+
+  useEffect(()=>{
+    sb.auth.getSession().then(({data:{session}})=>setSession(session));
+    const {data:{subscription}}=sb.auth.onAuthStateChange((_,session)=>{setSession(session);if(!session)setProfile(null);});
+    return()=>subscription.unsubscribe();
+  },[]);
+
+  useEffect(()=>{
+    if(!session)return;
+    sb.from('user_profiles').select('*').eq('id',session.user.id).single().then(({data})=>setProfile(data));
+  },[session]);
+
+  async function handleLogout(){await sb.auth.signOut();setSession(null);setProfile(null);}
+
+  if(session===undefined)return <div className="loading"><div className="spinner"/></div>;
+  if(!session)return <AuthScreen/>;
+  if(!profile)return <div className="loading"><div className="spinner"/><span style={{fontSize:13,color:'var(--text2)'}}>Verificando acceso...</span></div>;
+  if(profile.status!=='approved')return <PendingScreen onLogout={handleLogout}/>;
+  return <AppMain user={session.user} profile={profile} onLogout={handleLogout}/>;
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<Root/>);
 </script>
 </body>
 </html>
