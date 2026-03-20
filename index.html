@@ -391,17 +391,29 @@ function Store({user,userName,onLogout,children}){
     if(items.length){const {error:e2}=await sb.from('quincena_items').insert(items);if(e2)return e2.message;}
     await load();return null;
   }
-  async function updateQ(qid,inv){
+  async function updateQ(qid,label,fecha,inv){
+    const {error:e1}=await sb.from('quincenas').update({label,fecha}).eq('id',qid);
+    if(e1)return e1.message;
     await sb.from('quincena_items').delete().eq('quincena_id',qid);
     const items=Object.entries(inv).map(([pid,cantidad])=>({quincena_id:qid,product_id:parseInt(pid),cantidad}));
     if(items.length){const {error}=await sb.from('quincena_items').insert(items);if(error)return error.message;}
     await load();return null;
   }
+  function csvConsolidado(products,quincenasWithInv,dl){
+    const qs=[...quincenasWithInv].sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
+    const headers=['Código','Nombre','Flujo','Unidad',...qs.map(q=>q.label)];
+    const rows=[headers];
+    products.forEach(p=>{
+      rows.push([p.codigo,p.nombre,p.flujo,p.unidad,...qs.map(q=>q.inventario[p.id]??'')]);
+    });
+    dl(rows,'consolidado-conteos');
+  }
   async function addIng(pid,cant,fecha,nota){const {error}=await sb.from('ingresos').insert([{product_id:parseInt(pid),cantidad:parseInt(cant),fecha,nota}]);if(error)return error.message;await load();return null;}
   function dl(rows,name){const csv=rows.map(r=>r.map(c=>`"${c}"`).join(',')).join('\n');const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);a.download=`${name}-${new Date().toISOString().slice(0,10)}.csv`;a.click();}
   function csvInventario(){const rows=[['Criticidad','Código','Nombre','Flujo','Unidad','Stock','Días','Estado']];products.forEach(p=>{const e=getEstado(p.id);rows.push([p.criticidad,p.codigo,p.nombre,p.flujo,p.unidad,getStock(p.id),getDias(p.id)===999?'Sin hist.':getDias(p.id),e==='critico'?'Crítico':e==='alerta'?'Alerta':'En stock'])});dl(rows,'inventario');}
   function csvLista(){const rows=[['Código','Nombre','Stock','Consume/Q','Pedir','Unidad','Días']];getLista().forEach(p=>rows.push([p.codigo,p.nombre,p.stock,p.consumo,p.pedir,p.unidad,p.dias]));dl(rows,'lista-compra');}
-  return <Ctx.Provider value={{products,quincenas:quincenasWithInv,ingresos,loading,error,userName,onLogout,getStock,getConsumo,getDias,getEstado,getLista,addProd,updateProd,delProd,addQ,updateQ,addIng,csvInventario,csvLista}}>{children}</Ctx.Provider>;
+  function csvConsolidadoFn(){csvConsolidado(products,quincenasWithInv,dl);}
+  return <Ctx.Provider value={{products,quincenas:quincenasWithInv,ingresos,loading,error,userName,onLogout,getStock,getConsumo,getDias,getEstado,getLista,addProd,updateProd,delProd,addQ,updateQ,addIng,csvInventario,csvLista,csvConsolidado:csvConsolidadoFn}}>{children}</Ctx.Provider>;
 }
 const useApp=()=>useContext(Ctx);
 
@@ -666,45 +678,60 @@ function Inventario(){
 
 // ── CONTROL ──
 function Control(){
-  const {products,quincenas,addQ,updateQ,getStock}=useApp();
+  const {products,quincenas,addQ,updateQ,getStock,csvConsolidado}=useApp();
   const hoy=new Date().toISOString().slice(0,10);
   const m=new Date().getDate()<=15?1:2,mes=new Date().toLocaleString('es',{month:'short'});
-  const [label,setLabel]=useState(`Q${m} ${mes[0].toUpperCase()+mes.slice(1)}`);
+  const defLabel=`Q${m} ${mes[0].toUpperCase()+mes.slice(1)}`;
+  const [label,setLabel]=useState(defLabel);
   const [fecha,setFecha]=useState(hoy);
   const [counts,setCounts]=useState({});
   const [msg,setMsg]=useState({text:'',type:'ok'});
   const [saving,setSaving]=useState(false);
   const [editQ,setEditQ]=useState(null);
+  const [editLabel,setEditLabel]=useState('');
+  const [editFecha,setEditFecha]=useState('');
   const uq=quincenas.length?[...quincenas].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha))[0]:null;
 
   function openEditQ(q){
-    setEditQ(q);
+    setEditQ(q);setEditLabel(q.label);setEditFecha(q.fecha);
     const c={};Object.entries(q.inventario).forEach(([k,v])=>{c[k]=v;});
     setCounts(c);
   }
-  function cancelEdit(){setEditQ(null);setCounts({});}
+  function cancelEdit(){setEditQ(null);setCounts({});setEditLabel('');setEditFecha('');}
 
   async function guardar(){
     setSaving(true);
     const inv={};products.forEach(p=>{const v=counts[p.id];inv[p.id]=v!==undefined&&v!==''?parseInt(v):getStock(p.id);});
     let err;
-    if(editQ){err=await updateQ(editQ.id,inv);}
+    if(editQ){err=await updateQ(editQ.id,editLabel||editQ.label,editFecha||editQ.fecha,inv);}
     else{err=await addQ(label,fecha,inv);}
     if(err){setMsg({text:err,type:'err'});}
-    else{setMsg({text:editQ?'Control actualizado ✓':'Control guardado ✓',type:'ok'});setCounts({});setEditQ(null);}
+    else{
+      setMsg({text:editQ?'Conteo actualizado ✓':'Conteo guardado ✓',type:'ok'});
+      setCounts({});setEditQ(null);setEditLabel('');setEditFecha('');
+      if(!editQ){setLabel(defLabel);setFecha(hoy);}
+    }
     setTimeout(()=>setMsg({text:'',type:'ok'}),3000);
     setSaving(false);
   }
 
   const ref=uq&&!editQ?uq:null;
   return <div className="page">
-    <div className="ph"><div><h1 className="pt">Control</h1><p className="ps">{editQ?`Editando: ${editQ.label}`:'Solo ingresa el stock contado. Vacíos mantienen valor anterior.'}</p></div></div>
+    <div className="ph">
+      <div><h1 className="pt">Control</h1><p className="ps">{editQ?`Editando conteo: ${editQ.label}`:'Ingresa el stock contado. Vacíos mantienen el valor anterior.'}</p></div>
+      {quincenas.length>0&&!editQ&&<button className="bs" style={{fontSize:12}} onClick={csvConsolidado}>↓ Consolidado CSV</button>}
+    </div>
     <div className="cfgcard">
       <div className="cfgrow">
-        {!editQ&&<><div className="field" style={{minWidth:0}}><label>Etiqueta</label><input value={label} onChange={e=>setLabel(e.target.value)} style={{width:130}}/></div>
-        <div className="field" style={{minWidth:0}}><label>Fecha</label><input type="date" value={fecha} onChange={e=>setFecha(e.target.value)} style={{width:155}}/></div></>}
-        {editQ&&<span style={{fontSize:13,fontWeight:500}}>Editando conteo de <strong style={{color:'var(--green)'}}>{editQ.label}</strong></span>}
-        {ref&&<span className="hint">Último: <strong>{ref.label}</strong></span>}
+        <div className="field" style={{minWidth:0}}>
+          <label>Etiqueta del conteo</label>
+          <input value={editQ?editLabel:label} onChange={e=>editQ?setEditLabel(e.target.value):setLabel(e.target.value)} placeholder="Q1 Mar" style={{width:140}}/>
+        </div>
+        <div className="field" style={{minWidth:0}}>
+          <label>Fecha</label>
+          <input type="date" value={editQ?editFecha:fecha} onChange={e=>editQ?setEditFecha(e.target.value):setFecha(e.target.value)} style={{width:155}}/>
+        </div>
+        {ref&&<span className="hint">Último conteo: <strong>{ref.label}</strong></span>}
       </div>
     </div>
     <Msg text={msg.text} type={msg.type}/>
@@ -724,16 +751,16 @@ function Control(){
     </div>
     <div className="foot">
       {editQ&&<button className="bs" onClick={cancelEdit}>Cancelar edición</button>}
-      <button className="bp bpsave" onClick={guardar} disabled={saving}>{saving?'Guardando...':(editQ?`Actualizar ${editQ.label}`:`Guardar conteo de ${label}`)}</button>
+      <button className="bp bpsave" onClick={guardar} disabled={saving}>{saving?'Guardando...':(editQ?'Actualizar conteo':'Guardar conteo')}</button>
     </div>
     {quincenas.length>0&&<div>
-      <div className="stitle" style={{marginBottom:'.75rem'}}>Historial de controles</div>
+      <div className="stitle" style={{marginBottom:'.75rem'}}>Historial de conteos</div>
       {[...quincenas].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha)).map(q=>(
         <div key={q.id} className="qitem">
-          <span style={{fontWeight:500,fontSize:13,minWidth:70}}>{q.label}</span>
+          <span style={{fontWeight:500,fontSize:13,minWidth:80}}>{q.label}</span>
           <span style={{fontSize:12,color:'var(--text2)'}}>{new Date(q.fecha).toLocaleDateString('es',{day:'2-digit',month:'short',year:'numeric'})}</span>
           <span style={{fontSize:12,color:'var(--text3)',marginLeft:'auto'}}>{Object.keys(q.inventario).length} productos</span>
-          <button className="bedit" style={{marginLeft:8}} title="Editar este conteo" onClick={()=>openEditQ(q)}>✏️</button>
+          <button className="bedit" style={{marginLeft:8}} title="Editar" onClick={()=>openEditQ(q)}>✏️</button>
         </div>
       ))}
     </div>}
