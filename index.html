@@ -299,21 +299,23 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
   const [quincenas,setQuincenas]=useState([]);
   const [qItems,setQItems]=useState([]);
   const [ingresos,setIngresos]=useState([]);
+  const [salidas,setSalidas]=useState([]);
   const [actLog,setActLog]=useState([]);
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState(null);
 
   const load=useCallback(async()=>{
     try{
-      const [p,q,qi,i,al]=await Promise.all([
+      const [p,q,qi,i,sal,al]=await Promise.all([
         sb.from('products').select('*').order('id'),
         sb.from('quincenas').select('*').order('fecha'),
         sb.from('quincena_items').select('*'),
         sb.from('ingresos').select('*').order('fecha',{ascending:false}),
+        sb.from('salidas').select('*').order('created_at',{ascending:false}),
         sb.from('activity_log').select('*').order('created_at',{ascending:false}).limit(100),
       ]);
       if(p.error)throw p.error;
-      setProducts(p.data||[]);setQuincenas(q.data||[]);setQItems(qi.data||[]);setIngresos(i.data||[]);setActLog(al.data||[]);
+      setProducts(p.data||[]);setQuincenas(q.data||[]);setQItems(qi.data||[]);setIngresos(i.data||[]);setSalidas(sal.data||[]);setActLog(al.data||[]);
     }catch(e){setError(e.message);}
     setLoading(false);
   },[]);
@@ -334,7 +336,8 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
     const u=[...quincenasWithInv].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha))[0];
     const base=u.inventario[pid]??0;
     const ing=ingresos.filter(i=>i.product_id===pid&&new Date(i.fecha)>=new Date(u.fecha)).reduce((s,i)=>s+i.cantidad,0);
-    return base+ing;
+    const sal=salidas.filter(s=>s.product_id===pid&&s.status==='approved'&&new Date(s.fecha)>=new Date(u.fecha)).reduce((t,s)=>t+s.cantidad,0);
+    return base+ing-sal;
   }
   function getConsumo(pid){
     const validated=quincenasWithInv.filter(q=>q.status==='validated'||q.status===null||q.status===undefined);
@@ -415,10 +418,28 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
     await logAction('Registró ingreso',`${p?.nombre||pid}: +${cant}`);await load();return null;
   }
   function dl(rows,name){const csv=rows.map(r=>r.map(c=>`"${c}"`).join(',')).join('\n');const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);a.download=`${name}-${new Date().toISOString().slice(0,10)}.csv`;a.click();}
+  async function addSalida(pid,cant,fecha){
+    const stock=getStock(parseInt(pid));
+    if(parseInt(cant)>stock)return `Stock insuficiente. Disponible: ${stock}`;
+    const {error}=await sb.from('salidas').insert([{product_id:parseInt(pid),cantidad:parseInt(cant),fecha,status:'pending',created_by:userEmail}]);
+    if(error)return error.message;
+    const p=products.find(x=>x.id===parseInt(pid));
+    await logAction('Solicitó salida',`${p?.nombre||pid}: -${cant}`);await load();return null;
+  }
+  async function aprobarSalida(id,prodNombre,cant){
+    const {error}=await sb.from('salidas').update({status:'approved',reviewed_by:userEmail,reviewed_at:new Date().toISOString()}).eq('id',id);
+    if(error)return error.message;
+    await logAction('Aprobó salida',`${prodNombre}: -${cant}`);await load();return null;
+  }
+  async function rechazarSalida(id,prodNombre,cant){
+    const {error}=await sb.from('salidas').update({status:'rejected',reviewed_by:userEmail,reviewed_at:new Date().toISOString()}).eq('id',id);
+    if(error)return error.message;
+    await logAction('Rechazó salida',`${prodNombre}: -${cant}`);await load();return null;
+  }
   function csvInventario(){const rows=[['Criticidad','Código','Nombre','Flujo','Unidad','Stock','Días','Estado']];products.forEach(p=>{const e=getEstado(p.id);rows.push([p.criticidad,p.codigo,p.nombre,p.flujo,p.unidad,getStock(p.id),getDias(p.id)===999?'Sin hist.':getDias(p.id),e==='critico'?'Crítico':e==='alerta'?'Alerta':'En stock'])});dl(rows,'inventario');}
   function csvLista(){const rows=[['Código','Nombre','Stock','Consume/Q','Pedir','Unidad','Días']];getLista().forEach(p=>rows.push([p.codigo,p.nombre,p.stock,p.consumo,p.pedir,p.unidad,p.dias]));dl(rows,'lista-compra');}
   function csvConsolidado(){const qs=[...quincenasWithInv].sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));const headers=['Código','Nombre','Flujo','Unidad',...qs.map(q=>q.label)];const rows=[headers];products.forEach(p=>{rows.push([p.codigo,p.nombre,p.flujo,p.unidad,...qs.map(q=>q.inventario[p.id]??'')]);});dl(rows,'consolidado-conteos');}
-  return <Ctx.Provider value={{products,quincenas:quincenasWithInv,ingresos,actLog,loading,error,userEmail,isSupervisor,onLogout,getStock,getConsumo,getDias,getEstado,getLista,getAnomalias,addProd,updateProd,delProd,addQ,updateQ,validarQ,addIng,csvInventario,csvLista,csvConsolidado}}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{products,quincenas:quincenasWithInv,ingresos,salidas,actLog,loading,error,userEmail,isSupervisor,onLogout,getStock,getConsumo,getDias,getEstado,getLista,getAnomalias,addProd,updateProd,delProd,addQ,updateQ,validarQ,addIng,addSalida,aprobarSalida,rechazarSalida,csvInventario,csvLista,csvConsolidado}}>{children}</Ctx.Provider>;
 }
 const useApp=()=>useContext(Ctx);
 
@@ -457,13 +478,12 @@ function LineChartSVG({data,height=180}){
 }
 
 function Dashboard(){
-  const {products,getStock,getConsumo,getDias,getEstado,getLista,csvLista,isSupervisor,getAnomalias}=useApp();
+  const {products,getStock,getConsumo,getDias,getEstado,getLista,csvLista}=useApp();
   const [show,setShow]=useState(false);
   const cr=products.filter(p=>getEstado(p.id)==='critico');
   const al=products.filter(p=>getEstado(p.id)==='alerta');
   const ok=products.filter(p=>getEstado(p.id)==='stock');
   const lista=getLista();
-  const anomalias=isSupervisor?getAnomalias():[];
   return <div className="page">
     <div className="ph"><div><h1 className="pt">Dashboard</h1><p className="ps">Resumen del inventario actual</p></div></div>
     <div className="metrics">
@@ -479,14 +499,6 @@ function Dashboard(){
         <div className="chead"><span>Producto</span><span>Stock</span><span>/Q</span><span>Pedir</span></div>
         {lista.map(p=><div key={p.id} className="crow"><span><span className="pname">{p.nombre}</span><span className="pdesc">{p.codigo}</span></span><span className="mono">{p.stock}<small> {p.unidad}</small></span><span className="mono">~{p.consumo}</span><span className="mono cg">+{p.pedir}<small> {p.unidad}</small></span></div>)}
       </div>}
-    </div>}
-    {isSupervisor&&anomalias.length>0&&<div className="section">
-      <h2 className="stitle"><span className="sdot" style={{background:'var(--amber)'}}/>Anomalías detectadas — solo visible para supervisores</h2>
-      {anomalias.map((a,i)=><div key={i} className="anomaly-card">
-        <div className="anomaly-title">⚠️ {a.tipo} — {a.producto}</div>
-        <div className="anomaly-desc">{a.detalle}</div>
-        <div className="anomaly-meta">Conteo: {a.conteo}</div>
-      </div>)}
     </div>}
     {cr.length>0&&<div className="section">
       <h2 className="stitle"><span className="sdot" style={{background:'var(--red)'}}/>Críticos</h2>
@@ -507,7 +519,148 @@ function Dashboard(){
 }
 
 function Inventario(){
-  const {products,getStock,getDias,getEstado,addProd,updateProd,delProd,addIng,isSupervisor}=useApp();
+  const {products,salidas,getStock,getDias,getEstado,addProd,updateProd,delProd,addIng,addSalida,isSupervisor}=useApp();
+  const [bus,setBus]=useState('');const [fil,setFil]=useState('Todos');
+  const [sf,setSf]=useState(false);const [si,setSi]=useState(false);const [ss,setSs]=useState(false);
+  const [editId,setEditId]=useState(null);
+  const empty={criticidad:'Alto',codigo:'',nombre:'',descripcion:'',flujo:'',unidad:'',conversion:'',stockInicial:''};
+  const [form,setForm]=useState(empty);
+  const [ing,setIng]=useState({productoId:'',cantidad:'',fecha:new Date().toISOString().slice(0,10),nota:''});
+  const [sal,setSal]=useState({productoId:'',cantidad:'',fecha:new Date().toISOString().slice(0,10)});
+  const [msg,setMsg]=useState({text:'',type:'ok'});
+  const [saving,setSaving]=useState(false);
+  const flujos=['Todos',...new Set(products.map(p=>p.flujo).filter(Boolean))];
+  const filtered=products.filter(p=>{
+    const mf=fil==='Todos'||p.flujo.toLowerCase()===fil.toLowerCase();
+    const mb=!bus||p.nombre.toLowerCase().includes(bus.toLowerCase())||p.codigo.toLowerCase().includes(bus.toLowerCase());
+    return mf&&mb;
+  });
+  function showMsg(t,type='ok'){setMsg({text:t,type});setTimeout(()=>setMsg({text:'',type:'ok'}),3000)}
+  function openEdit(p){setEditId(p.id);setForm({criticidad:p.criticidad,codigo:p.codigo,nombre:p.nombre,descripcion:p.descripcion||'',flujo:p.flujo||'',unidad:p.unidad||'',conversion:p.conversion||'',stockInicial:''});setSf(true);setSi(false);setSs(false);}
+  function openNew(){setEditId(null);setForm(empty);setSf(v=>!v);setSi(false);setSs(false);}
+  async function saveProd(){
+    if(!form.codigo||!form.nombre)return;setSaving(true);
+    if(editId){const err=await updateProd(editId,{criticidad:form.criticidad,codigo:form.codigo,nombre:form.nombre,descripcion:form.descripcion,flujo:form.flujo,unidad:form.unidad,conversion:form.conversion});err?showMsg(err,'err'):(setSf(false),setEditId(null),showMsg('Producto actualizado ✓'));}
+    else{const err=await addProd({criticidad:form.criticidad,codigo:form.codigo,nombre:form.nombre,descripcion:form.descripcion,flujo:form.flujo,unidad:form.unidad,conversion:form.conversion});err?showMsg(err,'err'):(setForm(empty),setSf(false),showMsg('Producto guardado ✓'));}
+    setSaving(false);
+  }
+  async function saveIng(){
+    if(!ing.productoId||!ing.cantidad||parseInt(ing.cantidad)<=0)return;setSaving(true);
+    const err=await addIng(ing.productoId,ing.cantidad,ing.fecha,ing.nota);
+    err?showMsg(err,'err'):(setIng({productoId:'',cantidad:'',fecha:new Date().toISOString().slice(0,10),nota:''}),setSi(false),showMsg('Ingreso registrado ✓'));
+    setSaving(false);
+  }
+  async function saveSal(){
+    if(!sal.productoId||!sal.cantidad||parseInt(sal.cantidad)<=0)return;setSaving(true);
+    const err=await addSalida(sal.productoId,sal.cantidad,sal.fecha);
+    err?showMsg(err,'err'):(setSal({productoId:'',cantidad:'',fecha:new Date().toISOString().slice(0,10)}),setSs(false),showMsg('Salida solicitada — pendiente de autorización ✓'));
+    setSaving(false);
+  }
+  const misSalidas=salidas.slice(0,5);
+  const statusColor={pending:'var(--amber)',approved:'var(--green)',rejected:'var(--red)'};
+  const statusLabel={pending:'Pendiente',approved:'Aprobada',rejected:'Rechazada'};
+  return <div className="page" style={{position:'relative'}}>
+    <div className="ph">
+      <div><h1 className="pt">Inventario</h1><p className="ps">{products.length} productos</p></div>
+      <button className="bp" onClick={openNew}>{sf&&!editId?'Cancelar':'+ Nuevo producto'}</button>
+    </div>
+    <Msg text={msg.text} type={msg.type}/>
+    {sf&&<div className="fcard" style={{borderColor:editId?'rgba(77,158,255,0.3)':'var(--border2)'}}>
+      <div className="ftitle">{editId?'✏️ Editar producto':'Nuevo producto'}</div>
+      <div className="fgrid">
+        <div className="field"><label>Criticidad</label><select value={form.criticidad} onChange={e=>setForm(f=>({...f,criticidad:e.target.value}))}><option>Alto</option><option>Medio</option><option>Bajo</option></select></div>
+        <div className="field"><label>Código *</label><input value={form.codigo} onChange={e=>setForm(f=>({...f,codigo:e.target.value}))} placeholder="P12345"/></div>
+        <div className="field s2"><label>Nombre *</label><input value={form.nombre} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Nombre del producto"/></div>
+        <div className="field s2"><label>Descripción</label><input value={form.descripcion} onChange={e=>setForm(f=>({...f,descripcion:e.target.value}))} placeholder="Descripción"/></div>
+        <div className="field"><label>Flujo</label><input value={form.flujo} onChange={e=>setForm(f=>({...f,flujo:e.target.value}))} placeholder="Vans, Masterbox..."/></div>
+        <div className="field"><label>Unidad</label><input value={form.unidad} onChange={e=>setForm(f=>({...f,unidad:e.target.value}))} placeholder="Rollo, Unid..."/></div>
+        <div className="field"><label>Conversión</label><input value={form.conversion} onChange={e=>setForm(f=>({...f,conversion:e.target.value}))} placeholder="Rollo x 100 Etiq"/></div>
+        {!editId&&<div className="field"><label>Stock inicial</label><input type="number" min="0" value={form.stockInicial} onChange={e=>setForm(f=>({...f,stockInicial:e.target.value}))} placeholder="0"/></div>}
+      </div>
+      <div className="factions"><button className="bp" onClick={saveProd} disabled={saving}>{saving?'Guardando...':(editId?'Guardar cambios':'Guardar producto')}</button><button className="bs" onClick={()=>{setSf(false);setEditId(null);}}>Cancelar</button></div>
+    </div>}
+    <div className="filters">
+      <input className="search" value={bus} onChange={e=>setBus(e.target.value)} placeholder="Buscar..."/>
+      <div className="tabs">{flujos.map(f=><button key={f} className={`tab${fil===f?' on':''}`} onClick={()=>setFil(f)}>{f}</button>)}</div>
+    </div>
+    <div className="twrap t-inv">
+      <div className="thead"><span>Crit.</span><span>Código</span><span>Nombre</span><span>Flujo</span><span>Unidad</span><span>Stock</span><span>Días</span><span>Estado</span><span>Acc.</span></div>
+      {filtered.map(p=>{const s=getStock(p.id),d=getDias(p.id),e=getEstado(p.id);return(
+        <div key={p.id} className="trow">
+          <span><span className={`cbadge c${p.criticidad[0]}`}>{p.criticidad[0]}</span></span>
+          <span className="mono" style={{fontSize:11,color:'var(--text2)'}}>{p.codigo}</span>
+          <span><span className="pname">{p.nombre}</span><span className="pdesc">{p.descripcion}</span></span>
+          <span><span className="chip">{p.flujo}</span></span>
+          <span><span className="pname">{p.unidad}</span><span className="pdesc">{p.conversion}</span></span>
+          <span className={`mono ${e}`}>{s}</span>
+          <span className="mono">{d===999?'—':`${d}d`}</span>
+          <span><span className={`badge ${e}`}>{lbl(e)}</span></span>
+          <span className="row-actions">
+            {isSupervisor&&<button className="bedit" title="Editar" onClick={()=>openEdit(p)}>✏️</button>}
+            {isSupervisor&&<button className="bdel" title="Eliminar" onClick={()=>delProd(p.id)}>✕</button>}
+          </span>
+        </div>
+      );})}
+      {!filtered.length&&<div className="empty">No se encontraron productos</div>}
+    </div>
+    <div className="clist">
+      {filtered.map(p=>{const s=getStock(p.id),d=getDias(p.id),e=getEstado(p.id);return(
+        <div key={p.id} className={`pcard c${e}`}>
+          <div className="ctop">
+            <div><span className="pname">{p.nombre}</span><span className="pdesc">{p.codigo} · {p.flujo}</span></div>
+            <div style={{display:'flex',alignItems:'center',gap:4}}>
+              <span className={`badge ${e}`}>{lbl(e)}</span>
+              {isSupervisor&&<button className="bedit" onClick={()=>openEdit(p)}>✏️</button>}
+            </div>
+          </div>
+          <div className="cbot"><div style={{display:'flex',alignItems:'baseline',gap:4}}><span className={`sval ${e}`}>{s}</span><span style={{fontSize:11,color:'var(--text2)'}}> {p.unidad}s</span></div><span style={{fontSize:11,color:'var(--text2)'}}>{d===999?'Sin historial':`~${d} días`}</span></div>
+        </div>
+      );})}
+      {!filtered.length&&<div className="empty">No se encontraron productos</div>}
+    </div>
+    {misSalidas.length>0&&<div style={{marginTop:'1.5rem'}}>
+      <h2 className="stitle">Últimas salidas</h2>
+      <div className="twrap">
+        <div className="thead" style={{gridTemplateColumns:'110px 2fr 80px 90px'}}><span>Fecha</span><span>Producto</span><span>Cantidad</span><span>Estado</span></div>
+        {misSalidas.map(s=>{const p=products.find(x=>x.id===s.product_id);return(
+          <div key={s.id} className="trow" style={{gridTemplateColumns:'110px 2fr 80px 90px'}}>
+            <span style={{fontSize:12,color:'var(--text2)'}}>{new Date(s.fecha).toLocaleDateString('es',{day:'2-digit',month:'short',year:'numeric'})}</span>
+            <span><span className="pname">{p?.nombre||'—'}</span><span className="pdesc">{s.created_by}</span></span>
+            <span className="mono" style={{color:'var(--red)'}}>-{s.cantidad}<small> {p?.unidad}</small></span>
+            <span><span className="badge" style={{background:`${statusColor[s.status]}22`,color:statusColor[s.status]}}>{statusLabel[s.status]}</span></span>
+          </div>
+        );})}
+      </div>
+    </div>}
+    <div style={{position:'fixed',bottom:80,right:20,display:'flex',flexDirection:'column',gap:8,alignItems:'flex-end',zIndex:90}}>
+      <div style={{display:'flex',alignItems:'center',gap:6}}>
+        <span style={{fontSize:10,color:'var(--text3)'}}>Ingreso</span>
+        <button className="fab" onClick={()=>{setSi(v=>!v);setSf(false);setEditId(null);setSs(false);}} style={{background:'var(--green)',color:'#000'}}>{si?'✕':'↑'}</button>
+      </div>
+      <div style={{display:'flex',alignItems:'center',gap:6}}>
+        <span style={{fontSize:10,color:'var(--text3)'}}>Salida</span>
+        <button className="fab" onClick={()=>{setSs(v=>!v);setSf(false);setEditId(null);setSi(false);}} style={{background:'var(--red)',color:'#fff'}}>{ss?'✕':'↓'}</button>
+      </div>
+    </div>
+    {si&&<div className="modal">
+      <div className="mtitle">Registrar ingreso</div>
+      <div className="mform">
+        <div className="field"><label>Producto *</label><select value={ing.productoId} onChange={e=>setIng(f=>({...f,productoId:e.target.value}))}><option value="">Seleccionar...</option>{products.map(p=><option key={p.id} value={p.id}>{p.nombre}</option>)}</select></div>
+        <div className="mrow"><div className="field"><label>Cantidad *</label><input type="number" min="1" value={ing.cantidad} onChange={e=>setIng(f=>({...f,cantidad:e.target.value}))} placeholder="0"/></div><div className="field"><label>Fecha</label><input type="date" value={ing.fecha} onChange={e=>setIng(f=>({...f,fecha:e.target.value}))}/></div></div>
+        <div className="field"><label>Nota</label><input value={ing.nota} onChange={e=>setIng(f=>({...f,nota:e.target.value}))} placeholder="Proveedor..."/></div>
+      </div>
+      <div className="mactions"><button className="bp" onClick={saveIng} disabled={saving}>{saving?'Guardando...':'Registrar'}</button><button className="bs" onClick={()=>setSi(false)}>Cancelar</button></div>
+    </div>}
+    {ss&&<div className="modal" style={{borderColor:'rgba(255,80,80,0.3)'}}>
+      <div className="mtitle" style={{color:'var(--red)'}}>↓ Solicitar salida</div>
+      <div className="mform">
+        <div className="field"><label>Producto *</label><select value={sal.productoId} onChange={e=>setSal(f=>({...f,productoId:e.target.value}))}><option value="">Seleccionar...</option>{products.map(p=><option key={p.id} value={p.id}>{p.nombre} (Stock: {getStock(p.id)})</option>)}</select></div>
+        <div className="mrow"><div className="field"><label>Cantidad *</label><input type="number" min="1" value={sal.cantidad} onChange={e=>setSal(f=>({...f,cantidad:e.target.value}))} placeholder="0"/></div><div className="field"><label>Fecha</label><input type="date" value={sal.fecha} onChange={e=>setSal(f=>({...f,fecha:e.target.value}))}/></div></div>
+      </div>
+      <div className="mactions"><button className="bp" style={{background:'var(--red)'}} onClick={saveSal} disabled={saving}>{saving?'Enviando...':'Solicitar salida'}</button><button className="bs" onClick={()=>setSs(false)}>Cancelar</button></div>
+    </div>}
+  </div>;
+}
   const [bus,setBus]=useState('');const [fil,setFil]=useState('Todos');
   const [sf,setSf]=useState(false);const [si,setSi]=useState(false);
   const [editId,setEditId]=useState(null);
@@ -611,6 +764,91 @@ function Inventario(){
 
 function Control(){
   const {products,quincenas,addQ,updateQ,getStock,csvConsolidado,isSupervisor,validarQ}=useApp();
+  const hoy=new Date().toISOString().slice(0,10);
+  const m=new Date().getDate()<=15?1:2,mes=new Date().toLocaleString('es',{month:'short'});
+  const defLabel=`Q${m} ${mes[0].toUpperCase()+mes.slice(1)}`;
+  const [label,setLabel]=useState(defLabel);
+  const [fecha,setFecha]=useState(hoy);
+  const [counts,setCounts]=useState({});
+  const [msg,setMsg]=useState({text:'',type:'ok'});
+  const [saving,setSaving]=useState(false);
+  const [editQ,setEditQ]=useState(null);
+  const [editLabel,setEditLabel]=useState('');
+  const [editFecha,setEditFecha]=useState('');
+  const [filtroC,setFiltroC]=useState('Todos');
+  const uq=quincenas.length?[...quincenas].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha))[0]:null;
+  const {userEmail}=useApp();
+  const yaRegistroHoy=quincenas.some(q=>q.created_by===userEmail&&q.fecha===hoy);
+
+  const productosFiltrados=products.filter(p=>filtroC==='Todos'||p.criticidad===filtroC);
+
+  function openEditQ(q){setEditQ(q);setEditLabel(q.label);setEditFecha(q.fecha);const c={};Object.entries(q.inventario).forEach(([k,v])=>{c[k]=v;});setCounts(c);}
+  function cancelEdit(){setEditQ(null);setCounts({});setEditLabel('');setEditFecha('');}
+
+  async function guardar(){
+    if(!isSupervisor&&yaRegistroHoy){setMsg({text:'Ya registraste un conteo hoy.',type:'err'});return;}
+    setSaving(true);
+    const inv={};products.forEach(p=>{const v=counts[p.id];inv[p.id]=v!==undefined&&v!==''?parseInt(v):getStock(p.id);});
+    let err;
+    if(editQ){err=await updateQ(editQ.id,editLabel||editQ.label,editFecha||editQ.fecha,inv);}
+    else{err=await addQ(label,fecha,inv);}
+    if(err){setMsg({text:err,type:'err'});}
+    else{setMsg({text:editQ?'Conteo actualizado ✓':'Conteo guardado — pendiente de validación ✓',type:'ok'});setCounts({});setEditQ(null);setEditLabel('');setEditFecha('');if(!editQ){setLabel(defLabel);setFecha(hoy);}}
+    setTimeout(()=>setMsg({text:'',type:'ok'}),3000);setSaving(false);
+  }
+
+  const ref=uq&&!editQ?uq:null;
+  return <div className="page">
+    <div className="ph">
+      <div><h1 className="pt">Control</h1><p className="ps">{editQ?`Editando: ${editQ.label}`:'Ingresa el stock contado. Vacíos mantienen el valor anterior.'}</p></div>
+      {quincenas.length>0&&!editQ&&isSupervisor&&<button className="bs" style={{fontSize:12}} onClick={csvConsolidado}>↓ Consolidado CSV</button>}
+    </div>
+    <div className="cfgcard"><div className="cfgrow">
+      <div className="field" style={{minWidth:0}}><label>Etiqueta del conteo</label><input value={editQ?editLabel:label} onChange={e=>editQ?setEditLabel(e.target.value):setLabel(e.target.value)} placeholder="Q1 Mar" style={{width:140}}/></div>
+      <div className="field" style={{minWidth:0}}><label>Fecha</label><input type="date" value={editQ?editFecha:fecha} onChange={e=>editQ?setEditFecha(e.target.value):setFecha(e.target.value)} style={{width:155}}/></div>
+      {ref&&<span className="hint">Último: <strong>{ref.label}</strong></span>}
+    </div></div>
+    <div className="tabs" style={{marginBottom:'1rem',width:'fit-content'}}>
+      {['Todos','Alto','Medio','Bajo'].map(f=><button key={f} className={`tab${filtroC===f?' on':''}`} onClick={()=>setFiltroC(f)}>{f==='Todos'?'Todos':`Criticidad ${f.charAt(0)}`}</button>)}
+    </div>
+    <Msg text={msg.text} type={msg.type}/>
+    <div className="twrap t-ctrl">
+      <div className="thead"><span>Producto</span><span>Anterior</span><span>Conteo</span><span>Diferencia</span></div>
+      {productosFiltrados.map(p=>{
+        const ant=ref?(ref.inventario[p.id]??'—'):'—';
+        const con=counts[p.id];
+        const diff=con!==undefined&&con!==''&&ant!=='—'?parseInt(con)-parseInt(ant):null;
+        return <div key={p.id} className="trow">
+          <span><span className="pname">{p.nombre}</span><span className="pdesc">{p.unidad} · {p.flujo} · <span className={`cbadge c${p.criticidad[0]}`} style={{width:16,height:16,fontSize:9}}>{p.criticidad[0]}</span></span></span>
+          <span className="mono" style={{fontSize:15,fontWeight:500}}>{editQ?(editQ.inventario[p.id]??'—'):ant}</span>
+          <span><input type="number" min="0" placeholder={editQ?(editQ.inventario[p.id]??'0'):ant!=='—'?String(ant):'0'} value={counts[p.id]??''} onChange={e=>setCounts(v=>({...v,[p.id]:e.target.value}))} className="cinput"/></span>
+          <span>{diff!==null?<span className={diff<0?'dn':diff>0?'dp':'dz'}>{diff>0?'+':''}{diff}</span>:<span className="dz">—</span>}</span>
+        </div>;
+      })}
+      {productosFiltrados.length===0&&<div className="empty">No hay productos con criticidad {filtroC}</div>}
+    </div>
+    <div className="foot">
+      {editQ&&<button className="bs" onClick={cancelEdit}>Cancelar</button>}
+      <button className="bp bpsave" onClick={guardar} disabled={saving}>{saving?'Guardando...':(editQ?'Actualizar conteo':'Guardar conteo')}</button>
+    </div>
+    {quincenas.length>0&&<div>
+      <div className="stitle" style={{marginBottom:'.75rem'}}>Historial de conteos</div>
+      {[...quincenas].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha)).map(q=>{
+        const isPending=!q.status||q.status==='pending';
+        return <div key={q.id} className="qitem">
+          <span style={{fontWeight:500,fontSize:13,minWidth:80}}>{q.label}</span>
+          <span style={{fontSize:12,color:'var(--text2)'}}>{new Date(q.fecha).toLocaleDateString('es',{day:'2-digit',month:'short',year:'numeric'})}</span>
+          {isPending?<span className="badge pending">Pendiente</span>:<span className="badge validated">Validado</span>}
+          <span style={{fontSize:11,color:'var(--text3)'}}>{q.created_by}</span>
+          <span style={{marginLeft:'auto',display:'flex',gap:4}}>
+            {isSupervisor&&isPending&&<button className="bval" onClick={()=>validarQ(q.id,q.label)}>✓ Validar</button>}
+            {isSupervisor&&<button className="bedit" title="Editar" onClick={()=>openEditQ(q)}>✏️</button>}
+          </span>
+        </div>;
+      })}
+    </div>}
+  </div>;
+}
   const hoy=new Date().toISOString().slice(0,10);
   const m=new Date().getDate()<=15?1:2,mes=new Date().toLocaleString('es',{month:'short'});
   const defLabel=`Q${m} ${mes[0].toUpperCase()+mes.slice(1)}`;
@@ -753,7 +991,88 @@ function Graficos(){
 }
 
 function Supervision(){
-  const {quincenas,actLog,validarQ,getAnomalias,isSupervisor}=useApp();
+  const {quincenas,salidas,actLog,validarQ,getAnomalias,aprobarSalida,rechazarSalida,products,isSupervisor}=useApp();
+  const [tab,setTab]=useState('conteos');
+  if(!isSupervisor)return null;
+  const pendientes=quincenas.filter(q=>!q.status||q.status==='pending');
+  const salidasPendientes=salidas.filter(s=>s.status==='pending');
+  const anomalias=getAnomalias();
+  const statusColor={pending:'var(--amber)',approved:'var(--green)',rejected:'var(--red)'};
+  const statusLabel={pending:'Pendiente',approved:'Aprobada',rejected:'Rechazada'};
+  return <div className="page">
+    <div className="ph"><div><h1 className="pt">Supervisión</h1><p className="ps">Control de calidad y auditoría</p></div></div>
+    <div className="ptabs">
+      <button className={`ptab${tab==='conteos'?' on':''}`} onClick={()=>setTab('conteos')}>Conteos {pendientes.length>0&&<span style={{background:'var(--amber-dim)',color:'var(--amber)',fontSize:10,padding:'1px 6px',borderRadius:99,marginLeft:4}}>{pendientes.length}</span>}</button>
+      <button className={`ptab${tab==='salidas'?' on':''}`} onClick={()=>setTab('salidas')}>Salidas {salidasPendientes.length>0&&<span style={{background:'var(--red-dim)',color:'var(--red)',fontSize:10,padding:'1px 6px',borderRadius:99,marginLeft:4}}>{salidasPendientes.length}</span>}</button>
+      <button className={`ptab${tab==='anomalias'?' on':''}`} onClick={()=>setTab('anomalias')}>Anomalías {anomalias.length>0&&<span style={{background:'var(--red-dim)',color:'var(--red)',fontSize:10,padding:'1px 6px',borderRadius:99,marginLeft:4}}>{anomalias.length}</span>}</button>
+      <button className={`ptab${tab==='log'?' on':''}`} onClick={()=>setTab('log')}>Log</button>
+    </div>
+    {tab==='conteos'&&<div className="sup-section">
+      {pendientes.length===0?<div className="nodata">No hay conteos pendientes ✓</div>
+      :<div className="twrap t-sup">
+        <div className="thead"><span>Conteo</span><span>Fecha</span><span>Registrado por</span><span>Productos</span><span>Acción</span></div>
+        {pendientes.sort((a,b)=>new Date(b.fecha)-new Date(a.fecha)).map(q=>(
+          <div key={q.id} className="trow">
+            <span><span className="pname">{q.label}</span></span>
+            <span style={{fontSize:12,color:'var(--text2)'}}>{new Date(q.fecha).toLocaleDateString('es',{day:'2-digit',month:'short',year:'numeric'})}</span>
+            <span style={{fontSize:12,color:'var(--blue)'}}>{q.created_by||'—'}</span>
+            <span className="mono">{Object.keys(q.inventario).length}</span>
+            <span><button className="bval" onClick={()=>validarQ(q.id,q.label)}>✓ Validar</button></span>
+          </div>
+        ))}
+      </div>}
+    </div>}
+    {tab==='salidas'&&<div className="sup-section">
+      {salidasPendientes.length===0?<div className="nodata">No hay salidas pendientes ✓</div>
+      :<div>
+        {salidasPendientes.map(s=>{const p=products.find(x=>x.id===s.product_id);return(
+          <div key={s.id} className="anomaly-card" style={{borderColor:'rgba(255,80,80,.25)',borderLeftColor:'var(--red)'}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:4}}>
+              <span className="anomaly-title" style={{margin:0}}>{p?.nombre||'—'}</span>
+              <span className="mono" style={{color:'var(--red)',fontSize:15,fontWeight:500}}>-{s.cantidad} <small style={{fontSize:10,color:'var(--text2)'}}>{p?.unidad}</small></span>
+            </div>
+            <div className="anomaly-desc">{s.created_by} · {new Date(s.fecha).toLocaleDateString('es',{day:'2-digit',month:'short',year:'numeric'})}</div>
+            <div style={{display:'flex',gap:8,marginTop:10}}>
+              <button className="bval" onClick={()=>aprobarSalida(s.id,p?.nombre,s.cantidad)}>✓ Aprobar</button>
+              <button className="bdel" style={{padding:'4px 12px',border:'1px solid var(--border2)',borderRadius:4,fontSize:12}} onClick={()=>rechazarSalida(s.id,p?.nombre,s.cantidad)}>✕ Rechazar</button>
+            </div>
+          </div>
+        );})}
+        <div className="stitle" style={{marginTop:'1.5rem',marginBottom:'.75rem'}}>Historial de salidas</div>
+        <div className="twrap">
+          <div className="thead" style={{gridTemplateColumns:'110px 2fr 80px 90px 120px'}}><span>Fecha</span><span>Producto</span><span>Cantidad</span><span>Estado</span><span>Revisado por</span></div>
+          {salidas.filter(s=>s.status!=='pending').map(s=>{const p=products.find(x=>x.id===s.product_id);return(
+            <div key={s.id} className="trow" style={{gridTemplateColumns:'110px 2fr 80px 90px 120px'}}>
+              <span style={{fontSize:12,color:'var(--text2)'}}>{new Date(s.fecha).toLocaleDateString('es',{day:'2-digit',month:'short',year:'numeric'})}</span>
+              <span><span className="pname">{p?.nombre||'—'}</span><span className="pdesc">{s.created_by}</span></span>
+              <span className="mono" style={{color:'var(--red)'}}>-{s.cantidad}</span>
+              <span><span className="badge" style={{background:`${statusColor[s.status]}22`,color:statusColor[s.status]}}>{statusLabel[s.status]}</span></span>
+              <span style={{fontSize:11,color:'var(--text3)'}}>{s.reviewed_by||'—'}</span>
+            </div>
+          );})}
+        </div>
+      </div>}
+    </div>}
+    {tab==='anomalias'&&<div className="sup-section">
+      {anomalias.length===0?<div className="nodata">No se detectaron anomalías ✓</div>
+      :anomalias.map((a,i)=><div key={i} className="anomaly-card">
+        <div className="anomaly-title">⚠️ {a.tipo} — {a.producto}</div>
+        <div className="anomaly-desc">{a.detalle}</div>
+        <div className="anomaly-meta">Conteo: {a.conteo}</div>
+      </div>)}
+    </div>}
+    {tab==='log'&&<div className="sup-section">
+      {actLog.length===0?<div className="nodata">Sin actividad registrada</div>
+      :<div className="twrap">
+        {actLog.map(l=><div key={l.id} className="log-item">
+          <span className="log-time">{new Date(l.created_at).toLocaleDateString('es',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</span>
+          <span className="log-user">{l.user_email}</span>
+          <span className="log-action">{l.accion} — {l.detalle}</span>
+        </div>)}
+      </div>}
+    </div>}
+  </div>;
+}
   const [tab,setTab]=useState('conteos');
   if(!isSupervisor)return null;
   const pendientes=quincenas.filter(q=>!q.status||q.status==='pending');
@@ -813,9 +1132,11 @@ function AppMain({user,profile,isSupervisor,onLogout}){
 }
 
 function AppInner({page,setPage,onLogout,userName,isSupervisor}){
-  const {getEstado,products,csvInventario,loading,error,quincenas}=useApp();
+  const {getEstado,products,csvInventario,loading,error,quincenas,salidas}=useApp();
   const nc=products.filter(p=>getEstado(p.id)==='critico').length;
   const pendientes=quincenas.filter(q=>!q.status||q.status==='pending').length;
+  const salidasPend=salidas.filter(s=>s.status==='pending').length;
+  const totalPend=pendientes+salidasPend;
   const PAGES=isSupervisor?PAGES_SUP:PAGES_OP;
   if(loading)return <div className="loading"><div className="spinner"/><span style={{fontSize:13,color:'var(--text2)'}}>Cargando inventario...</span></div>;
   if(error)return <div className="loading"><span style={{fontSize:14,color:'var(--red)'}}>Error: {error}</span><button className="bs" style={{marginTop:8}} onClick={()=>window.location.reload()}>Reintentar</button></div>;
@@ -829,7 +1150,7 @@ function AppInner({page,setPage,onLogout,userName,isSupervisor}){
         {PAGES.map(p=><button key={p.id} className={`nav-btn${page===p.id?' active':''}`} onClick={()=>setPage(p.id)}>
           <span className="nav-icon">{p.icon}</span><span>{p.label}</span>
           {p.id==='dashboard'&&nc>0&&<span className="nbadge">{nc}</span>}
-          {p.id==='supervision'&&pendientes>0&&<span className="nbadge" style={{background:'var(--amber)'}}>{pendientes}</span>}
+          {p.id==='supervision'&&totalPend>0&&<span className="nbadge" style={{background:'var(--amber)'}}>{totalPend}</span>}
         </button>)}
       </nav>
       <div className="sidebar-foot">
@@ -851,7 +1172,7 @@ function AppInner({page,setPage,onLogout,userName,isSupervisor}){
         <div style={{position:'relative',display:'inline-block'}}>
           <span className="bnico">{p.icon}</span>
           {p.id==='dashboard'&&nc>0&&<span className="bnbadge">{nc}</span>}
-          {p.id==='supervision'&&pendientes>0&&<span className="bnbadge" style={{background:'var(--amber)'}}>{pendientes}</span>}
+          {p.id==='supervision'&&totalPend>0&&<span className="bnbadge" style={{background:'var(--amber)'}}>{totalPend}</span>}
         </div>
         <span className="bnlbl">{p.label}</span>
       </button>)}
