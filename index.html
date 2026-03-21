@@ -28,19 +28,16 @@ input,select{font-family:'DM Sans',sans-serif;font-size:13px;background:var(--bg
 input:focus,select:focus{border-color:var(--green)}
 select option{background:var(--bg3)}
 button{font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border:none;outline:none;border-radius:var(--radius-sm);transition:all .15s}
-/* AUTH */
 .auth-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg);padding:1rem}
 .auth-card{width:100%;max-width:380px;background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:2rem}
 .auth-logo{display:flex;align-items:center;gap:10px;justify-content:center;margin-bottom:2rem}
-.auth-logo-icon{font-size:24px;color:var(--green)}
-.auth-logo-name{font-size:18px;font-weight:500}
+.auth-logo-icon{font-size:24px;color:var(--green)}.auth-logo-name{font-size:18px;font-weight:500}
 .auth-title{font-size:20px;font-weight:500;text-align:center;margin-bottom:6px}
 .auth-sub{font-size:12px;color:var(--text2);text-align:center;margin-bottom:1.5rem}
 .auth-field{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
 .auth-field label{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--text2)}
 .auth-btn{width:100%;height:42px;background:var(--green);color:#000;font-weight:600;border-radius:8px;font-size:14px;margin-top:8px}
-.auth-btn:hover{opacity:.9}
-.auth-btn:disabled{opacity:.5;cursor:not-allowed}
+.auth-btn:hover{opacity:.9}.auth-btn:disabled{opacity:.5;cursor:not-allowed}
 .auth-divider{display:flex;align-items:center;gap:8px;margin:1rem 0}
 .auth-divider-line{flex:1;height:1px;background:var(--border)}
 .auth-divider-text{font-size:11px;color:var(--text3)}
@@ -48,10 +45,8 @@ button{font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border:non
 .auth-link-btn:hover{background:var(--bg3);color:var(--text)}
 .auth-switch{text-align:center;font-size:12px;color:var(--text3);margin-top:1rem}
 .auth-switch span{color:var(--green);cursor:pointer}
-.auth-switch span:hover{text-decoration:underline}
 .auth-err{background:var(--red-dim);color:var(--red);border:1px solid rgba(255,80,80,.2);border-radius:var(--radius-sm);padding:8px 12px;font-size:12px;margin-bottom:1rem}
 .auth-ok{background:var(--green-dim);color:var(--green);border:1px solid rgba(0,201,125,.2);border-radius:var(--radius-sm);padding:8px 12px;font-size:12px;margin-bottom:1rem}
-/* PENDING */
 .pending-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg);padding:1rem}
 .pending-card{width:100%;max-width:380px;background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:2rem;text-align:center}
 .pending-icon{font-size:48px;display:block;margin-bottom:1rem}
@@ -63,11 +58,13 @@ button{font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border:non
 .pending-info strong{color:var(--text2)}
 .pending-logout{margin-top:1.5rem;background:transparent;color:var(--text3);font-size:12px;border:1px solid var(--border);padding:6px 16px;border-radius:var(--radius-sm)}
 .pending-logout:hover{color:var(--text);background:var(--bg3)}
-/* APP LAYOUT */
 .app{display:flex;height:100vh;overflow:hidden}
 .sidebar{width:200px;min-width:200px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column}
 .brand{display:flex;align-items:center;gap:10px;padding:1.25rem;border-bottom:1px solid var(--border)}
 .brand-icon{font-size:20px;color:var(--green)}.brand-name{font-size:15px;font-weight:500}
+.rol-badge{font-size:9px;font-weight:600;padding:2px 7px;border-radius:99px;margin-left:auto}
+.rol-sup{background:rgba(77,158,255,0.15);color:var(--blue)}
+.rol-op{background:var(--bg4);color:var(--text3)}
 .nav{display:flex;flex-direction:column;gap:2px;padding:.75rem .5rem;flex:1}
 .nav-btn{display:flex;align-items:center;gap:9px;padding:8px 12px;border-radius:var(--radius-sm);background:transparent;color:var(--text2);font-size:13px;text-align:left;width:100%}
 .nav-btn:hover{background:var(--bg3);color:var(--text)}
@@ -81,9 +78,8 @@ button{font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border:non
 .user-dot{width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0}
 .main{flex:1;overflow-y:auto;background:var(--bg)}
 .bottom-nav{display:none}
-/* PAGES */
 .page{padding:1.5rem;max-width:1100px}
-.ph{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.5rem}
+.ph{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.5rem;gap:1rem;flex-wrap:wrap}
 .pt{font-size:22px;font-weight:500}.ps{font-size:13px;color:var(--text2);margin-top:3px}
 .metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:1.5rem}
 .metrics3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:1.25rem}
@@ -101,12 +97,13 @@ button{font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border:non
 .atop{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:3px}
 .aname{font-size:14px;font-weight:500}
 .acode{font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;display:block;margin-bottom:8px}
-.astats{display:flex;gap:1.5rem;font-size:12px;color:var(--text2);margin-bottom:8px}
+.astats{display:flex;gap:1.5rem;font-size:12px;color:var(--text2);margin-bottom:8px;flex-wrap:wrap}
 .astats strong{color:var(--text);font-weight:500}
 .dbadge{font-size:11px;font-weight:600;padding:3px 10px;border-radius:99px;white-space:nowrap}
 .dbadge.r{background:var(--red-dim);color:var(--red)}.dbadge.a{background:var(--amber-dim);color:var(--amber)}.dbadge.g{background:var(--green-dim);color:var(--green)}
 .badge{font-size:11px;font-weight:500;padding:3px 10px;border-radius:99px;display:inline-block}
 .badge.critico{background:var(--red-dim);color:var(--red)}.badge.alerta{background:var(--amber-dim);color:var(--amber)}.badge.stock{background:var(--green-dim);color:var(--green)}
+.badge.pending{background:var(--amber-dim);color:var(--amber)}.badge.validated{background:var(--green-dim);color:var(--green)}
 .bwrap{height:4px;background:var(--bg4);border-radius:99px;overflow:hidden}
 .bfill{height:100%;border-radius:99px}
 .cbtn{display:flex;align-items:center;gap:8px;background:var(--green);color:#000;font-weight:600;padding:10px 18px;border-radius:var(--radius);font-size:14px;width:100%}
@@ -123,6 +120,8 @@ button{font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border:non
 .t-inv .thead,.t-inv .trow{grid-template-columns:36px 100px 2fr 70px 90px 60px 55px 75px 70px}
 .t-ctrl .thead,.t-ctrl .trow{grid-template-columns:2fr 100px 130px 100px}
 .t-ing .thead,.t-ing .trow{grid-template-columns:110px 2fr 110px 1fr}
+.t-sup .thead,.t-sup .trow{grid-template-columns:80px 2fr 120px 80px 100px}
+.t-log .thead,.t-log .trow{grid-template-columns:140px 1fr 2fr}
 .pname{display:block;font-size:13px;font-weight:500}
 .pdesc{display:block;font-size:11px;color:var(--text3);margin-top:2px}
 .mono{font-family:'DM Mono',monospace;font-size:13px}
@@ -131,10 +130,12 @@ button{font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border:non
 .cbadge{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;font-size:11px;font-weight:600}
 .cA{background:var(--red-dim);color:var(--red)}.cM{background:var(--amber-dim);color:var(--amber)}.cB{background:var(--green-dim);color:var(--green)}
 .row-actions{display:flex;gap:2px;align-items:center}
-.bdel{background:transparent;color:var(--text3);padding:4px 6px;border-radius:4px;font-size:11px;line-height:1}
+.bdel{background:transparent;color:var(--text3);padding:4px 6px;border-radius:4px;font-size:11px}
 .bdel:hover{background:var(--red-dim);color:var(--red)}
-.bedit{background:transparent;color:var(--text3);padding:4px 6px;border-radius:4px;font-size:11px;line-height:1}
+.bedit{background:transparent;color:var(--text3);padding:4px 6px;border-radius:4px;font-size:11px}
 .bedit:hover{background:var(--blue-dim);color:var(--blue)}
+.bval{background:transparent;color:var(--text3);padding:4px 8px;border-radius:4px;font-size:11px;border:1px solid var(--border)}
+.bval:hover{background:var(--green-dim);color:var(--green);border-color:rgba(0,201,125,.3)}
 .empty{padding:2rem;text-align:center;color:var(--text3);font-size:13px}
 .fcard{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);padding:1.25rem;margin-bottom:1.25rem}
 .ftitle{font-size:14px;font-weight:500;margin-bottom:1rem}
@@ -177,7 +178,7 @@ button{font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border:non
 .dp{font-family:'DM Mono',monospace;font-size:13px;font-weight:500;color:var(--green)}
 .dz{font-family:'DM Mono',monospace;font-size:13px;color:var(--text3)}
 .foot{display:flex;justify-content:flex-end;align-items:center;gap:1rem;margin-bottom:2rem}
-.qitem{display:flex;align-items:center;gap:1rem;padding:10px 1rem;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:4px}
+.qitem{display:flex;align-items:center;gap:.75rem;padding:10px 1rem;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:4px;flex-wrap:wrap}
 .ptabs{display:flex;gap:4px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:3px;margin-bottom:1.25rem;width:fit-content}
 .ptab{background:transparent;color:var(--text2);padding:6px 14px;border-radius:4px;font-size:13px}
 .ptab:hover{color:var(--text)}.ptab.on{background:var(--bg4);color:var(--text);font-weight:500}
@@ -198,9 +199,17 @@ button{font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border:non
 .loading{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;gap:1rem}
 .spinner{width:32px;height:32px;border:3px solid var(--border2);border-top-color:var(--green);border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-/* SVG CHARTS */
-.svg-chart{width:100%;overflow:visible}
-.chart-wrap{width:100%;overflow-x:auto}
+.svg-chart{width:100%;overflow:visible}.chart-wrap{width:100%;overflow-x:auto}
+.anomaly-card{background:var(--bg2);border:1px solid rgba(240,165,0,.25);border-left:3px solid var(--amber);border-radius:var(--radius);padding:1rem;margin-bottom:6px}
+.anomaly-title{font-size:13px;font-weight:500;margin-bottom:4px}
+.anomaly-desc{font-size:12px;color:var(--text2)}
+.anomaly-meta{font-size:11px;color:var(--text3);margin-top:6px}
+.sup-section{margin-bottom:2rem}
+.log-item{display:flex;align-items:flex-start;gap:.75rem;padding:8px 1rem;border-bottom:1px solid var(--border)}
+.log-item:last-child{border-bottom:none}
+.log-time{font-size:11px;color:var(--text3);white-space:nowrap;font-family:'DM Mono',monospace}
+.log-user{font-size:12px;font-weight:500;color:var(--blue)}
+.log-action{font-size:12px;color:var(--text2)}
 @media(max-width:768px){
   .app{flex-direction:column;height:100dvh}
   .sidebar{display:none}
@@ -232,13 +241,11 @@ button{font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border:non
 <body>
 <div id="root"></div>
 <script type="text/babel" data-presets="react">
-const {useState,useEffect,createContext,useContext,useCallback,useRef}=React;
-
+const {useState,useEffect,createContext,useContext,useCallback}=React;
 const SB_URL='https://vjsgyatreowdclpsssem.supabase.co';
 const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZqc2d5YXRyZW93ZGNscHNzc2VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1ODY1OTMsImV4cCI6MjA4OTE2MjU5M30.Yoy_zj55dBFltOSvAIS9WFDb0aKtwMMwiwaRsanb6p4';
 const sb=supabase.createClient(SB_URL,SB_KEY);
 
-// ── AUTH SCREENS ──
 function AuthScreen(){
   const [mode,setMode]=useState('login');
   const [nombre,setNombre]=useState('');
@@ -247,111 +254,78 @@ function AuthScreen(){
   const [loading,setLoading]=useState(false);
   const [err,setErr]=useState('');
   const [ok,setOk]=useState('');
-
-  async function handleLogin(e){
-    e.preventDefault();setErr('');setLoading(true);
-    const {error}=await sb.auth.signInWithPassword({email,password:pass});
-    if(error)setErr(error.message);
-    setLoading(false);
-  }
+  async function handleLogin(e){e.preventDefault();setErr('');setLoading(true);const {error}=await sb.auth.signInWithPassword({email,password:pass});if(error)setErr(error.message);setLoading(false);}
   async function handleRegister(e){
     e.preventDefault();setErr('');setLoading(true);
     const {data,error}=await sb.auth.signUp({email,password:pass});
     if(error){setErr(error.message);setLoading(false);return;}
-    if(data.user){
-      await sb.from('user_profiles').insert([{id:data.user.id,nombre,email,status:'pending'}]);
-      setOk('Cuenta creada. Esperando aprobación del administrador.');
-      setMode('pending_msg');
-    }
+    if(data.user){await sb.from('user_profiles').insert([{id:data.user.id,nombre,email,status:'pending'}]);setOk('Cuenta creada. Esperando aprobación.');setMode('pending_msg');}
     setLoading(false);
   }
-
-  if(mode==='pending_msg') return(
-    <div className="auth-wrap">
-      <div className="auth-card" style={{textAlign:'center'}}>
-        <span style={{fontSize:48,display:'block',marginBottom:'1rem'}}>⏳</span>
-        <div className="auth-title">Solicitud enviada</div>
-        <div className="auth-sub" style={{marginBottom:'1.5rem'}}>El administrador revisará tu solicitud y te dará acceso.</div>
-        <div style={{background:'var(--bg3)',borderRadius:8,padding:12,fontSize:12,color:'var(--text3)',textAlign:'left',lineHeight:1.7}}>
-          <strong style={{color:'var(--text2)'}}>¿Qué sigue?</strong><br/>
-          El admin entrará a Supabase → Authentication → Users y aprobará tu perfil en la tabla user_profiles.
-        </div>
-        <button className="auth-link-btn" style={{marginTop:'1.5rem'}} onClick={()=>setMode('login')}>Volver al inicio</button>
-      </div>
-    </div>
-  );
-
-  return(
-    <div className="auth-wrap">
-      <div className="auth-card">
-        <div className="auth-logo"><span className="auth-logo-icon">⬡</span><span className="auth-logo-name">Inventario</span></div>
-        <div className="auth-title">{mode==='login'?'Bienvenido':'Crear cuenta'}</div>
-        <div className="auth-sub">{mode==='login'?'Ingresa con tu cuenta para continuar':'Tu acceso será aprobado por el administrador'}</div>
-        {err&&<div className="auth-err">{err}</div>}
-        {ok&&<div className="auth-ok">{ok}</div>}
-        <form onSubmit={mode==='login'?handleLogin:handleRegister}>
-          {mode==='register'&&<div className="auth-field"><label>Nombre completo</label><input value={nombre} onChange={e=>setNombre(e.target.value)} placeholder="Juan Pérez" required/></div>}
-          <div className="auth-field"><label>Correo</label><input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="usuario@empresa.com" required/></div>
-          <div className="auth-field"><label>Contraseña</label><input type="password" value={pass} onChange={e=>setPass(e.target.value)} placeholder={mode==='login'?'Tu contraseña':'Mínimo 6 caracteres'} required/></div>
-          <button type="submit" className="auth-btn" disabled={loading}>{loading?'Cargando...':(mode==='login'?'Iniciar sesión':'Registrarme')}</button>
-        </form>
-        <div className="auth-divider"><div className="auth-divider-line"/><div className="auth-divider-text">o</div><div className="auth-divider-line"/></div>
-        <button className="auth-link-btn" onClick={()=>{setMode(mode==='login'?'register':'login');setErr('');setOk('');}}>
-          {mode==='login'?'Crear cuenta nueva':'Ya tengo cuenta'}
-        </button>
-        {mode==='register'&&<div className="auth-switch" style={{marginTop:'1rem'}}>¿Ya tienes cuenta? <span onClick={()=>setMode('login')}>Iniciar sesión</span></div>}
-      </div>
-    </div>
-  );
+  if(mode==='pending_msg')return(<div className="auth-wrap"><div className="auth-card" style={{textAlign:'center'}}><span style={{fontSize:48,display:'block',marginBottom:'1rem'}}>⏳</span><div className="auth-title">Solicitud enviada</div><div className="auth-sub" style={{marginBottom:'1.5rem'}}>El administrador revisará tu solicitud y te dará acceso.</div><button className="auth-link-btn" style={{marginTop:'1rem'}} onClick={()=>setMode('login')}>Volver al inicio</button></div></div>);
+  return(<div className="auth-wrap"><div className="auth-card">
+    <div className="auth-logo"><span className="auth-logo-icon">⬡</span><span className="auth-logo-name">Inventario</span></div>
+    <div className="auth-title">{mode==='login'?'Bienvenido':'Crear cuenta'}</div>
+    <div className="auth-sub">{mode==='login'?'Ingresa con tu cuenta':'Tu acceso será aprobado por el administrador'}</div>
+    {err&&<div className="auth-err">{err}</div>}
+    {ok&&<div className="auth-ok">{ok}</div>}
+    <form onSubmit={mode==='login'?handleLogin:handleRegister}>
+      {mode==='register'&&<div className="auth-field"><label>Nombre completo</label><input value={nombre} onChange={e=>setNombre(e.target.value)} placeholder="Juan Pérez" required/></div>}
+      <div className="auth-field"><label>Correo</label><input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="usuario@empresa.com" required/></div>
+      <div className="auth-field"><label>Contraseña</label><input type="password" value={pass} onChange={e=>setPass(e.target.value)} placeholder={mode==='login'?'Tu contraseña':'Mínimo 6 caracteres'} required/></div>
+      <button type="submit" className="auth-btn" disabled={loading}>{loading?'Cargando...':(mode==='login'?'Iniciar sesión':'Registrarme')}</button>
+    </form>
+    <div className="auth-divider"><div className="auth-divider-line"/><div className="auth-divider-text">o</div><div className="auth-divider-line"/></div>
+    <button className="auth-link-btn" onClick={()=>{setMode(mode==='login'?'register':'login');setErr('');setOk('');}}>
+      {mode==='login'?'Crear cuenta nueva':'Ya tengo cuenta'}
+    </button>
+  </div></div>);
 }
 
 function PendingScreen({onLogout}){
-  return(
-    <div className="pending-wrap">
-      <div className="pending-card">
-        <span className="pending-icon">⏳</span>
-        <div className="pending-title">Acceso pendiente</div>
-        <div className="pending-badge"><div className="pending-dot"/>Esperando aprobación</div>
-        <div className="pending-sub">Tu solicitud fue enviada. El administrador revisará tu cuenta y te dará acceso en breve.</div>
-        <div className="pending-info"><strong>¿Cómo me aprueban?</strong><br/>El admin entra a Supabase → Table Editor → user_profiles → cambia tu status de "pending" a "approved".</div>
-        <button className="pending-logout" onClick={onLogout}>Cerrar sesión</button>
-      </div>
-    </div>
-  );
+  return(<div className="pending-wrap"><div className="pending-card">
+    <span className="pending-icon">⏳</span>
+    <div className="pending-title">Acceso pendiente</div>
+    <div className="pending-badge"><div className="pending-dot"/>Esperando aprobación</div>
+    <div className="pending-sub">Tu solicitud fue enviada. El administrador revisará tu cuenta y te dará acceso en breve.</div>
+    <div className="pending-info"><strong>¿Cómo me aprueban?</strong><br/>El administrador revisará tu solicitud y te notificará cuando tengas acceso.</div>
+    <button className="pending-logout" onClick={onLogout}>Cerrar sesión</button>
+  </div></div>);
 }
 
-// ── STORE ──
 const Ctx=createContext(null);
-function Store({user,userName,onLogout,children}){
+function Store({user,userEmail,isSupervisor,onLogout,children}){
   const [products,setProducts]=useState([]);
   const [quincenas,setQuincenas]=useState([]);
   const [qItems,setQItems]=useState([]);
   const [ingresos,setIngresos]=useState([]);
+  const [actLog,setActLog]=useState([]);
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState(null);
 
   const load=useCallback(async()=>{
     try{
-      const [p,q,qi,i]=await Promise.all([
+      const [p,q,qi,i,al]=await Promise.all([
         sb.from('products').select('*').order('id'),
         sb.from('quincenas').select('*').order('fecha'),
         sb.from('quincena_items').select('*'),
         sb.from('ingresos').select('*').order('fecha',{ascending:false}),
+        sb.from('activity_log').select('*').order('created_at',{ascending:false}).limit(100),
       ]);
       if(p.error)throw p.error;
-      setProducts(p.data||[]);
-      setQuincenas(q.data||[]);
-      setQItems(qi.data||[]);
-      setIngresos(i.data||[]);
+      setProducts(p.data||[]);setQuincenas(q.data||[]);setQItems(qi.data||[]);setIngresos(i.data||[]);setActLog(al.data||[]);
     }catch(e){setError(e.message);}
     setLoading(false);
   },[]);
 
   useEffect(()=>{load();},[load]);
 
+  async function logAction(accion,detalle){
+    await sb.from('activity_log').insert([{user_email:userEmail,accion,detalle}]);
+  }
+
   const quincenasWithInv=quincenas.map(q=>{
-    const inv={};
-    qItems.filter(i=>i.quincena_id===q.id).forEach(i=>{inv[i.product_id]=i.cantidad;});
+    const inv={};qItems.filter(i=>i.quincena_id===q.id).forEach(i=>{inv[i.product_id]=i.cantidad;});
     return{...q,inventario:inv};
   });
 
@@ -363,8 +337,9 @@ function Store({user,userName,onLogout,children}){
     return base+ing;
   }
   function getConsumo(pid){
-    if(quincenasWithInv.length<2)return 0;
-    const s=[...quincenasWithInv].sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
+    const validated=quincenasWithInv.filter(q=>q.status==='validated'||q.status===null||q.status===undefined);
+    if(validated.length<2)return 0;
+    const s=[...validated].sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
     const cs=[];
     for(let i=1;i<s.length;i++){
       const p=s[i-1].inventario[pid]??0,c=s[i].inventario[pid]??0;
@@ -381,15 +356,44 @@ function Store({user,userName,onLogout,children}){
       return{...p,stock,consumo,pedir:Math.max(0,consumo*2-stock),dias:getDias(p.id),estado:getEstado(p.id)};
     }).sort((a,b)=>a.dias-b.dias);
   }
-  async function addProd(d){const {error}=await sb.from('products').insert([d]);if(error)return error.message;await load();return null;}
-  async function updateProd(id,d){const {error}=await sb.from('products').update(d).eq('id',id);if(error)return error.message;await load();return null;}
-  async function delProd(id){if(!confirm('¿Eliminar este producto? Se perderá su historial.'))return;await sb.from('products').delete().eq('id',id);await load();}
+
+  function getAnomalias(){
+    const anomalias=[];
+    const sorted=[...quincenasWithInv].sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
+    products.forEach(p=>{
+      const avg=getConsumo(p.id);
+      for(let i=1;i<sorted.length;i++){
+        const prev=sorted[i-1].inventario[p.id]??0;
+        const curr=sorted[i].inventario[p.id]??0;
+        const ing=ingresos.filter(x=>x.product_id===p.id&&new Date(x.fecha)>=new Date(sorted[i-1].fecha)&&new Date(x.fecha)<new Date(sorted[i].fecha)).reduce((t,x)=>t+x.cantidad,0);
+        const consumo=prev+ing-curr;
+        if(consumo<0){
+          anomalias.push({producto:p.nombre,tipo:'Stock subió sin ingreso',detalle:`Stock pasó de ${prev} a ${curr} sin ingreso registrado`,conteo:sorted[i].label,qid:sorted[i].id});
+        } else if(avg>0&&consumo>avg*1.5){
+          anomalias.push({producto:p.nombre,tipo:'Consumo inusualmente alto',detalle:`Consumió ${consumo} und (promedio: ${avg})`,conteo:sorted[i].label,qid:sorted[i].id});
+        }
+        if(curr===0&&prev>avg*0.5){
+          anomalias.push({producto:p.nombre,tipo:'Caída brusca a cero',detalle:`Stock cayó de ${prev} a 0 en una quincena`,conteo:sorted[i].label,qid:sorted[i].id});
+        }
+      }
+    });
+    return anomalias;
+  }
+
+  async function addProd(d){const {error}=await sb.from('products').insert([d]);if(error)return error.message;await logAction('Nuevo producto',d.nombre);await load();return null;}
+  async function updateProd(id,d){const {error}=await sb.from('products').update(d).eq('id',id);if(error)return error.message;await logAction('Editó producto',d.nombre);await load();return null;}
+  async function delProd(id){
+    if(!confirm('¿Eliminar este producto? Se perderá su historial.'))return;
+    const p=products.find(x=>x.id===id);
+    await sb.from('products').delete().eq('id',id);
+    await logAction('Eliminó producto',p?.nombre||id);await load();
+  }
   async function addQ(label,fecha,inv){
-    const {data,error}=await sb.from('quincenas').insert([{label,fecha}]).select().single();
+    const {data,error}=await sb.from('quincenas').insert([{label,fecha,status:'pending',created_by:userEmail}]).select().single();
     if(error)return error.message;
     const items=Object.entries(inv).map(([pid,cantidad])=>({quincena_id:data.id,product_id:parseInt(pid),cantidad}));
     if(items.length){const {error:e2}=await sb.from('quincena_items').insert(items);if(e2)return e2.message;}
-    await load();return null;
+    await logAction('Registró conteo',label);await load();return null;
   }
   async function updateQ(qid,label,fecha,inv){
     const {error:e1}=await sb.from('quincenas').update({label,fecha}).eq('id',qid);
@@ -397,106 +401,69 @@ function Store({user,userName,onLogout,children}){
     await sb.from('quincena_items').delete().eq('quincena_id',qid);
     const items=Object.entries(inv).map(([pid,cantidad])=>({quincena_id:qid,product_id:parseInt(pid),cantidad}));
     if(items.length){const {error}=await sb.from('quincena_items').insert(items);if(error)return error.message;}
-    await load();return null;
+    await logAction('Editó conteo',label);await load();return null;
   }
-  function csvConsolidado(products,quincenasWithInv,dl){
-    const qs=[...quincenasWithInv].sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
-    const headers=['Código','Nombre','Flujo','Unidad',...qs.map(q=>q.label)];
-    const rows=[headers];
-    products.forEach(p=>{
-      rows.push([p.codigo,p.nombre,p.flujo,p.unidad,...qs.map(q=>q.inventario[p.id]??'')]);
-    });
-    dl(rows,'consolidado-conteos');
+  async function validarQ(qid,label){
+    const {error}=await sb.from('quincenas').update({status:'validated',validated_by:userEmail,validated_at:new Date().toISOString()}).eq('id',qid);
+    if(error)return error.message;
+    await logAction('Validó conteo',label);await load();return null;
   }
-  async function addIng(pid,cant,fecha,nota){const {error}=await sb.from('ingresos').insert([{product_id:parseInt(pid),cantidad:parseInt(cant),fecha,nota}]);if(error)return error.message;await load();return null;}
+  async function addIng(pid,cant,fecha,nota){
+    const {error}=await sb.from('ingresos').insert([{product_id:parseInt(pid),cantidad:parseInt(cant),fecha,nota,created_by:userEmail}]);
+    if(error)return error.message;
+    const p=products.find(x=>x.id===parseInt(pid));
+    await logAction('Registró ingreso',`${p?.nombre||pid}: +${cant}`);await load();return null;
+  }
   function dl(rows,name){const csv=rows.map(r=>r.map(c=>`"${c}"`).join(',')).join('\n');const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);a.download=`${name}-${new Date().toISOString().slice(0,10)}.csv`;a.click();}
   function csvInventario(){const rows=[['Criticidad','Código','Nombre','Flujo','Unidad','Stock','Días','Estado']];products.forEach(p=>{const e=getEstado(p.id);rows.push([p.criticidad,p.codigo,p.nombre,p.flujo,p.unidad,getStock(p.id),getDias(p.id)===999?'Sin hist.':getDias(p.id),e==='critico'?'Crítico':e==='alerta'?'Alerta':'En stock'])});dl(rows,'inventario');}
   function csvLista(){const rows=[['Código','Nombre','Stock','Consume/Q','Pedir','Unidad','Días']];getLista().forEach(p=>rows.push([p.codigo,p.nombre,p.stock,p.consumo,p.pedir,p.unidad,p.dias]));dl(rows,'lista-compra');}
-  function csvConsolidadoFn(){csvConsolidado(products,quincenasWithInv,dl);}
-  return <Ctx.Provider value={{products,quincenas:quincenasWithInv,ingresos,loading,error,userName,onLogout,getStock,getConsumo,getDias,getEstado,getLista,addProd,updateProd,delProd,addQ,updateQ,addIng,csvInventario,csvLista,csvConsolidado:csvConsolidadoFn}}>{children}</Ctx.Provider>;
+  function csvConsolidado(){const qs=[...quincenasWithInv].sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));const headers=['Código','Nombre','Flujo','Unidad',...qs.map(q=>q.label)];const rows=[headers];products.forEach(p=>{rows.push([p.codigo,p.nombre,p.flujo,p.unidad,...qs.map(q=>q.inventario[p.id]??'')]);});dl(rows,'consolidado-conteos');}
+  return <Ctx.Provider value={{products,quincenas:quincenasWithInv,ingresos,actLog,loading,error,userEmail,isSupervisor,onLogout,getStock,getConsumo,getDias,getEstado,getLista,getAnomalias,addProd,updateProd,delProd,addQ,updateQ,validarQ,addIng,csvInventario,csvLista,csvConsolidado}}>{children}</Ctx.Provider>;
 }
 const useApp=()=>useContext(Ctx);
 
-// ── HELPERS ──
 function DBadge({d}){const c=d<=10?'r':d<=20?'a':'g';return <span className={`dbadge ${c}`}>{d===999?'—':`${d}d`}</span>}
 function Barra({d}){const p=Math.min(100,Math.round(d/30*100)),col=d<=10?'#ff5050':d<=20?'#f0a500':'#00c97d';return <div className="bwrap"><div className="bfill" style={{width:`${p}%`,background:col}}/></div>}
 const lbl=e=>e==='critico'?'Crítico':e==='alerta'?'Alerta':'En stock';
 function Msg({text,type}){return text?<div className={`smsg ${type||'ok'}`}>{text}</div>:null}
 
-// ── SVG BAR CHART ──
 function BarChartSVG({data,color='#00c97d',height=160}){
   if(!data||!data.length)return <div className="nodata">Sin datos suficientes</div>;
   const max=Math.max(...data.map(d=>d.v),1);
   const W=500,H=height,pad={l:36,r:10,t:10,b:28};
   const cW=W-pad.l-pad.r,cH=H-pad.t-pad.b;
-  const bW=Math.min(36,cW/data.length*0.6);
-  const gap=cW/data.length;
-  return(
-    <div className="chart-wrap">
-      <svg viewBox={`0 0 ${W} ${H}`} className="svg-chart" style={{height}}>
-        {[0,.25,.5,.75,1].map(t=>{
-          const y=pad.t+cH*(1-t);
-          return <g key={t}>
-            <line x1={pad.l} y1={y} x2={W-pad.r} y2={y} stroke="rgba(255,255,255,0.05)" strokeWidth="1"/>
-            <text x={pad.l-4} y={y+4} textAnchor="end" fontSize="9" fill="#555">{Math.round(max*t)}</text>
-          </g>;
-        })}
-        {data.map((d,i)=>{
-          const x=pad.l+gap*i+gap/2;
-          const bH=Math.max(2,(d.v/max)*cH);
-          const y=pad.t+cH-bH;
-          return <g key={i}>
-            <rect x={x-bW/2} y={y} width={bW} height={bH} fill={color} opacity="0.85" rx="3"/>
-            <text x={x} y={H-pad.b+14} textAnchor="middle" fontSize="9" fill="#555">{d.q}</text>
-            <text x={x} y={y-4} textAnchor="middle" fontSize="9" fill="#888">{d.v}</text>
-          </g>;
-        })}
-      </svg>
-    </div>
-  );
+  const bW=Math.min(36,cW/data.length*0.6),gap=cW/data.length;
+  return(<div className="chart-wrap"><svg viewBox={`0 0 ${W} ${H}`} className="svg-chart" style={{height}}>
+    {[0,.25,.5,.75,1].map(t=>{const y=pad.t+cH*(1-t);return <g key={t}><line x1={pad.l} y1={y} x2={W-pad.r} y2={y} stroke="rgba(255,255,255,0.05)" strokeWidth="1"/><text x={pad.l-4} y={y+4} textAnchor="end" fontSize="9" fill="#555">{Math.round(max*t)}</text></g>;})}
+    {data.map((d,i)=>{const x=pad.l+gap*i+gap/2,bH=Math.max(2,(d.v/max)*cH),y=pad.t+cH-bH;return <g key={i}><rect x={x-bW/2} y={y} width={bW} height={bH} fill={color} opacity="0.85" rx="3"/><text x={x} y={H-pad.b+14} textAnchor="middle" fontSize="9" fill="#555">{d.q}</text><text x={x} y={y-4} textAnchor="middle" fontSize="9" fill="#888">{d.v}</text></g>;})}
+  </svg></div>);
 }
 
-// ── SVG LINE CHART ──
 function LineChartSVG({data,height=180}){
   if(!data||data.length<2)return <div className="nodata">Sin datos suficientes</div>;
   const allVals=[...data.map(d=>d.r).filter(v=>v!=null),...data.map(d=>d.p).filter(v=>v!=null)];
   const max=Math.max(...allVals,1);
   const W=500,H=height,pad={l:40,r:10,t:10,b:28};
   const cW=W-pad.l-pad.r,cH=H-pad.t-pad.b;
-  const xp=(i)=>pad.l+i*(cW/(data.length-1));
-  const yp=(v)=>pad.t+cH*(1-v/max);
-  const realPts=data.map((d,i)=>d.r!=null?`${xp(i)},${yp(d.r)}`:null).filter(Boolean);
-  const projPts=data.map((d,i)=>d.p!=null?`${xp(i)},${yp(d.p)}`:null).filter(Boolean);
-  return(
-    <div className="chart-wrap">
-      <svg viewBox={`0 0 ${W} ${H}`} className="svg-chart" style={{height}}>
-        {[0,.25,.5,.75,1].map(t=>{
-          const y=pad.t+cH*(1-t);
-          return <g key={t}>
-            <line x1={pad.l} y1={y} x2={W-pad.r} y2={y} stroke="rgba(255,255,255,0.05)" strokeWidth="1"/>
-            <text x={pad.l-4} y={y+4} textAnchor="end" fontSize="9" fill="#555">{Math.round(max*t)}</text>
-          </g>;
-        })}
-        {realPts.length>1&&<polyline points={realPts.join(' ')} fill="none" stroke="#00c97d" strokeWidth="2" strokeLinejoin="round"/>}
-        {projPts.length>1&&<polyline points={projPts.join(' ')} fill="none" stroke="#4d9eff" strokeWidth="2" strokeDasharray="6,4" strokeLinejoin="round"/>}
-        {data.map((d,i)=><g key={i}>
-          {d.r!=null&&<circle cx={xp(i)} cy={yp(d.r)} r="4" fill="#00c97d"/>}
-          {d.p!=null&&<circle cx={xp(i)} cy={yp(d.p)} r="3.5" fill="#0f0f0f" stroke="#4d9eff" strokeWidth="2"/>}
-          <text x={xp(i)} y={H-pad.b+14} textAnchor="middle" fontSize="9" fill="#555">{d.q}</text>
-        </g>)}
-      </svg>
-    </div>
-  );
+  const xp=i=>pad.l+i*(cW/(data.length-1)),yp=v=>pad.t+cH*(1-v/max);
+  const rPts=data.map((d,i)=>d.r!=null?`${xp(i)},${yp(d.r)}`:null).filter(Boolean);
+  const pPts=data.map((d,i)=>d.p!=null?`${xp(i)},${yp(d.p)}`:null).filter(Boolean);
+  return(<div className="chart-wrap"><svg viewBox={`0 0 ${W} ${H}`} className="svg-chart" style={{height}}>
+    {[0,.25,.5,.75,1].map(t=>{const y=pad.t+cH*(1-t);return <g key={t}><line x1={pad.l} y1={y} x2={W-pad.r} y2={y} stroke="rgba(255,255,255,0.05)" strokeWidth="1"/><text x={pad.l-4} y={y+4} textAnchor="end" fontSize="9" fill="#555">{Math.round(max*t)}</text></g>;})}
+    {rPts.length>1&&<polyline points={rPts.join(' ')} fill="none" stroke="#00c97d" strokeWidth="2" strokeLinejoin="round"/>}
+    {pPts.length>1&&<polyline points={pPts.join(' ')} fill="none" stroke="#4d9eff" strokeWidth="2" strokeDasharray="6,4" strokeLinejoin="round"/>}
+    {data.map((d,i)=><g key={i}>{d.r!=null&&<circle cx={xp(i)} cy={yp(d.r)} r="4" fill="#00c97d"/>}{d.p!=null&&<circle cx={xp(i)} cy={yp(d.p)} r="3.5" fill="#0f0f0f" stroke="#4d9eff" strokeWidth="2"/>}<text x={xp(i)} y={H-pad.b+14} textAnchor="middle" fontSize="9" fill="#555">{d.q}</text></g>)}
+  </svg></div>);
 }
 
-// ── DASHBOARD ──
 function Dashboard(){
-  const {products,getStock,getConsumo,getDias,getEstado,getLista,csvLista}=useApp();
+  const {products,getStock,getConsumo,getDias,getEstado,getLista,csvLista,isSupervisor,getAnomalias}=useApp();
   const [show,setShow]=useState(false);
   const cr=products.filter(p=>getEstado(p.id)==='critico');
   const al=products.filter(p=>getEstado(p.id)==='alerta');
   const ok=products.filter(p=>getEstado(p.id)==='stock');
   const lista=getLista();
+  const anomalias=isSupervisor?getAnomalias():[];
   return <div className="page">
     <div className="ph"><div><h1 className="pt">Dashboard</h1><p className="ps">Resumen del inventario actual</p></div></div>
     <div className="metrics">
@@ -506,64 +473,41 @@ function Dashboard(){
       <div className="metric" style={{borderColor:'rgba(0,201,125,.2)'}}><span className="ml">En stock</span><span className="mv cg">{ok.length}</span></div>
     </div>
     {lista.length>0&&<div style={{marginBottom:'1.5rem'}}>
-      <button className="cbtn" onClick={()=>setShow(v=>!v)}>
-        <span>🛒</span>Necesito comprar
-        <span style={{background:'rgba(0,0,0,.2)',padding:'1px 8px',borderRadius:99,fontSize:12}}>{lista.length}</span>
-        <span style={{marginLeft:'auto',fontSize:10}}>{show?'▲':'▼'}</span>
-      </button>
+      <button className="cbtn" onClick={()=>setShow(v=>!v)}><span>🛒</span>Necesito comprar<span style={{background:'rgba(0,0,0,.2)',padding:'1px 8px',borderRadius:99,fontSize:12}}>{lista.length}</span><span style={{marginLeft:'auto',fontSize:10}}>{show?'▲':'▼'}</span></button>
       {show&&<div className="ccard">
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'.75rem'}}>
-          <span style={{fontSize:12,color:'var(--text2)'}}>Orden sugerida — cubre 2 quincenas</span>
-          <button className="bs" style={{fontSize:11,padding:'4px 10px'}} onClick={csvLista}>↓ CSV</button>
-        </div>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'.75rem'}}><span style={{fontSize:12,color:'var(--text2)'}}>Orden sugerida — cubre 2 quincenas</span><button className="bs" style={{fontSize:11,padding:'4px 10px'}} onClick={csvLista}>↓ CSV</button></div>
         <div className="chead"><span>Producto</span><span>Stock</span><span>/Q</span><span>Pedir</span></div>
-        {lista.map(p=><div key={p.id} className="crow">
-          <span><span className="pname">{p.nombre}</span><span className="pdesc">{p.codigo}</span></span>
-          <span className="mono">{p.stock}<small> {p.unidad}</small></span>
-          <span className="mono">~{p.consumo}</span>
-          <span className="mono cg">+{p.pedir}<small> {p.unidad}</small></span>
-        </div>)}
+        {lista.map(p=><div key={p.id} className="crow"><span><span className="pname">{p.nombre}</span><span className="pdesc">{p.codigo}</span></span><span className="mono">{p.stock}<small> {p.unidad}</small></span><span className="mono">~{p.consumo}</span><span className="mono cg">+{p.pedir}<small> {p.unidad}</small></span></div>)}
       </div>}
+    </div>}
+    {isSupervisor&&anomalias.length>0&&<div className="section">
+      <h2 className="stitle"><span className="sdot" style={{background:'var(--amber)'}}/>Anomalías detectadas — solo visible para supervisores</h2>
+      {anomalias.map((a,i)=><div key={i} className="anomaly-card">
+        <div className="anomaly-title">⚠️ {a.tipo} — {a.producto}</div>
+        <div className="anomaly-desc">{a.detalle}</div>
+        <div className="anomaly-meta">Conteo: {a.conteo}</div>
+      </div>)}
     </div>}
     {cr.length>0&&<div className="section">
       <h2 className="stitle"><span className="sdot" style={{background:'var(--red)'}}/>Críticos</h2>
-      <div className="alert-list">{cr.map(p=><div key={p.id} className="card card-red">
-        <div className="atop"><span className="aname">{p.nombre}</span><DBadge d={getDias(p.id)}/></div>
-        <span className="acode">{p.codigo} · {p.flujo}</span>
-        <div className="astats"><span>Stock: <strong>{getStock(p.id)} {p.unidad}s</strong></span><span>Consume: <strong>~{getConsumo(p.id)}/Q</strong></span></div>
-        <Barra d={getDias(p.id)}/>
-      </div>)}</div>
+      <div className="alert-list">{cr.map(p=><div key={p.id} className="card card-red"><div className="atop"><span className="aname">{p.nombre}</span><DBadge d={getDias(p.id)}/></div><span className="acode">{p.codigo} · {p.flujo}</span><div className="astats"><span>Stock: <strong>{getStock(p.id)} {p.unidad}s</strong></span><span>Consume: <strong>~{getConsumo(p.id)}/Q</strong></span></div><Barra d={getDias(p.id)}/></div>)}</div>
     </div>}
     {al.length>0&&<div className="section">
       <h2 className="stitle"><span className="sdot" style={{background:'var(--amber)'}}/>Alertas</h2>
-      <div className="alert-list">{al.map(p=><div key={p.id} className="card card-amber">
-        <div className="atop"><span className="aname">{p.nombre}</span><DBadge d={getDias(p.id)}/></div>
-        <span className="acode">{p.codigo} · {p.flujo}</span>
-        <div className="astats"><span>Stock: <strong>{getStock(p.id)} {p.unidad}s</strong></span><span>Consume: <strong>~{getConsumo(p.id)}/Q</strong></span></div>
-        <Barra d={getDias(p.id)}/>
-      </div>)}</div>
+      <div className="alert-list">{al.map(p=><div key={p.id} className="card card-amber"><div className="atop"><span className="aname">{p.nombre}</span><DBadge d={getDias(p.id)}/></div><span className="acode">{p.codigo} · {p.flujo}</span><div className="astats"><span>Stock: <strong>{getStock(p.id)} {p.unidad}s</strong></span><span>Consume: <strong>~{getConsumo(p.id)}/Q</strong></span></div><Barra d={getDias(p.id)}/></div>)}</div>
     </div>}
     <div className="section">
       <h2 className="stitle">Todos los productos</h2>
       <div className="twrap t-dash">
         <div className="thead"><span>Producto</span><span>Stock</span><span>Días</span><span>Estado</span></div>
-        {[...products].sort((a,b)=>getDias(a.id)-getDias(b.id)).map(p=>{
-          const e=getEstado(p.id),d=getDias(p.id);
-          return <div key={p.id} className="trow">
-            <span><span className="pname">{p.nombre}</span><span className="pdesc">{p.codigo} · {p.flujo}</span></span>
-            <span className="mono">{getStock(p.id)}<small> {p.unidad}</small></span>
-            <span className="mono">{d===999?'—':`${d}d`}</span>
-            <span><span className={`badge ${e}`}>{lbl(e)}</span></span>
-          </div>;
-        })}
+        {[...products].sort((a,b)=>getDias(a.id)-getDias(b.id)).map(p=>{const e=getEstado(p.id),d=getDias(p.id);return <div key={p.id} className="trow"><span><span className="pname">{p.nombre}</span><span className="pdesc">{p.codigo} · {p.flujo}</span></span><span className="mono">{getStock(p.id)}<small> {p.unidad}</small></span><span className="mono">{d===999?'—':`${d}d`}</span><span><span className={`badge ${e}`}>{lbl(e)}</span></span></div>;})}
       </div>
     </div>
   </div>;
 }
 
-// ── INVENTARIO ──
 function Inventario(){
-  const {products,getStock,getDias,getEstado,addProd,updateProd,delProd,addIng}=useApp();
+  const {products,getStock,getDias,getEstado,addProd,updateProd,delProd,addIng,isSupervisor}=useApp();
   const [bus,setBus]=useState('');const [fil,setFil]=useState('Todos');
   const [sf,setSf]=useState(false);const [si,setSi]=useState(false);
   const [editId,setEditId]=useState(null);
@@ -583,13 +527,8 @@ function Inventario(){
   function openNew(){setEditId(null);setForm(empty);setSf(v=>!v);setSi(false);}
   async function saveProd(){
     if(!form.codigo||!form.nombre)return;setSaving(true);
-    if(editId){
-      const err=await updateProd(editId,{criticidad:form.criticidad,codigo:form.codigo,nombre:form.nombre,descripcion:form.descripcion,flujo:form.flujo,unidad:form.unidad,conversion:form.conversion});
-      err?showMsg(err,'err'):(setSf(false),setEditId(null),showMsg('Producto actualizado ✓'));
-    }else{
-      const err=await addProd({criticidad:form.criticidad,codigo:form.codigo,nombre:form.nombre,descripcion:form.descripcion,flujo:form.flujo,unidad:form.unidad,conversion:form.conversion});
-      err?showMsg(err,'err'):(setForm(empty),setSf(false),showMsg('Producto guardado ✓'));
-    }
+    if(editId){const err=await updateProd(editId,{criticidad:form.criticidad,codigo:form.codigo,nombre:form.nombre,descripcion:form.descripcion,flujo:form.flujo,unidad:form.unidad,conversion:form.conversion});err?showMsg(err,'err'):(setSf(false),setEditId(null),showMsg('Producto actualizado ✓'));}
+    else{const err=await addProd({criticidad:form.criticidad,codigo:form.codigo,nombre:form.nombre,descripcion:form.descripcion,flujo:form.flujo,unidad:form.unidad,conversion:form.conversion});err?showMsg(err,'err'):(setForm(empty),setSf(false),showMsg('Producto guardado ✓'));}
     setSaving(false);
   }
   async function saveIng(){
@@ -616,10 +555,7 @@ function Inventario(){
         <div className="field"><label>Conversión</label><input value={form.conversion} onChange={e=>setForm(f=>({...f,conversion:e.target.value}))} placeholder="Rollo x 100 Etiq"/></div>
         {!editId&&<div className="field"><label>Stock inicial</label><input type="number" min="0" value={form.stockInicial} onChange={e=>setForm(f=>({...f,stockInicial:e.target.value}))} placeholder="0"/></div>}
       </div>
-      <div className="factions">
-        <button className="bp" onClick={saveProd} disabled={saving}>{saving?'Guardando...':(editId?'Guardar cambios':'Guardar producto')}</button>
-        <button className="bs" onClick={()=>{setSf(false);setEditId(null);}}>Cancelar</button>
-      </div>
+      <div className="factions"><button className="bp" onClick={saveProd} disabled={saving}>{saving?'Guardando...':(editId?'Guardar cambios':'Guardar producto')}</button><button className="bs" onClick={()=>{setSf(false);setEditId(null);}}>Cancelar</button></div>
     </div>}
     <div className="filters">
       <input className="search" value={bus} onChange={e=>setBus(e.target.value)} placeholder="Buscar..."/>
@@ -638,8 +574,8 @@ function Inventario(){
           <span className="mono">{d===999?'—':`${d}d`}</span>
           <span><span className={`badge ${e}`}>{lbl(e)}</span></span>
           <span className="row-actions">
-            <button className="bedit" title="Editar" onClick={()=>openEdit(p)}>✏️</button>
-            <button className="bdel" title="Eliminar" onClick={()=>delProd(p.id)}>✕</button>
+            {isSupervisor&&<button className="bedit" title="Editar" onClick={()=>openEdit(p)}>✏️</button>}
+            {isSupervisor&&<button className="bdel" title="Eliminar" onClick={()=>delProd(p.id)}>✕</button>}
           </span>
         </div>
       );})}
@@ -652,7 +588,7 @@ function Inventario(){
             <div><span className="pname">{p.nombre}</span><span className="pdesc">{p.codigo} · {p.flujo}</span></div>
             <div style={{display:'flex',alignItems:'center',gap:4}}>
               <span className={`badge ${e}`}>{lbl(e)}</span>
-              <button className="bedit" onClick={()=>openEdit(p)}>✏️</button>
+              {isSupervisor&&<button className="bedit" onClick={()=>openEdit(p)}>✏️</button>}
             </div>
           </div>
           <div className="cbot"><div style={{display:'flex',alignItems:'baseline',gap:4}}><span className={`sval ${e}`}>{s}</span><span style={{fontSize:11,color:'var(--text2)'}}> {p.unidad}s</span></div><span style={{fontSize:11,color:'var(--text2)'}}>{d===999?'Sin historial':`~${d} días`}</span></div>
@@ -665,10 +601,7 @@ function Inventario(){
       <div className="mtitle">Registrar ingreso</div>
       <div className="mform">
         <div className="field"><label>Producto *</label><select value={ing.productoId} onChange={e=>setIng(f=>({...f,productoId:e.target.value}))}><option value="">Seleccionar...</option>{products.map(p=><option key={p.id} value={p.id}>{p.nombre}</option>)}</select></div>
-        <div className="mrow">
-          <div className="field"><label>Cantidad *</label><input type="number" min="1" value={ing.cantidad} onChange={e=>setIng(f=>({...f,cantidad:e.target.value}))} placeholder="0"/></div>
-          <div className="field"><label>Fecha</label><input type="date" value={ing.fecha} onChange={e=>setIng(f=>({...f,fecha:e.target.value}))}/></div>
-        </div>
+        <div className="mrow"><div className="field"><label>Cantidad *</label><input type="number" min="1" value={ing.cantidad} onChange={e=>setIng(f=>({...f,cantidad:e.target.value}))} placeholder="0"/></div><div className="field"><label>Fecha</label><input type="date" value={ing.fecha} onChange={e=>setIng(f=>({...f,fecha:e.target.value}))}/></div></div>
         <div className="field"><label>Nota</label><input value={ing.nota} onChange={e=>setIng(f=>({...f,nota:e.target.value}))} placeholder="Proveedor..."/></div>
       </div>
       <div className="mactions"><button className="bp" onClick={saveIng} disabled={saving}>{saving?'Guardando...':'Registrar'}</button><button className="bs" onClick={()=>setSi(false)}>Cancelar</button></div>
@@ -676,9 +609,8 @@ function Inventario(){
   </div>;
 }
 
-// ── CONTROL ──
 function Control(){
-  const {products,quincenas,addQ,updateQ,getStock,csvConsolidado}=useApp();
+  const {products,quincenas,addQ,updateQ,getStock,csvConsolidado,isSupervisor,validarQ}=useApp();
   const hoy=new Date().toISOString().slice(0,10);
   const m=new Date().getDate()<=15?1:2,mes=new Date().toLocaleString('es',{month:'short'});
   const defLabel=`Q${m} ${mes[0].toUpperCase()+mes.slice(1)}`;
@@ -692,48 +624,34 @@ function Control(){
   const [editFecha,setEditFecha]=useState('');
   const uq=quincenas.length?[...quincenas].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha))[0]:null;
 
-  function openEditQ(q){
-    setEditQ(q);setEditLabel(q.label);setEditFecha(q.fecha);
-    const c={};Object.entries(q.inventario).forEach(([k,v])=>{c[k]=v;});
-    setCounts(c);
-  }
+  const yaRegistroHoy=quincenas.some(q=>q.created_by===useApp().userEmail&&q.fecha===hoy);
+
+  function openEditQ(q){setEditQ(q);setEditLabel(q.label);setEditFecha(q.fecha);const c={};Object.entries(q.inventario).forEach(([k,v])=>{c[k]=v;});setCounts(c);}
   function cancelEdit(){setEditQ(null);setCounts({});setEditLabel('');setEditFecha('');}
 
   async function guardar(){
+    if(!isSupervisor&&yaRegistroHoy){setMsg({text:'Ya registraste un conteo hoy.',type:'err'});return;}
     setSaving(true);
     const inv={};products.forEach(p=>{const v=counts[p.id];inv[p.id]=v!==undefined&&v!==''?parseInt(v):getStock(p.id);});
     let err;
     if(editQ){err=await updateQ(editQ.id,editLabel||editQ.label,editFecha||editQ.fecha,inv);}
     else{err=await addQ(label,fecha,inv);}
     if(err){setMsg({text:err,type:'err'});}
-    else{
-      setMsg({text:editQ?'Conteo actualizado ✓':'Conteo guardado ✓',type:'ok'});
-      setCounts({});setEditQ(null);setEditLabel('');setEditFecha('');
-      if(!editQ){setLabel(defLabel);setFecha(hoy);}
-    }
-    setTimeout(()=>setMsg({text:'',type:'ok'}),3000);
-    setSaving(false);
+    else{setMsg({text:editQ?'Conteo actualizado ✓':'Conteo guardado — pendiente de validación ✓',type:'ok'});setCounts({});setEditQ(null);setEditLabel('');setEditFecha('');if(!editQ){setLabel(defLabel);setFecha(hoy);}}
+    setTimeout(()=>setMsg({text:'',type:'ok'}),3000);setSaving(false);
   }
 
   const ref=uq&&!editQ?uq:null;
   return <div className="page">
     <div className="ph">
-      <div><h1 className="pt">Control</h1><p className="ps">{editQ?`Editando conteo: ${editQ.label}`:'Ingresa el stock contado. Vacíos mantienen el valor anterior.'}</p></div>
-      {quincenas.length>0&&!editQ&&<button className="bs" style={{fontSize:12}} onClick={csvConsolidado}>↓ Consolidado CSV</button>}
+      <div><h1 className="pt">Control</h1><p className="ps">{editQ?`Editando: ${editQ.label}`:'Ingresa el stock contado. Vacíos mantienen el valor anterior.'}</p></div>
+      {quincenas.length>0&&!editQ&&isSupervisor&&<button className="bs" style={{fontSize:12}} onClick={csvConsolidado}>↓ Consolidado CSV</button>}
     </div>
-    <div className="cfgcard">
-      <div className="cfgrow">
-        <div className="field" style={{minWidth:0}}>
-          <label>Etiqueta del conteo</label>
-          <input value={editQ?editLabel:label} onChange={e=>editQ?setEditLabel(e.target.value):setLabel(e.target.value)} placeholder="Q1 Mar" style={{width:140}}/>
-        </div>
-        <div className="field" style={{minWidth:0}}>
-          <label>Fecha</label>
-          <input type="date" value={editQ?editFecha:fecha} onChange={e=>editQ?setEditFecha(e.target.value):setFecha(e.target.value)} style={{width:155}}/>
-        </div>
-        {ref&&<span className="hint">Último conteo: <strong>{ref.label}</strong></span>}
-      </div>
-    </div>
+    <div className="cfgcard"><div className="cfgrow">
+      <div className="field" style={{minWidth:0}}><label>Etiqueta del conteo</label><input value={editQ?editLabel:label} onChange={e=>editQ?setEditLabel(e.target.value):setLabel(e.target.value)} placeholder="Q1 Mar" style={{width:140}}/></div>
+      <div className="field" style={{minWidth:0}}><label>Fecha</label><input type="date" value={editQ?editFecha:fecha} onChange={e=>editQ?setEditFecha(e.target.value):setFecha(e.target.value)} style={{width:155}}/></div>
+      {ref&&<span className="hint">Último: <strong>{ref.label}</strong></span>}
+    </div></div>
     <Msg text={msg.text} type={msg.type}/>
     <div className="twrap t-ctrl">
       <div className="thead"><span>Producto</span><span>Anterior</span><span>Conteo</span><span>Diferencia</span></div>
@@ -750,24 +668,28 @@ function Control(){
       })}
     </div>
     <div className="foot">
-      {editQ&&<button className="bs" onClick={cancelEdit}>Cancelar edición</button>}
+      {editQ&&<button className="bs" onClick={cancelEdit}>Cancelar</button>}
       <button className="bp bpsave" onClick={guardar} disabled={saving}>{saving?'Guardando...':(editQ?'Actualizar conteo':'Guardar conteo')}</button>
     </div>
     {quincenas.length>0&&<div>
       <div className="stitle" style={{marginBottom:'.75rem'}}>Historial de conteos</div>
-      {[...quincenas].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha)).map(q=>(
-        <div key={q.id} className="qitem">
+      {[...quincenas].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha)).map(q=>{
+        const isPending=!q.status||q.status==='pending';
+        return <div key={q.id} className="qitem">
           <span style={{fontWeight:500,fontSize:13,minWidth:80}}>{q.label}</span>
           <span style={{fontSize:12,color:'var(--text2)'}}>{new Date(q.fecha).toLocaleDateString('es',{day:'2-digit',month:'short',year:'numeric'})}</span>
-          <span style={{fontSize:12,color:'var(--text3)',marginLeft:'auto'}}>{Object.keys(q.inventario).length} productos</span>
-          <button className="bedit" style={{marginLeft:8}} title="Editar" onClick={()=>openEditQ(q)}>✏️</button>
-        </div>
-      ))}
+          {isPending?<span className="badge pending">Pendiente</span>:<span className="badge validated">Validado</span>}
+          <span style={{fontSize:11,color:'var(--text3)'}}>{q.created_by}</span>
+          <span style={{marginLeft:'auto',display:'flex',gap:4}}>
+            {isSupervisor&&isPending&&<button className="bval" onClick={()=>validarQ(q.id,q.label)}>✓ Validar</button>}
+            {isSupervisor&&<button className="bedit" title="Editar" onClick={()=>openEditQ(q)}>✏️</button>}
+          </span>
+        </div>;
+      })}
     </div>}
   </div>;
 }
 
-// ── INGRESOS ──
 function Ingresos(){
   const {products,ingresos}=useApp();
   const sorted=[...ingresos].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
@@ -775,20 +697,19 @@ function Ingresos(){
     <div className="ph"><div><h1 className="pt">Ingresos</h1><p className="ps">Historial · Registra ingresos con el botón <strong style={{color:'var(--green)'}}>↑</strong> en Inventario</p></div></div>
     {!sorted.length?<div className="iempty"><span className="iicon">↑</span><p style={{fontSize:13,color:'var(--text2)',marginBottom:6}}>No hay ingresos registrados.</p><p style={{fontSize:13,color:'var(--text2)'}}>Ve a <strong style={{color:'var(--green)'}}>Inventario</strong> y usa el botón flotante ↑</p></div>
     :<div className="twrap t-ing">
-      <div className="thead"><span>Fecha</span><span>Producto</span><span>Cantidad</span><span>Nota</span></div>
+      <div className="thead"><span>Fecha</span><span>Producto</span><span>Cantidad</span><span>Registrado por</span></div>
       {sorted.map(i=>{const p=products.find(x=>x.id===i.product_id);return(
         <div key={i.id} className="trow">
           <span style={{fontSize:12,color:'var(--text2)'}}>{new Date(i.fecha).toLocaleDateString('es',{day:'2-digit',month:'short',year:'numeric'})}</span>
           <span>{p?<><span className="pname">{p.nombre}</span><span className="pdesc">{p.codigo}</span></>:<span className="pdesc">Eliminado</span>}</span>
           <span style={{display:'flex',alignItems:'baseline',gap:5}}><span className="mono cg">+{i.cantidad}</span><span style={{fontSize:11,color:'var(--text3)'}}>{p?.unidad}</span></span>
-          <span style={{fontSize:12,color:'var(--text2)'}}>{i.nota||'—'}</span>
+          <span style={{fontSize:12,color:'var(--text2)'}}>{i.created_by||'—'}</span>
         </div>
       );})}
     </div>}
   </div>;
 }
 
-// ── GRÁFICOS ──
 function Graficos(){
   const {products,quincenas,getStock,getConsumo,getDias,getEstado}=useApp();
   const [sid,setSid]=useState(products[0]?.id??null);
@@ -804,40 +725,17 @@ function Graficos(){
   let s=stock;const py=['Próx.1','Próx.2','Próx.3','Próx.4'].map(l=>{s=Math.max(0,s-avg);return{q:l,p:s};});
   const comb=[...sr.slice(-3).map(d=>({q:d.q,r:d.s})),{q:py[0]?.q,r:stock,p:stock},...py.map(d=>({q:d.q,p:d.p}))];
   const qAobj=quincenas.find(q=>q.id===parseInt(qa)),qBobj=quincenas.find(q=>q.id===parseInt(qb));
-  const comp=(qAobj&&qBobj)?products.map(p=>{
-    const ca=Math.max(0,(qAobj.inventario[p.id]??0)-(qBobj.inventario[p.id]??0));
-    const cb=getConsumo(p.id);const diff=ca===0?0:Math.round(((cb-ca)/ca)*100);
-    return{n:p.nombre,ca,cb,diff};
-  }):[];
+  const comp=(qAobj&&qBobj)?products.map(p=>{const ca=Math.max(0,(qAobj.inventario[p.id]??0)-(qBobj.inventario[p.id]??0));const cb=getConsumo(p.id);const diff=ca===0?0:Math.round(((cb-ca)/ca)*100);return{n:p.nombre,ca,cb,diff};}):[];
   const td=comp.length?Math.round(comp.reduce((s,p)=>s+p.diff,0)/comp.length):0;
   return <div className="page">
     <div className="ph"><div><h1 className="pt">Gráficos</h1><p className="ps">Análisis de consumo y proyección</p></div></div>
-    <div className="ptabs">
-      <button className={`ptab${tab==='c'?' on':''}`} onClick={()=>setTab('c')}>Consumo y proyección</button>
-      <button className={`ptab${tab==='k'?' on':''}`} onClick={()=>setTab('k')}>Comparativo</button>
-    </div>
+    <div className="ptabs"><button className={`ptab${tab==='c'?' on':''}`} onClick={()=>setTab('c')}>Consumo y proyección</button><button className={`ptab${tab==='k'?' on':''}`} onClick={()=>setTab('k')}>Comparativo</button></div>
     {tab==='c'&&<>
-      <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:'1rem'}}>
-        <label style={{fontSize:12,color:'var(--text2)'}}>Producto</label>
-        <select value={sid??''} onChange={e=>setSid(parseInt(e.target.value))} style={{minWidth:220,width:'auto'}}>{products.map(p=><option key={p.id} value={p.id}>{p.nombre}</option>)}</select>
-      </div>
+      <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:'1rem'}}><label style={{fontSize:12,color:'var(--text2)'}}>Producto</label><select value={sid??''} onChange={e=>setSid(parseInt(e.target.value))} style={{minWidth:220,width:'auto'}}>{products.map(p=><option key={p.id} value={p.id}>{p.nombre}</option>)}</select></div>
       {prod&&<>
-        <div className="metrics3">
-          <div className="metric"><span className="ml">Stock actual</span><span className={`mv ${est}`}>{stock}<small style={{fontSize:12,fontWeight:400,color:'var(--text2)'}}> {prod.unidad}s</small></span></div>
-          <div className="metric"><span className="ml">Consume prom/Q</span><span className="mv">{avg}<small style={{fontSize:12,fontWeight:400,color:'var(--text2)'}}> {prod.unidad}s</small></span></div>
-          <div className="metric"><span className="ml">Días restantes</span><span className={`mv ${est}`}>{dias===999?'—':`${dias}d`}</span></div>
-        </div>
-        <div className="chcard">
-          <div className="chtitle">Consumo por quincena</div>
-          <BarChartSVG data={cd} color="#00c97d" height={160}/>
-        </div>
-        <div className="chcard">
-          <div className="chrow">
-            <div className="chtitle">Stock real vs proyección</div>
-            <div className="legend"><span><span className="ldot" style={{background:'#00c97d'}}/>Real</span><span><span className="ldot" style={{background:'#4d9eff'}}/>Proyección</span></div>
-          </div>
-          <LineChartSVG data={comb} height={180}/>
-        </div>
+        <div className="metrics3"><div className="metric"><span className="ml">Stock actual</span><span className={`mv ${est}`}>{stock}<small style={{fontSize:12,fontWeight:400,color:'var(--text2)'}}> {prod.unidad}s</small></span></div><div className="metric"><span className="ml">Consume prom/Q</span><span className="mv">{avg}<small style={{fontSize:12,fontWeight:400,color:'var(--text2)'}}> {prod.unidad}s</small></span></div><div className="metric"><span className="ml">Días restantes</span><span className={`mv ${est}`}>{dias===999?'—':`${dias}d`}</span></div></div>
+        <div className="chcard"><div className="chtitle">Consumo por quincena</div><BarChartSVG data={cd} color="#00c97d" height={160}/></div>
+        <div className="chcard"><div className="chrow"><div className="chtitle">Stock real vs proyección</div><div className="legend"><span><span className="ldot" style={{background:'#00c97d'}}/>Real</span><span><span className="ldot" style={{background:'#4d9eff'}}/>Proyección</span></div></div><LineChartSVG data={comb} height={180}/></div>
       </>}
     </>}
     {tab==='k'&&<>
@@ -846,51 +744,92 @@ function Graficos(){
         <span className="vs">vs</span>
         <div className="field"><label style={{fontSize:11,textTransform:'uppercase',letterSpacing:'.05em',color:'var(--text2)'}}>Quincena anterior</label><select value={qb??''} onChange={e=>setQb(e.target.value)} style={{minWidth:150,width:'auto'}}>{sq.map(q=><option key={q.id} value={q.id}>{q.label}</option>)}</select></div>
       </div>
-      {quincenas.length<2?<div className="nodata">Necesitas al menos 2 controles registrados</div>:<>
-        <div className="metrics3">
-          <div className="metric"><span className="ml">Variación prom.</span><span className={`mv${td>0?' cr':td<0?' cg':''}`}>{td>0?'+':''}{td}%</span></div>
-          <div className="metric"><span className="ml">Subieron</span><span className="mv cr">{comp.filter(p=>p.diff>0).length}</span></div>
-          <div className="metric"><span className="ml">Bajaron</span><span className="mv cg">{comp.filter(p=>p.diff<0).length}</span></div>
-        </div>
-        <div className="ctab">
-          <div className="cthead"><span>Producto</span><span>Anterior</span><span>Actual</span><span>Variación</span></div>
-          {[...comp].sort((a,b)=>b.diff-a.diff).map((p,i)=>(
-            <div key={i} className="ctrow">
-              <span className="pname">{p.n}</span><span className="mono">{p.ca}</span><span className="mono">{p.cb}</span>
-              <span className={`mono${p.diff>0?' cr':p.diff<0?' cg':''}`}>{p.diff>0?'+':''}{p.diff}%</span>
-            </div>
-          ))}
-        </div>
+      {quincenas.length<2?<div className="nodata">Necesitas al menos 2 conteos registrados</div>:<>
+        <div className="metrics3"><div className="metric"><span className="ml">Variación prom.</span><span className={`mv${td>0?' cr':td<0?' cg':''}`}>{td>0?'+':''}{td}%</span></div><div className="metric"><span className="ml">Subieron</span><span className="mv cr">{comp.filter(p=>p.diff>0).length}</span></div><div className="metric"><span className="ml">Bajaron</span><span className="mv cg">{comp.filter(p=>p.diff<0).length}</span></div></div>
+        <div className="ctab"><div className="cthead"><span>Producto</span><span>Anterior</span><span>Actual</span><span>Variación</span></div>{[...comp].sort((a,b)=>b.diff-a.diff).map((p,i)=><div key={i} className="ctrow"><span className="pname">{p.n}</span><span className="mono">{p.ca}</span><span className="mono">{p.cb}</span><span className={`mono${p.diff>0?' cr':p.diff<0?' cg':''}`}>{p.diff>0?'+':''}{p.diff}%</span></div>)}</div>
       </>}
     </>}
   </div>;
 }
 
-// ── APP ROOT ──
-const PAGES=[{id:'dashboard',label:'Dashboard',icon:'▦'},{id:'inventario',label:'Inventario',icon:'≡'},{id:'control',label:'Control',icon:'⊞'},{id:'ingresos',label:'Ingresos',icon:'↑'},{id:'graficos',label:'Gráficos',icon:'∿'}];
-
-function AppMain({user,profile,onLogout}){
-  const [page,setPage]=useState('dashboard');
-  const userName=profile?.nombre||user.email;
-  return(
-    <Store user={user} userName={userName} onLogout={onLogout}>
-      <AppInner page={page} setPage={setPage} onLogout={onLogout} userName={userName}/>
-    </Store>
-  );
+function Supervision(){
+  const {quincenas,actLog,validarQ,getAnomalias,isSupervisor}=useApp();
+  const [tab,setTab]=useState('conteos');
+  if(!isSupervisor)return null;
+  const pendientes=quincenas.filter(q=>!q.status||q.status==='pending');
+  const anomalias=getAnomalias();
+  return <div className="page">
+    <div className="ph"><div><h1 className="pt">Supervisión</h1><p className="ps">Control de calidad y auditoría</p></div></div>
+    <div className="ptabs">
+      <button className={`ptab${tab==='conteos'?' on':''}`} onClick={()=>setTab('conteos')}>Conteos pendientes {pendientes.length>0&&<span style={{background:'var(--amber-dim)',color:'var(--amber)',fontSize:10,padding:'1px 6px',borderRadius:99,marginLeft:4}}>{pendientes.length}</span>}</button>
+      <button className={`ptab${tab==='anomalias'?' on':''}`} onClick={()=>setTab('anomalias')}>Anomalías {anomalias.length>0&&<span style={{background:'var(--red-dim)',color:'var(--red)',fontSize:10,padding:'1px 6px',borderRadius:99,marginLeft:4}}>{anomalias.length}</span>}</button>
+      <button className={`ptab${tab==='log'?' on':''}`} onClick={()=>setTab('log')}>Log de actividad</button>
+    </div>
+    {tab==='conteos'&&<div className="sup-section">
+      {pendientes.length===0?<div className="nodata">No hay conteos pendientes de validación ✓</div>
+      :<div className="twrap t-sup">
+        <div className="thead"><span>Conteo</span><span>Fecha</span><span>Registrado por</span><span>Productos</span><span>Acción</span></div>
+        {pendientes.sort((a,b)=>new Date(b.fecha)-new Date(a.fecha)).map(q=>(
+          <div key={q.id} className="trow">
+            <span><span className="pname">{q.label}</span></span>
+            <span style={{fontSize:12,color:'var(--text2)'}}>{new Date(q.fecha).toLocaleDateString('es',{day:'2-digit',month:'short',year:'numeric'})}</span>
+            <span style={{fontSize:12,color:'var(--blue)'}}>{q.created_by||'—'}</span>
+            <span className="mono">{Object.keys(q.inventario).length}</span>
+            <span><button className="bval" onClick={()=>validarQ(q.id,q.label)}>✓ Validar</button></span>
+          </div>
+        ))}
+      </div>}
+    </div>}
+    {tab==='anomalias'&&<div className="sup-section">
+      {anomalias.length===0?<div className="nodata">No se detectaron anomalías ✓</div>
+      :anomalias.map((a,i)=><div key={i} className="anomaly-card">
+        <div className="anomaly-title">⚠️ {a.tipo} — {a.producto}</div>
+        <div className="anomaly-desc">{a.detalle}</div>
+        <div className="anomaly-meta">Conteo: {a.conteo}</div>
+      </div>)}
+    </div>}
+    {tab==='log'&&<div className="sup-section">
+      {actLog.length===0?<div className="nodata">Sin actividad registrada</div>
+      :<div className="twrap">
+        {actLog.map(l=><div key={l.id} className="log-item">
+          <span className="log-time">{new Date(l.created_at).toLocaleDateString('es',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</span>
+          <span className="log-user">{l.user_email}</span>
+          <span className="log-action">{l.accion} — {l.detalle}</span>
+        </div>)}
+      </div>}
+    </div>}
+  </div>;
 }
 
-function AppInner({page,setPage,onLogout,userName}){
-  const {getEstado,products,csvInventario,loading,error}=useApp();
+const PAGES_OP=[{id:'dashboard',label:'Dashboard',icon:'▦'},{id:'inventario',label:'Inventario',icon:'≡'},{id:'control',label:'Control',icon:'⊞'},{id:'ingresos',label:'Ingresos',icon:'↑'},{id:'graficos',label:'Gráficos',icon:'∿'}];
+const PAGES_SUP=[...PAGES_OP,{id:'supervision',label:'Supervisión',icon:'◈'}];
+
+function AppMain({user,profile,isSupervisor,onLogout}){
+  const [page,setPage]=useState('dashboard');
+  const userName=profile?.nombre||user.email;
+  return(<Store user={user} userEmail={user.email} isSupervisor={isSupervisor} onLogout={onLogout}>
+    <AppInner page={page} setPage={setPage} onLogout={onLogout} userName={userName} isSupervisor={isSupervisor}/>
+  </Store>);
+}
+
+function AppInner({page,setPage,onLogout,userName,isSupervisor}){
+  const {getEstado,products,csvInventario,loading,error,quincenas}=useApp();
   const nc=products.filter(p=>getEstado(p.id)==='critico').length;
+  const pendientes=quincenas.filter(q=>!q.status||q.status==='pending').length;
+  const PAGES=isSupervisor?PAGES_SUP:PAGES_OP;
   if(loading)return <div className="loading"><div className="spinner"/><span style={{fontSize:13,color:'var(--text2)'}}>Cargando inventario...</span></div>;
   if(error)return <div className="loading"><span style={{fontSize:14,color:'var(--red)'}}>Error: {error}</span><button className="bs" style={{marginTop:8}} onClick={()=>window.location.reload()}>Reintentar</button></div>;
   return <div className="app">
     <aside className="sidebar">
-      <div className="brand"><span className="brand-icon">⬡</span><span className="brand-name">Inventario</span></div>
+      <div className="brand">
+        <span className="brand-icon">⬡</span><span className="brand-name">Inventario</span>
+        <span className={`rol-badge ${isSupervisor?'rol-sup':'rol-op'}`}>{isSupervisor?'Sup.':'Op.'}</span>
+      </div>
       <nav className="nav">
         {PAGES.map(p=><button key={p.id} className={`nav-btn${page===p.id?' active':''}`} onClick={()=>setPage(p.id)}>
           <span className="nav-icon">{p.icon}</span><span>{p.label}</span>
           {p.id==='dashboard'&&nc>0&&<span className="nbadge">{nc}</span>}
+          {p.id==='supervision'&&pendientes>0&&<span className="nbadge" style={{background:'var(--amber)'}}>{pendientes}</span>}
         </button>)}
       </nav>
       <div className="sidebar-foot">
@@ -905,12 +844,14 @@ function AppInner({page,setPage,onLogout,userName}){
       {page==='control'&&<Control/>}
       {page==='ingresos'&&<Ingresos/>}
       {page==='graficos'&&<Graficos/>}
+      {page==='supervision'&&isSupervisor&&<Supervision/>}
     </main>
     <nav className="bottom-nav">
       {PAGES.map(p=><button key={p.id} className={`bnbtn${page===p.id?' on':''}`} onClick={()=>setPage(p.id)}>
         <div style={{position:'relative',display:'inline-block'}}>
           <span className="bnico">{p.icon}</span>
           {p.id==='dashboard'&&nc>0&&<span className="bnbadge">{nc}</span>}
+          {p.id==='supervision'&&pendientes>0&&<span className="bnbadge" style={{background:'var(--amber)'}}>{pendientes}</span>}
         </div>
         <span className="bnlbl">{p.label}</span>
       </button>)}
@@ -921,25 +862,32 @@ function AppInner({page,setPage,onLogout,userName}){
 function Root(){
   const [session,setSession]=useState(undefined);
   const [profile,setProfile]=useState(null);
+  const [isSupervisor,setIsSupervisor]=useState(false);
 
   useEffect(()=>{
     sb.auth.getSession().then(({data:{session}})=>setSession(session));
-    const {data:{subscription}}=sb.auth.onAuthStateChange((_,session)=>{setSession(session);if(!session)setProfile(null);});
+    const {data:{subscription}}=sb.auth.onAuthStateChange((_,session)=>{setSession(session);if(!session){setProfile(null);setIsSupervisor(false);}});
     return()=>subscription.unsubscribe();
   },[]);
 
   useEffect(()=>{
     if(!session)return;
-    sb.from('user_profiles').select('*').eq('id',session.user.id).single().then(({data})=>setProfile(data));
+    Promise.all([
+      sb.from('user_profiles').select('*').eq('id',session.user.id).single(),
+      sb.from('supervisors').select('email').eq('email',session.user.email).single()
+    ]).then(([{data:prof},{data:sup}])=>{
+      setProfile(prof);
+      setIsSupervisor(!!sup);
+    });
   },[session]);
 
-  async function handleLogout(){await sb.auth.signOut();setSession(null);setProfile(null);}
+  async function handleLogout(){await sb.auth.signOut();setSession(null);setProfile(null);setIsSupervisor(false);}
 
   if(session===undefined)return <div className="loading"><div className="spinner"/></div>;
   if(!session)return <AuthScreen/>;
   if(!profile)return <div className="loading"><div className="spinner"/><span style={{fontSize:13,color:'var(--text2)'}}>Verificando acceso...</span></div>;
   if(profile.status!=='approved')return <PendingScreen onLogout={handleLogout}/>;
-  return <AppMain user={session.user} profile={profile} onLogout={handleLogout}/>;
+  return <AppMain user={session.user} profile={profile} isSupervisor={isSupervisor} onLogout={handleLogout}/>;
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(<Root/>);
