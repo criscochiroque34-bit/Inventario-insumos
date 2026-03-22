@@ -250,7 +250,7 @@ function AuthScreen({onLogin}){
   const [dni,setDni]=useState('');
   const [loading,setLoading]=useState(false);
   const [err,setErr]=useState('');
-  async function handleLogin(e){
+  async function handleSubmit(e){
     e.preventDefault();setErr('');setLoading(true);
     const {data,error}=await sb.from('usuarios').select('*').eq('dni',dni.trim()).single();
     if(error||!data){setErr('DNI no registrado. Contacta al administrador.');setLoading(false);return;}
@@ -262,7 +262,7 @@ function AuthScreen({onLogin}){
     <div className="auth-title">Bienvenido</div>
     <div className="auth-sub">Ingresa tu DNI para acceder</div>
     {err&&<div className="auth-err">{err}</div>}
-    <form onSubmit={handleLogin}>
+    <form onSubmit={handleSubmit}>
       <div className="auth-field"><label>DNI</label><input value={dni} onChange={e=>setDni(e.target.value)} placeholder="Ej: 12345678" required autoFocus/></div>
       <button type="submit" className="auth-btn" disabled={loading}>{loading?'Verificando...':'Ingresar'}</button>
     </form>
@@ -887,11 +887,11 @@ function Supervision(){
 const PAGES_OP=[{id:'dashboard',label:'Dashboard',icon:'▦'},{id:'inventario',label:'Inventario',icon:'≡'},{id:'control',label:'Control',icon:'⊞'},{id:'ingresos',label:'Ingresos',icon:'↑'},{id:'graficos',label:'Gráficos',icon:'∿'}];
 const PAGES_SUP=[...PAGES_OP,{id:'supervision',label:'Supervisión',icon:'◈'}];
 
-function AppMain({usuario,onLogout}){
+function AppMain({user,profile,isSupervisor,onLogout}){
   const [page,setPage]=useState('dashboard');
-  const isSupervisor=usuario.cargo==='supervisor';
-  return(<Store user={{email:usuario.dni}} userEmail={usuario.nombre} isSupervisor={isSupervisor} onLogout={onLogout}>
-    <AppInner page={page} setPage={setPage} onLogout={onLogout} userName={usuario.nombre} isSupervisor={isSupervisor}/>
+  const userName=profile?.nombre||user.email;
+  return(<Store user={user} userEmail={user.email} isSupervisor={isSupervisor} onLogout={onLogout}>
+    <AppInner page={page} setPage={setPage} onLogout={onLogout} userName={userName} isSupervisor={isSupervisor}/>
   </Store>);
 }
 
@@ -964,7 +964,12 @@ function Root(){
 
   if(usuario===undefined)return <div className="loading"><div className="spinner"/></div>;
   if(!usuario)return <AuthScreen onLogin={handleLogin}/>;
-  return <AppMain usuario={usuario} onLogout={handleLogout}/>;
+
+  // Simula los mismos objetos que AppMain esperaba antes
+  const fakeUser={email:usuario.dni,id:usuario.dni};
+  const fakeProfile={nombre:usuario.nombre,status:'approved'};
+  const isSupervisor=usuario.cargo==='supervisor';
+  return <AppMain user={fakeUser} profile={fakeProfile} isSupervisor={isSupervisor} onLogout={handleLogout}/>;
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(<Root/>);
