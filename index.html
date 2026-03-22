@@ -246,55 +246,33 @@ const SB_URL='https://vjsgyatreowdclpsssem.supabase.co';
 const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZqc2d5YXRyZW93ZGNscHNzc2VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1ODY1OTMsImV4cCI6MjA4OTE2MjU5M30.Yoy_zj55dBFltOSvAIS9WFDb0aKtwMMwiwaRsanb6p4';
 const sb=supabase.createClient(SB_URL,SB_KEY);
 
-function AuthScreen(){
-  const [mode,setMode]=useState('login');
-  const [nombre,setNombre]=useState('');
-  const [email,setEmail]=useState('');
-  const [pass,setPass]=useState('');
+function AuthScreen({onLogin}){
+  const [dni,setDni]=useState('');
   const [loading,setLoading]=useState(false);
   const [err,setErr]=useState('');
-  const [ok,setOk]=useState('');
-  async function handleLogin(e){e.preventDefault();setErr('');setLoading(true);const {error}=await sb.auth.signInWithPassword({email,password:pass});if(error)setErr(error.message);setLoading(false);}
-  async function handleRegister(e){
+  async function handleLogin(e){
     e.preventDefault();setErr('');setLoading(true);
-    const {data,error}=await sb.auth.signUp({email,password:pass});
-    if(error){setErr(error.message);setLoading(false);return;}
-    if(data.user){await sb.from('user_profiles').insert([{id:data.user.id,nombre,email,status:'pending'}]);setOk('Cuenta creada. Esperando aprobación.');setMode('pending_msg');}
+    const {data,error}=await sb.from('usuarios').select('*').eq('dni',dni.trim()).single();
+    if(error||!data){setErr('DNI no registrado. Contacta al administrador.');setLoading(false);return;}
+    onLogin(data);
     setLoading(false);
   }
-  if(mode==='pending_msg')return(<div className="auth-wrap"><div className="auth-card" style={{textAlign:'center'}}><span style={{fontSize:48,display:'block',marginBottom:'1rem'}}>⏳</span><div className="auth-title">Solicitud enviada</div><div className="auth-sub" style={{marginBottom:'1.5rem'}}>El administrador revisará tu solicitud y te dará acceso.</div><button className="auth-link-btn" style={{marginTop:'1rem'}} onClick={()=>setMode('login')}>Volver al inicio</button></div></div>);
   return(<div className="auth-wrap"><div className="auth-card">
     <div className="auth-logo"><span className="auth-logo-icon">⬡</span><span className="auth-logo-name">Inventario</span></div>
-    <div className="auth-title">{mode==='login'?'Bienvenido':'Crear cuenta'}</div>
-    <div className="auth-sub">{mode==='login'?'Ingresa con tu cuenta':'Tu acceso será aprobado por el administrador'}</div>
+    <div className="auth-title">Bienvenido</div>
+    <div className="auth-sub">Ingresa tu DNI para acceder</div>
     {err&&<div className="auth-err">{err}</div>}
-    {ok&&<div className="auth-ok">{ok}</div>}
-    <form onSubmit={mode==='login'?handleLogin:handleRegister}>
-      {mode==='register'&&<div className="auth-field"><label>Nombre completo</label><input value={nombre} onChange={e=>setNombre(e.target.value)} placeholder="Juan Pérez" required/></div>}
-      <div className="auth-field"><label>Correo</label><input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="usuario@empresa.com" required/></div>
-      <div className="auth-field"><label>Contraseña</label><input type="password" value={pass} onChange={e=>setPass(e.target.value)} placeholder={mode==='login'?'Tu contraseña':'Mínimo 6 caracteres'} required/></div>
-      <button type="submit" className="auth-btn" disabled={loading}>{loading?'Cargando...':(mode==='login'?'Iniciar sesión':'Registrarme')}</button>
+    <form onSubmit={handleLogin}>
+      <div className="auth-field"><label>DNI</label><input value={dni} onChange={e=>setDni(e.target.value)} placeholder="Ej: 12345678" required autoFocus/></div>
+      <button type="submit" className="auth-btn" disabled={loading}>{loading?'Verificando...':'Ingresar'}</button>
     </form>
-    <div className="auth-divider"><div className="auth-divider-line"/><div className="auth-divider-text">o</div><div className="auth-divider-line"/></div>
-    <button className="auth-link-btn" onClick={()=>{setMode(mode==='login'?'register':'login');setErr('');setOk('');}}>
-      {mode==='login'?'Crear cuenta nueva':'Ya tengo cuenta'}
-    </button>
   </div></div>);
 }
 
-function PendingScreen({onLogout}){
-  return(<div className="pending-wrap"><div className="pending-card">
-    <span className="pending-icon">⏳</span>
-    <div className="pending-title">Acceso pendiente</div>
-    <div className="pending-badge"><div className="pending-dot"/>Esperando aprobación</div>
-    <div className="pending-sub">Tu solicitud fue enviada. El administrador revisará tu cuenta y te dará acceso en breve.</div>
-    <div className="pending-info"><strong>¿Cómo me aprueban?</strong><br/>El administrador revisará tu solicitud y te notificará cuando tengas acceso.</div>
-    <button className="pending-logout" onClick={onLogout}>Cerrar sesión</button>
-  </div></div>);
-}
+
 
 const Ctx=createContext(null);
-function Store({user,userEmail,isSupervisor,onLogout,children}){
+function Store({userName,isSupervisor,onLogout,children}){
   const [products,setProducts]=useState([]);
   const [quincenas,setQuincenas]=useState([]);
   const [qItems,setQItems]=useState([]);
@@ -323,7 +301,7 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
   useEffect(()=>{load();},[load]);
 
   async function logAction(accion,detalle){
-    await sb.from('activity_log').insert([{user_email:userEmail,accion,detalle}]);
+    await sb.from('activity_log').insert([{user_email:userName,accion,detalle}]);
   }
 
   const quincenasWithInv=quincenas.map(q=>{
@@ -392,7 +370,7 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
     await logAction('Eliminó producto',p?.nombre||id);await load();
   }
   async function addQ(label,fecha,inv){
-    const {data,error}=await sb.from('quincenas').insert([{label,fecha,status:'pending',created_by:userEmail}]).select().single();
+    const {data,error}=await sb.from('quincenas').insert([{label,fecha,status:'pending',created_by:userName}]).select().single();
     if(error)return error.message;
     const items=Object.entries(inv).map(([pid,cantidad])=>({quincena_id:data.id,product_id:parseInt(pid),cantidad}));
     if(items.length){const {error:e2}=await sb.from('quincena_items').insert(items);if(e2)return e2.message;}
@@ -407,12 +385,12 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
     await logAction('Editó conteo',label);await load();return null;
   }
   async function validarQ(qid,label){
-    const {error}=await sb.from('quincenas').update({status:'validated',validated_by:userEmail,validated_at:new Date().toISOString()}).eq('id',qid);
+    const {error}=await sb.from('quincenas').update({status:'validated',validated_by:userName,validated_at:new Date().toISOString()}).eq('id',qid);
     if(error)return error.message;
     await logAction('Validó conteo',label);await load();return null;
   }
   async function addIng(pid,cant,fecha,nota){
-    const {error}=await sb.from('ingresos').insert([{product_id:parseInt(pid),cantidad:parseInt(cant),fecha,nota,created_by:userEmail}]);
+    const {error}=await sb.from('ingresos').insert([{product_id:parseInt(pid),cantidad:parseInt(cant),fecha,nota,created_by:userName}]);
     if(error)return error.message;
     const p=products.find(x=>x.id===parseInt(pid));
     await logAction('Registró ingreso',`${p?.nombre||pid}: +${cant}`);await load();return null;
@@ -420,18 +398,18 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
   async function addSalida(pid,cant,fecha){
     const stock=getStock(parseInt(pid));
     if(parseInt(cant)>stock)return `Stock insuficiente. Disponible: ${stock}`;
-    const {error}=await sb.from('salidas').insert([{product_id:parseInt(pid),cantidad:parseInt(cant),fecha,status:'pending',created_by:userEmail}]);
+    const {error}=await sb.from('salidas').insert([{product_id:parseInt(pid),cantidad:parseInt(cant),fecha,status:'pending',created_by:userName}]);
     if(error)return error.message;
     const p=products.find(x=>x.id===parseInt(pid));
     await logAction('Solicitó salida',`${p?.nombre||pid}: -${cant}`);await load();return null;
   }
   async function aprobarSalida(id,prodNombre,cant){
-    const {error}=await sb.from('salidas').update({status:'approved',reviewed_by:userEmail,reviewed_at:new Date().toISOString()}).eq('id',id);
+    const {error}=await sb.from('salidas').update({status:'approved',reviewed_by:userName,reviewed_at:new Date().toISOString()}).eq('id',id);
     if(error)return error.message;
     await logAction('Aprobó salida',`${prodNombre}: -${cant}`);await load();return null;
   }
   async function rechazarSalida(id,prodNombre,cant){
-    const {error}=await sb.from('salidas').update({status:'rejected',reviewed_by:userEmail,reviewed_at:new Date().toISOString()}).eq('id',id);
+    const {error}=await sb.from('salidas').update({status:'rejected',reviewed_by:userName,reviewed_at:new Date().toISOString()}).eq('id',id);
     if(error)return error.message;
     await logAction('Rechazó salida',`${prodNombre}: -${cant}`);await load();return null;
   }
@@ -439,7 +417,7 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
   function csvInventario(){const rows=[['Criticidad','Código','Nombre','Flujo','Unidad','Stock','Días','Estado']];products.forEach(p=>{const e=getEstado(p.id);rows.push([p.criticidad,p.codigo,p.nombre,p.flujo,p.unidad,getStock(p.id),getDias(p.id)===999?'Sin hist.':getDias(p.id),e==='critico'?'Crítico':e==='alerta'?'Alerta':'En stock'])});dl(rows,'inventario');}
   function csvLista(){const rows=[['Código','Nombre','Stock','Consume/Q','Pedir','Unidad','Días']];getLista().forEach(p=>rows.push([p.codigo,p.nombre,p.stock,p.consumo,p.pedir,p.unidad,p.dias]));dl(rows,'lista-compra');}
   function csvConsolidado(){const qs=[...quincenasWithInv].sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));const headers=['Código','Nombre','Flujo','Unidad',...qs.map(q=>q.label)];const rows=[headers];products.forEach(p=>{rows.push([p.codigo,p.nombre,p.flujo,p.unidad,...qs.map(q=>q.inventario[p.id]??'')]);});dl(rows,'consolidado-conteos');}
-  return <Ctx.Provider value={{products,quincenas:quincenasWithInv,ingresos,salidas,actLog,loading,error,userEmail,isSupervisor,onLogout,getStock,getConsumo,getDias,getEstado,getLista,getAnomalias,addProd,updateProd,delProd,addQ,updateQ,validarQ,addIng,addSalida,aprobarSalida,rechazarSalida,csvInventario,csvLista,csvConsolidado}}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{products,quincenas:quincenasWithInv,ingresos,salidas,actLog,loading,error,userName,isSupervisor,onLogout,getStock,getConsumo,getDias,getEstado,getLista,getAnomalias,addProd,updateProd,delProd,addQ,updateQ,validarQ,addIng,addSalida,aprobarSalida,rechazarSalida,csvInventario,csvLista,csvConsolidado}}>{children}</Ctx.Provider>;
 }
 const useApp=()=>useContext(Ctx);
 
@@ -666,7 +644,7 @@ function Inventario(){
 }
 
 function Control(){
-  const {products,quincenas,addQ,updateQ,getStock,csvConsolidado,isSupervisor,validarQ,userEmail}=useApp();
+  const {products,quincenas,addQ,updateQ,getStock,csvConsolidado,isSupervisor,validarQ,userName}=useApp();
   const [filtroC,setFiltroC]=useState('Todos');
   const productosFiltrados=products.filter(p=>filtroC==='Todos'||p.criticidad===filtroC);
   const hoy=new Date().toISOString().slice(0,10);
@@ -682,7 +660,7 @@ function Control(){
   const [editFecha,setEditFecha]=useState('');
   const uq=quincenas.length?[...quincenas].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha))[0]:null;
 
-  const yaRegistroHoy=quincenas.some(q=>q.created_by===userEmail&&q.fecha===hoy);
+  const yaRegistroHoy=quincenas.some(q=>q.created_by===userName&&q.fecha===hoy);
 
   function openEditQ(q){setEditQ(q);setEditLabel(q.label);setEditFecha(q.fecha);const c={};Object.entries(q.inventario).forEach(([k,v])=>{c[k]=v;});setCounts(c);}
   function cancelEdit(){setEditQ(null);setCounts({});setEditLabel('');setEditFecha('');}
@@ -900,11 +878,11 @@ function Supervision(){
 const PAGES_OP=[{id:'dashboard',label:'Dashboard',icon:'▦'},{id:'inventario',label:'Inventario',icon:'≡'},{id:'control',label:'Control',icon:'⊞'},{id:'ingresos',label:'Ingresos',icon:'↑'},{id:'graficos',label:'Gráficos',icon:'∿'}];
 const PAGES_SUP=[...PAGES_OP,{id:'supervision',label:'Supervisión',icon:'◈'}];
 
-function AppMain({user,profile,isSupervisor,onLogout}){
+function AppMain({usuario,onLogout}){
   const [page,setPage]=useState('dashboard');
-  const userName=profile?.nombre||user.email;
-  return(<Store user={user} userEmail={user.email} isSupervisor={isSupervisor} onLogout={onLogout}>
-    <AppInner page={page} setPage={setPage} onLogout={onLogout} userName={userName} isSupervisor={isSupervisor}/>
+  const isSupervisor=usuario.cargo==='supervisor';
+  return(<Store userName={usuario.nombre} isSupervisor={isSupervisor} onLogout={onLogout}>
+    <AppInner page={page} setPage={setPage} onLogout={onLogout} userName={usuario.nombre} isSupervisor={isSupervisor}/>
   </Store>);
 }
 
@@ -958,34 +936,27 @@ function AppInner({page,setPage,onLogout,userName,isSupervisor}){
 }
 
 function Root(){
-  const [session,setSession]=useState(undefined);
-  const [profile,setProfile]=useState(null);
-  const [isSupervisor,setIsSupervisor]=useState(false);
+  const [usuario,setUsuario]=useState(null);
+  const [checking,setChecking]=useState(true);
 
   useEffect(()=>{
-    sb.auth.getSession().then(({data:{session}})=>setSession(session));
-    const {data:{subscription}}=sb.auth.onAuthStateChange((_,session)=>{setSession(session);if(!session){setProfile(null);setIsSupervisor(false);}});
-    return()=>subscription.unsubscribe();
+    const saved=sessionStorage.getItem('inv_usuario');
+    if(saved){try{setUsuario(JSON.parse(saved));}catch(e){}}
+    setChecking(false);
   },[]);
 
-  useEffect(()=>{
-    if(!session)return;
-    Promise.all([
-      sb.from('user_profiles').select('*').eq('id',session.user.id).single(),
-      sb.from('supervisors').select('email').eq('email',session.user.email).single()
-    ]).then(([{data:prof},{data:sup}])=>{
-      setProfile(prof);
-      setIsSupervisor(!!sup);
-    });
-  },[session]);
+  function handleLogin(data){
+    sessionStorage.setItem('inv_usuario',JSON.stringify(data));
+    setUsuario(data);
+  }
+  function handleLogout(){
+    sessionStorage.removeItem('inv_usuario');
+    setUsuario(null);
+  }
 
-  async function handleLogout(){await sb.auth.signOut();setSession(null);setProfile(null);setIsSupervisor(false);}
-
-  if(session===undefined)return <div className="loading"><div className="spinner"/></div>;
-  if(!session)return <AuthScreen/>;
-  if(!profile)return <div className="loading"><div className="spinner"/><span style={{fontSize:13,color:'var(--text2)'}}>Verificando acceso...</span></div>;
-  if(profile.status!=='approved')return <PendingScreen onLogout={handleLogout}/>;
-  return <AppMain user={session.user} profile={profile} isSupervisor={isSupervisor} onLogout={handleLogout}/>;
+  if(checking)return <div className="loading"><div className="spinner"/></div>;
+  if(!usuario)return <AuthScreen onLogin={handleLogin}/>;
+  return <AppMain usuario={usuario} onLogout={handleLogout}/>;
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(<Root/>);
