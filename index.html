@@ -465,7 +465,7 @@ function LineChartSVG({data,height=180}){
 }
 
 function Dashboard(){
-  const {products,getStock,getConsumo,getDias,getEstado,getLista,csvLista}=useApp();
+  const {products,getStock,getConsumo,getDias,getEstado,getLista,csvLista,isSupervisor}=useApp();
   const [show,setShow]=useState(false);
   const cr=products.filter(p=>getEstado(p.id)==='critico');
   const al=products.filter(p=>getEstado(p.id)==='alerta');
