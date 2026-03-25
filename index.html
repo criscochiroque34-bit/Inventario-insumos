@@ -118,7 +118,7 @@ button{font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border:non
 .trow:hover{background:var(--bg3)}
 .t-dash .thead,.t-dash .trow{grid-template-columns:2.5fr 1fr 80px 90px}
 .t-inv .thead,.t-inv .trow{grid-template-columns:36px 100px 2fr 70px 90px 60px 55px 75px 70px}
-.t-ctrl .thead,.t-ctrl .trow{grid-template-columns:2fr 100px 130px 100px}
+.t-ctrl .thead,.t-ctrl .trow{grid-template-columns:2fr 100px 130px 100px 110px}
 .t-ing .thead,.t-ing .trow{grid-template-columns:110px 2fr 110px 1fr}
 .t-sup .thead,.t-sup .trow{grid-template-columns:80px 2fr 120px 80px 100px}
 .t-log .thead,.t-log .trow{grid-template-columns:140px 1fr 2fr}
@@ -288,21 +288,23 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
   const [ingresos,setIngresos]=useState([]);
   const [salidas,setSalidas]=useState([]);
   const [actLog,setActLog]=useState([]);
+  const [usuariosList,setUsuariosList]=useState([]);
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState(null);
 
   const load=useCallback(async()=>{
     try{
-      const [p,q,qi,i,sal,al]=await Promise.all([
+      const [p,q,qi,i,sal,al,u]=await Promise.all([
         sb.from('products').select('*').order('id'),
         sb.from('quincenas').select('*').order('fecha'),
         sb.from('quincena_items').select('*'),
         sb.from('ingresos').select('*').order('fecha',{ascending:false}),
         sb.from('salidas').select('*').order('created_at',{ascending:false}),
         sb.from('activity_log').select('*').order('created_at',{ascending:false}).limit(100),
+        sb.from('usuarios').select('dni,nombre,area'),
       ]);
       if(p.error)throw p.error;
-      setProducts(p.data||[]);setQuincenas(q.data||[]);setQItems(qi.data||[]);setIngresos(i.data||[]);setSalidas(sal.data||[]);setActLog(al.data||[]);
+      setProducts(p.data||[]);setQuincenas(q.data||[]);setQItems(qi.data||[]);setIngresos(i.data||[]);setSalidas(sal.data||[]);setActLog(al.data||[]);setUsuariosList(u.data||[]);
     }catch(e){setError(e.message);}
     setLoading(false);
   },[]);
@@ -322,7 +324,7 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
     if(!quincenasWithInv.length)return 0;
     const u=[...quincenasWithInv].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha))[0];
     const base=u.inventario[pid]??0;
-    const ing=ingresos.filter(i=>i.product_id===pid&&new Date(i.fecha)>=new Date(u.fecha)).reduce((s,i)=>s+i.cantidad,0);
+    const ing=ingresos.filter(i=>i.product_id===pid&&(i.status==='approved'||i.status===null||i.status===undefined)&&new Date(i.fecha)>=new Date(u.fecha)).reduce((s,i)=>s+i.cantidad,0);
     const sal=salidas.filter(s=>s.product_id===pid&&s.status==='approved'&&new Date(s.fecha)>=new Date(u.fecha)).reduce((t,s)=>t+s.cantidad,0);
     return base+ing-sal;
   }
@@ -333,7 +335,7 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
     const cs=[];
     for(let i=1;i<s.length;i++){
       const p=s[i-1].inventario[pid]??0,c=s[i].inventario[pid]??0;
-      const ing=ingresos.filter(x=>x.product_id===pid&&new Date(x.fecha)>=new Date(s[i-1].fecha)&&new Date(x.fecha)<new Date(s[i].fecha)).reduce((t,x)=>t+x.cantidad,0);
+      const ing=ingresos.filter(x=>x.product_id===pid&&(x.status==='approved'||x.status===null||x.status===undefined)&&new Date(x.fecha)>=new Date(s[i-1].fecha)&&new Date(x.fecha)<new Date(s[i].fecha)).reduce((t,x)=>t+x.cantidad,0);
       const v=p+ing-c;if(v>0)cs.push(v);
     }
     return cs.length?Math.round(cs.reduce((a,b)=>a+b)/cs.length):0;
@@ -399,15 +401,32 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
     await logAction('Validó conteo',label);await load();return null;
   }
   async function addIng(pid,cant,fecha,nota){
-    const {error}=await sb.from('ingresos').insert([{product_id:parseInt(pid),cantidad:parseInt(cant),fecha,nota,created_by:userEmail}]);
+    const uData=usuariosList.find(u=>u.nombre===userEmail);
+    const {error}=await sb.from('ingresos').insert([{product_id:parseInt(pid),cantidad:parseInt(cant),fecha,nota,created_by:userEmail,status:'pending',area:uData?.area||null}]);
     if(error)return error.message;
     const p=products.find(x=>x.id===parseInt(pid));
     await logAction('Registró ingreso',`${p?.nombre||pid}: +${cant}`);await load();return null;
   }
+  async function rechazarQ(qid,label){
+    const {error}=await sb.from('quincenas').update({status:'rejected',rejected_by:userEmail,rejected_at:new Date().toISOString()}).eq('id',qid);
+    if(error)return error.message;
+    await logAction('Rechazó conteo',label);await load();return null;
+  }
+  async function aprobarIngreso(id,prodNombre,cant){
+    const {error}=await sb.from('ingresos').update({status:'approved',reviewed_by:userEmail,reviewed_at:new Date().toISOString()}).eq('id',id);
+    if(error)return error.message;
+    await logAction('Aprobó ingreso',`${prodNombre}: +${cant}`);await load();return null;
+  }
+  async function rechazarIngreso(id,prodNombre,cant){
+    const {error}=await sb.from('ingresos').update({status:'rejected',reviewed_by:userEmail,reviewed_at:new Date().toISOString()}).eq('id',id);
+    if(error)return error.message;
+    await logAction('Rechazó ingreso',`${prodNombre}: +${cant}`);await load();return null;
+  }
   async function addSalida(pid,cant,fecha){
     const stock=getStock(parseInt(pid));
     if(parseInt(cant)>stock)return `Stock insuficiente. Disponible: ${stock}`;
-    const {error}=await sb.from('salidas').insert([{product_id:parseInt(pid),cantidad:parseInt(cant),fecha,status:'pending',created_by:userEmail}]);
+    const uData=usuariosList.find(u=>u.nombre===userEmail);
+    const {error}=await sb.from('salidas').insert([{product_id:parseInt(pid),cantidad:parseInt(cant),fecha,status:'pending',created_by:userEmail,area:uData?.area||null}]);
     if(error)return error.message;
     const p=products.find(x=>x.id===parseInt(pid));
     await logAction('Solicitó salida',`${p?.nombre||pid}: -${cant}`);await load();return null;
@@ -426,7 +445,7 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
   function csvInventario(){const rows=[['Criticidad','Código','Nombre','Flujo','Unidad','Stock','Días','Estado']];products.forEach(p=>{const e=getEstado(p.id);rows.push([p.criticidad,p.codigo,p.nombre,p.flujo,p.unidad,getStock(p.id),getDias(p.id)===999?'Sin hist.':getDias(p.id),e==='critico'?'Crítico':e==='alerta'?'Alerta':'En stock'])});dl(rows,'inventario');}
   function csvLista(){const rows=[['Código','Nombre','Stock','Consume/Q','Pedir','Unidad','Días']];getLista().forEach(p=>rows.push([p.codigo,p.nombre,p.stock,p.consumo,p.pedir,p.unidad,p.dias]));dl(rows,'lista-compra');}
   function csvConsolidado(){const qs=[...quincenasWithInv].sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));const headers=['Código','Nombre','Flujo','Unidad',...qs.map(q=>q.label)];const rows=[headers];products.forEach(p=>{rows.push([p.codigo,p.nombre,p.flujo,p.unidad,...qs.map(q=>q.inventario[p.id]??'')]);});dl(rows,'consolidado-conteos');}
-  return <Ctx.Provider value={{products,quincenas:quincenasWithInv,ingresos,salidas,actLog,loading,error,userEmail,isSupervisor,onLogout,getStock,getConsumo,getDias,getEstado,getLista,getAnomalias,addProd,updateProd,delProd,addQ,updateQ,validarQ,addIng,addSalida,aprobarSalida,rechazarSalida,csvInventario,csvLista,csvConsolidado}}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{products,quincenas:quincenasWithInv,ingresos,salidas,actLog,usuariosList,loading,error,userEmail,isSupervisor,onLogout,getStock,getConsumo,getDias,getEstado,getLista,getAnomalias,addProd,updateProd,delProd,addQ,updateQ,validarQ,rechazarQ,addIng,aprobarIngreso,rechazarIngreso,addSalida,aprobarSalida,rechazarSalida,csvInventario,csvLista,csvConsolidado}}>{children}</Ctx.Provider>;
 }
 const useApp=()=>useContext(Ctx);
 
@@ -635,7 +654,8 @@ function Inventario(){
     {si&&<div className="modal">
       <div className="mtitle">Registrar ingreso</div>
       <div className="mform">
-        <div className="field"><label>Producto *</label><select value={ing.productoId} onChange={e=>setIng(f=>({...f,productoId:e.target.value}))}><option value="">Seleccionar...</option>{products.map(p=><option key={p.id} value={p.id}>{p.nombre}</option>)}</select></div>
+        <div className="field"><label>Flujo</label><select value={ing.flujoFil||''} onChange={e=>setIng(f=>({...f,flujoFil:e.target.value,productoId:''}))}><option value="">Todos</option>{[...new Set(products.map(p=>p.flujo).filter(Boolean))].map(f=><option key={f} value={f}>{f}</option>)}</select></div>
+        <div className="field"><label>Producto *</label><select value={ing.productoId} onChange={e=>setIng(f=>({...f,productoId:e.target.value}))}><option value="">Seleccionar...</option>{products.filter(p=>!ing.flujoFil||p.flujo===ing.flujoFil).map(p=><option key={p.id} value={p.id}>{p.nombre}</option>)}</select></div>
         <div className="mrow"><div className="field"><label>Cantidad *</label><input type="number" min="1" value={ing.cantidad} onChange={e=>setIng(f=>({...f,cantidad:e.target.value}))} placeholder="0"/></div><div className="field"><label>Fecha</label><input type="date" value={ing.fecha} onChange={e=>setIng(f=>({...f,fecha:e.target.value}))}/></div></div>
         <div className="field"><label>Nota</label><input value={ing.nota} onChange={e=>setIng(f=>({...f,nota:e.target.value}))} placeholder="Proveedor..."/></div>
       </div>
@@ -644,7 +664,8 @@ function Inventario(){
     {ss&&<div className="modal" style={{borderColor:'rgba(255,80,80,0.3)'}}>
       <div className="mtitle" style={{color:'var(--red)'}}>↓ Solicitar salida</div>
       <div className="mform">
-        <div className="field"><label>Producto *</label><select value={sal.productoId} onChange={e=>setSal(f=>({...f,productoId:e.target.value}))}><option value="">Seleccionar...</option>{products.map(p=><option key={p.id} value={p.id}>{p.nombre} (Stock: {getStock(p.id)})</option>)}</select></div>
+        <div className="field"><label>Flujo</label><select value={sal.flujoFil||''} onChange={e=>setSal(f=>({...f,flujoFil:e.target.value,productoId:''}))}><option value="">Todos</option>{[...new Set(products.map(p=>p.flujo).filter(Boolean))].map(f=><option key={f} value={f}>{f}</option>)}</select></div>
+        <div className="field"><label>Producto *</label><select value={sal.productoId} onChange={e=>setSal(f=>({...f,productoId:e.target.value}))}><option value="">Seleccionar...</option>{products.filter(p=>!sal.flujoFil||p.flujo===sal.flujoFil).map(p=><option key={p.id} value={p.id}>{p.nombre} (Stock: {getStock(p.id)})</option>)}</select></div>
         <div className="mrow"><div className="field"><label>Cantidad *</label><input type="number" min="1" value={sal.cantidad} onChange={e=>setSal(f=>({...f,cantidad:e.target.value}))} placeholder="0"/></div><div className="field"><label>Fecha</label><input type="date" value={sal.fecha} onChange={e=>setSal(f=>({...f,fecha:e.target.value}))}/></div></div>
       </div>
       <div className="mactions"><button className="bp" style={{background:'var(--red)'}} onClick={saveSal} disabled={saving}>{saving?'Enviando...':'Solicitar salida'}</button><button className="bs" onClick={()=>setSs(false)}>Cancelar</button></div>
@@ -702,7 +723,7 @@ function Control(){
     </div>
     <Msg text={msg.text} type={msg.type}/>
     <div className="twrap t-ctrl">
-      <div className="thead"><span>Producto</span><span>Anterior</span><span>Conteo</span><span>Diferencia</span></div>
+      <div className="thead"><span>Producto</span><span>Anterior</span><span>Conteo</span><span>Diferencia</span><span>Stock result.</span></div>
       {productosFiltrados.map(p=>{
         const ant=ref?(ref.inventario[p.id]??'—'):'—';
         const con=counts[p.id];
@@ -712,6 +733,7 @@ function Control(){
           <span className="mono" style={{fontSize:15,fontWeight:500}}>{editQ?(editQ.inventario[p.id]??'—'):ant}</span>
           <span><input type="number" min="0" placeholder={editQ?(editQ.inventario[p.id]??'0'):ant!=='—'?String(ant):'0'} value={counts[p.id]??''} onChange={e=>setCounts(v=>({...v,[p.id]:e.target.value}))} className="cinput"/></span>
           <span>{diff!==null?<span className={diff<0?'dn':diff>0?'dp':'dz'}>{diff>0?'+':''}{diff}</span>:<span className="dz">—</span>}</span>
+          <span className="mono" style={{fontWeight:500}}>{con!==undefined&&con!==''?parseInt(con):(ant!=='—'?ant:'—')}</span>
         </div>;
       })}
     </div>
@@ -723,10 +745,13 @@ function Control(){
       <div className="stitle" style={{marginBottom:'.75rem'}}>Historial de conteos</div>
       {[...quincenas].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha)).map(q=>{
         const isPending=!q.status||q.status==='pending';
+        const isRejected=q.status==='rejected';
         return <div key={q.id} className="qitem">
           <span style={{fontWeight:500,fontSize:13,minWidth:80}}>{q.label}</span>
           <span style={{fontSize:12,color:'var(--text2)'}}>{new Date(q.fecha).toLocaleDateString('es',{day:'2-digit',month:'short',year:'numeric'})}</span>
-          {isPending?<span className="badge pending">Pendiente</span>:<span className="badge validated">Validado</span>}
+          {isPending&&<span className="badge pending">Pendiente</span>}
+          {isRejected&&<span className="badge" style={{background:'var(--red-dim)',color:'var(--red)'}}>Rechazado</span>}
+          {!isPending&&!isRejected&&<span className="badge validated">Validado</span>}
           <span style={{fontSize:11,color:'var(--text3)'}}>{q.created_by}</span>
           <span style={{marginLeft:'auto',display:'flex',gap:4}}>
             {isSupervisor&&isPending&&<button className="bval" onClick={()=>validarQ(q.id,q.label)}>✓ Validar</button>}
@@ -801,18 +826,21 @@ function Graficos(){
 }
 
 function Supervision(){
-  const {quincenas,salidas,actLog,validarQ,getAnomalias,aprobarSalida,rechazarSalida,products,isSupervisor}=useApp();
+  const {quincenas,ingresos,salidas,actLog,usuariosList,validarQ,rechazarQ,getAnomalias,aprobarIngreso,rechazarIngreso,aprobarSalida,rechazarSalida,products,isSupervisor}=useApp();
+  function getNombre(dni){const u=usuariosList.find(x=>x.nombre===dni||x.dni===dni);return u?`${u.nombre}${u.area?' · '+u.area:''}`:dni||'—';}
   const statusColor={pending:'var(--amber)',approved:'var(--green)',rejected:'var(--red)'};
   const statusLabel={pending:'Pendiente',approved:'Aprobada',rejected:'Rechazada'};
   const [tab,setTab]=useState('conteos');
   if(!isSupervisor)return null;
   const pendientes=quincenas.filter(q=>!q.status||q.status==='pending');
   const salidasPend=salidas?salidas.filter(s=>s.status==='pending'):[];
+  const ingresosPend=ingresos?ingresos.filter(i=>i.status==='pending'):[];
   const anomalias=getAnomalias();
   return <div className="page">
     <div className="ph"><div><h1 className="pt">Supervisión</h1><p className="ps">Control de calidad y auditoría</p></div></div>
     <div className="ptabs">
       <button className={`ptab${tab==='conteos'?' on':''}`} onClick={()=>setTab('conteos')}>Conteos {pendientes.length>0&&<span style={{background:'var(--amber-dim)',color:'var(--amber)',fontSize:10,padding:'1px 6px',borderRadius:99,marginLeft:4}}>{pendientes.length}</span>}</button>
+      <button className={`ptab${tab==='ingresos'?' on':''}`} onClick={()=>setTab('ingresos')}>Ingresos {ingresosPend.length>0&&<span style={{background:'var(--green-dim)',color:'var(--green)',fontSize:10,padding:'1px 6px',borderRadius:99,marginLeft:4}}>{ingresosPend.length}</span>}</button>
       <button className={`ptab${tab==='salidas'?' on':''}`} onClick={()=>setTab('salidas')}>Salidas {salidasPend.length>0&&<span style={{background:'var(--red-dim)',color:'var(--red)',fontSize:10,padding:'1px 6px',borderRadius:99,marginLeft:4}}>{salidasPend.length}</span>}</button>
       <button className={`ptab${tab==='anomalias'?' on':''}`} onClick={()=>setTab('anomalias')}>Anomalías {anomalias.length>0&&<span style={{background:'var(--red-dim)',color:'var(--red)',fontSize:10,padding:'1px 6px',borderRadius:99,marginLeft:4}}>{anomalias.length}</span>}</button>
       <button className={`ptab${tab==='log'?' on':''}`} onClick={()=>setTab('log')}>Log</button>
@@ -825,11 +853,42 @@ function Supervision(){
           <div key={q.id} className="trow">
             <span><span className="pname">{q.label}</span></span>
             <span style={{fontSize:12,color:'var(--text2)'}}>{new Date(q.fecha).toLocaleDateString('es',{day:'2-digit',month:'short',year:'numeric'})}</span>
-            <span style={{fontSize:12,color:'var(--blue)'}}>{q.created_by||'—'}</span>
+            <span style={{fontSize:12,color:'var(--blue)'}}>{getNombre(q.created_by)}</span>
             <span className="mono">{Object.keys(q.inventario).length}</span>
-            <span><button className="bval" onClick={()=>validarQ(q.id,q.label)}>✓ Validar</button></span>
+            <span style={{display:'flex',gap:4}}><button className="bval" onClick={()=>validarQ(q.id,q.label)}>✓ Validar</button><button className="bdel" style={{padding:'4px 10px',border:'1px solid var(--border2)',borderRadius:4,fontSize:12}} onClick={()=>rechazarQ(q.id,q.label)}>✕ Rechazar</button></span>
           </div>
         ))}
+      </div>}
+    </div>}
+    {tab==='ingresos'&&<div className="sup-section">
+      {ingresosPend.length===0?<div className="nodata">No hay ingresos pendientes ✓</div>
+      :<div>
+        {ingresosPend.map(ig=>{const p=products.find(x=>x.id===ig.product_id);return(
+          <div key={ig.id} className="anomaly-card" style={{borderColor:'rgba(0,201,125,.25)',borderLeftColor:'var(--green)'}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:4}}>
+              <span style={{fontWeight:500,fontSize:13}}>{p?.nombre||'—'}</span>
+              <span className="mono" style={{color:'var(--green)',fontSize:15,fontWeight:500}}>+{ig.cantidad} <small style={{fontSize:10,color:'var(--text2)'}}>{p?.unidad}</small></span>
+            </div>
+            <div style={{fontSize:12,color:'var(--text2)'}}>{getNombre(ig.created_by)} · {new Date(ig.fecha).toLocaleDateString('es',{day:'2-digit',month:'short',year:'numeric'})}</div>
+            <div style={{display:'flex',gap:8,marginTop:10}}>
+              <button className="bval" onClick={()=>aprobarIngreso(ig.id,p?.nombre,ig.cantidad)}>✓ Aprobar</button>
+              <button className="bdel" style={{padding:'4px 12px',border:'1px solid var(--border2)',borderRadius:4,fontSize:12}} onClick={()=>rechazarIngreso(ig.id,p?.nombre,ig.cantidad)}>✕ Rechazar</button>
+            </div>
+          </div>
+        );})}
+        <div className="stitle" style={{marginTop:'1.5rem',marginBottom:'.75rem'}}>Historial</div>
+        <div className="twrap">
+          <div className="thead" style={{gridTemplateColumns:'100px 2fr 80px 90px 120px'}}><span>Fecha</span><span>Producto</span><span>Cant.</span><span>Estado</span><span>Revisado por</span></div>
+          {ingresos.filter(ig=>ig.status&&ig.status!=='pending').map(ig=>{const p=products.find(x=>x.id===ig.product_id);return(
+            <div key={ig.id} className="trow" style={{gridTemplateColumns:'100px 2fr 80px 90px 120px'}}>
+              <span style={{fontSize:12,color:'var(--text2)'}}>{new Date(ig.fecha).toLocaleDateString('es',{day:'2-digit',month:'short',year:'numeric'})}</span>
+              <span><span className="pname">{p?.nombre||'—'}</span><span className="pdesc">{getNombre(ig.created_by)}</span></span>
+              <span className="mono" style={{color:'var(--green)'}}>+{ig.cantidad}</span>
+              <span><span className="badge" style={{background:ig.status==='approved'?'var(--green-dim)':'var(--red-dim)',color:ig.status==='approved'?'var(--green)':'var(--red)'}}>{ig.status==='approved'?'Aprobado':'Rechazado'}</span></span>
+              <span style={{fontSize:11,color:'var(--text3)'}}>{ig.reviewed_by||'—'}</span>
+            </div>
+          );})}
+        </div>
       </div>}
     </div>}
     {tab==='salidas'&&<div className="sup-section">
@@ -841,7 +900,7 @@ function Supervision(){
               <span style={{fontWeight:500,fontSize:13}}>{p?.nombre||'—'}</span>
               <span className="mono" style={{color:'var(--red)',fontSize:15,fontWeight:500}}>-{sv.cantidad} <small style={{fontSize:10,color:'var(--text2)'}}>{p?.unidad}</small></span>
             </div>
-            <div style={{fontSize:12,color:'var(--text2)'}}>{sv.created_by} · {new Date(sv.fecha).toLocaleDateString('es',{day:'2-digit',month:'short',year:'numeric'})}</div>
+            <div style={{fontSize:12,color:'var(--text2)'}}>{getNombre(sv.created_by)} · {new Date(sv.fecha).toLocaleDateString('es',{day:'2-digit',month:'short',year:'numeric'})}</div>
             <div style={{display:'flex',gap:8,marginTop:10}}>
               <button className="bval" onClick={()=>aprobarSalida(sv.id,p?.nombre,sv.cantidad)}>✓ Aprobar</button>
               <button className="bdel" style={{padding:'4px 12px',border:'1px solid var(--border2)',borderRadius:4,fontSize:12}} onClick={()=>rechazarSalida(sv.id,p?.nombre,sv.cantidad)}>✕ Rechazar</button>
@@ -876,7 +935,7 @@ function Supervision(){
       :<div className="twrap">
         {actLog.map(l=><div key={l.id} className="log-item">
           <span className="log-time">{new Date(l.created_at).toLocaleDateString('es',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</span>
-          <span className="log-user">{l.user_email}</span>
+          <span className="log-user">{getNombre(l.user_email)}</span>
           <span className="log-action">{l.accion} — {l.detalle}</span>
         </div>)}
       </div>}
@@ -896,11 +955,12 @@ function AppMain({user,profile,isSupervisor,onLogout}){
 }
 
 function AppInner({page,setPage,onLogout,userName,isSupervisor}){
-  const {getEstado,products,csvInventario,loading,error,quincenas,salidas}=useApp();
+  const {getEstado,products,csvInventario,loading,error,quincenas,salidas,ingresos}=useApp();
   const nc=products.filter(p=>getEstado(p.id)==='critico').length;
   const pendientes=quincenas.filter(q=>!q.status||q.status==='pending').length;
   const salPend=salidas?salidas.filter(s=>s.status==='pending').length:0;
-  const totalPend=pendientes+salPend;
+  const ingPend=ingresos?ingresos.filter(i=>i.status==='pending').length:0;
+  const totalPend=pendientes+salPend+ingPend;
   const PAGES=isSupervisor?PAGES_SUP:PAGES_OP;
   if(loading)return <div className="loading"><div className="spinner"/><span style={{fontSize:13,color:'var(--text2)'}}>Cargando inventario...</span></div>;
   if(error)return <div className="loading"><span style={{fontSize:14,color:'var(--red)'}}>Error: {error}</span><button className="bs" style={{marginTop:8}} onClick={()=>window.location.reload()}>Reintentar</button></div>;
