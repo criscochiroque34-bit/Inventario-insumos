@@ -760,31 +760,31 @@ function Control(){
         </div>;
       })}
     </div>}
-  </div>;
-}
-
-function Ingresos(){
-  const {products,ingresos}=useApp();
-  const sorted=[...ingresos].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
-  return <div className="page">
-    <div className="ph"><div><h1 className="pt">Ingresos</h1><p className="ps">Historial · Registra ingresos con el botón <strong style={{color:'var(--green)'}}>↑</strong> en Inventario</p></div></div>
-    {!sorted.length?<div className="iempty"><span className="iicon">↑</span><p style={{fontSize:13,color:'var(--text2)',marginBottom:6}}>No hay ingresos registrados.</p><p style={{fontSize:13,color:'var(--text2)'}}>Ve a <strong style={{color:'var(--green)'}}>Inventario</strong> y usa el botón flotante ↑</p></div>
-    :<div className="twrap t-ing">
-      <div className="thead"><span>Fecha</span><span>Producto</span><span>Cantidad</span><span>Registrado por</span></div>
-      {sorted.map(i=>{const p=products.find(x=>x.id===i.product_id);return(
-        <div key={i.id} className="trow">
-          <span style={{fontSize:12,color:'var(--text2)'}}>{new Date(i.fecha).toLocaleDateString('es',{day:'2-digit',month:'short',year:'numeric'})}</span>
-          <span>{p?<><span className="pname">{p.nombre}</span><span className="pdesc">{p.codigo}</span></>:<span className="pdesc">Eliminado</span>}</span>
-          <span style={{display:'flex',alignItems:'baseline',gap:5}}><span className="mono cg">+{i.cantidad}</span><span style={{fontSize:11,color:'var(--text3)'}}>{p?.unidad}</span></span>
-          <span style={{fontSize:12,color:'var(--text2)'}}>{i.created_by||'—'}</span>
+    {tab==='a'&&<>
+      {areas.length===0?<div className="nodata">No hay datos de área registrados aún. Las salidas aprobadas con área asignada aparecerán aquí.</div>:<>
+        <div className="metrics3" style={{gridTemplateColumns:`repeat(${Math.min(areas.length,3)},minmax(0,1fr))`}}>
+          {areas.map((a,i)=><div key={a} className="metric">
+            <span className="ml">Consumo total — {a}</span>
+            <span className="mv" style={{color:areaColors[i%areaColors.length]}}>{consumoPorArea(a)}<small style={{fontSize:12,fontWeight:400,color:'var(--text2)'}}> und</small></span>
+          </div>)}
         </div>
-      );})}
-    </div>}
+        {areas.map((a,i)=>{
+          const data=consumoAreaPorProducto(a);
+          return data.length>0&&<div key={a} className="chcard">
+            <div className="chtitle">Consumo por producto — {a}</div>
+            <BarChartSVG data={data.map(x=>({q:x.n.length>10?x.n.slice(0,10)+'…':x.n,v:x.v}))} color={areaColors[i%areaColors.length]} height={160}/>
+          </div>;
+        })}
+        <div className="chcard">
+          <div className="chtitle">Comparativo total por área</div>
+          <BarChartSVG data={areas.map((a,i)=>({q:a,v:consumoPorArea(a)}))} color="#4d9eff" height={140}/>
+        </div>
+      </>}
+    </>}
   </div>;
 }
-
 function Graficos(){
-  const {products,quincenas,getStock,getConsumo,getDias,getEstado}=useApp();
+  const {products,quincenas,salidas,getStock,getConsumo,getDias,getEstado,usuariosList}=useApp();
   const [sid,setSid]=useState(products[0]?.id??null);
   const [tab,setTab]=useState('c');
   const sq=[...quincenas].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
@@ -800,9 +800,28 @@ function Graficos(){
   const qAobj=quincenas.find(q=>q.id===parseInt(qa)),qBobj=quincenas.find(q=>q.id===parseInt(qb));
   const comp=(qAobj&&qBobj)?products.map(p=>{const ca=Math.max(0,(qAobj.inventario[p.id]??0)-(qBobj.inventario[p.id]??0));const cb=getConsumo(p.id);const diff=ca===0?0:Math.round(((cb-ca)/ca)*100);return{n:p.nombre,ca,cb,diff};}):[];
   const td=comp.length?Math.round(comp.reduce((s,p)=>s+p.diff,0)/comp.length):0;
+
+  const areas=[...new Set((usuariosList||[]).map(u=>u.area).filter(Boolean))];
+  const salidasAprobadas=(salidas||[]).filter(s=>s.status==='approved'&&s.area);
+  function consumoPorArea(area){
+    const total=salidasAprobadas.filter(s=>s.area===area).reduce((t,s)=>t+s.cantidad,0);
+    return total;
+  }
+  function consumoAreaPorProducto(area){
+    return products.map(p=>{
+      const total=salidasAprobadas.filter(s=>s.area===area&&s.product_id===p.id).reduce((t,s)=>t+s.cantidad,0);
+      return{n:p.nombre,v:total};
+    }).filter(x=>x.v>0).sort((a,b)=>b.v-a.v);
+  }
+  const areaColors=['#00c97d','#4d9eff','#f0a500','#ff5050'];
+
   return <div className="page">
     <div className="ph"><div><h1 className="pt">Gráficos</h1><p className="ps">Análisis de consumo y proyección</p></div></div>
-    <div className="ptabs"><button className={`ptab${tab==='c'?' on':''}`} onClick={()=>setTab('c')}>Consumo y proyección</button><button className={`ptab${tab==='k'?' on':''}`} onClick={()=>setTab('k')}>Comparativo</button></div>
+    <div className="ptabs">
+      <button className={`ptab${tab==='c'?' on':''}`} onClick={()=>setTab('c')}>Consumo y proyección</button>
+      <button className={`ptab${tab==='k'?' on':''}`} onClick={()=>setTab('k')}>Comparativo</button>
+      <button className={`ptab${tab==='a'?' on':''}`} onClick={()=>setTab('a')}>Por área</button>
+    </div>
     {tab==='c'&&<>
       <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:'1rem'}}><label style={{fontSize:12,color:'var(--text2)'}}>Producto</label><select value={sid??''} onChange={e=>setSid(parseInt(e.target.value))} style={{minWidth:220,width:'auto'}}>{products.map(p=><option key={p.id} value={p.id}>{p.nombre}</option>)}</select></div>
       {prod&&<>
@@ -822,6 +841,30 @@ function Graficos(){
         <div className="ctab"><div className="cthead"><span>Producto</span><span>Anterior</span><span>Actual</span><span>Variación</span></div>{[...comp].sort((a,b)=>b.diff-a.diff).map((p,i)=><div key={i} className="ctrow"><span className="pname">{p.n}</span><span className="mono">{p.ca}</span><span className="mono">{p.cb}</span><span className={`mono${p.diff>0?' cr':p.diff<0?' cg':''}`}>{p.diff>0?'+':''}{p.diff}%</span></div>)}</div>
       </>}
     </>}
+  </div>;
+}
+
+function Ingresos(){
+  const {products,ingresos,usuariosList}=useApp();
+  function getNombre(dni){const u=(usuariosList||[]).find(x=>x.nombre===dni||x.dni===dni);return u?`${u.nombre}${u.area?' · '+u.area:''}`:dni||'—';}
+  const statusColor={pending:'var(--amber)',approved:'var(--green)',rejected:'var(--red)'};
+  const statusLabel={pending:'Pendiente',approved:'Aprobado',rejected:'Rechazado'};
+  const sorted=[...ingresos].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
+  return <div className="page">
+    <div className="ph"><div><h1 className="pt">Ingresos</h1><p className="ps">Historial · Registra ingresos con el botón <strong style={{color:'var(--green)'}}>↑</strong> en Inventario</p></div></div>
+    {!sorted.length?<div className="iempty"><span className="iicon">↑</span><p style={{fontSize:13,color:'var(--text2)',marginBottom:6}}>No hay ingresos registrados.</p><p style={{fontSize:13,color:'var(--text2)'}}>Ve a <strong style={{color:'var(--green)'}}>Inventario</strong> y usa el botón flotante ↑</p></div>
+    :<div className="twrap" style={{overflowX:'auto'}}>
+      <div className="thead" style={{gridTemplateColumns:'100px 2fr 80px 90px 1fr'}}><span>Fecha</span><span>Producto</span><span>Cantidad</span><span>Estado</span><span>Registrado por</span></div>
+      {sorted.map(i=>{const p=products.find(x=>x.id===i.product_id);return(
+        <div key={i.id} className="trow" style={{gridTemplateColumns:'100px 2fr 80px 90px 1fr'}}>
+          <span style={{fontSize:12,color:'var(--text2)'}}>{new Date(i.fecha).toLocaleDateString('es',{day:'2-digit',month:'short',year:'numeric'})}</span>
+          <span>{p?<><span className="pname">{p.nombre}</span><span className="pdesc">{p.codigo}</span></>:<span className="pdesc">Eliminado</span>}</span>
+          <span style={{display:'flex',alignItems:'baseline',gap:5}}><span className="mono cg">+{i.cantidad}</span><span style={{fontSize:11,color:'var(--text3)'}}>{p?.unidad}</span></span>
+          <span><span className="badge" style={{background:i.status?`${statusColor[i.status]}22`:'var(--green-dim)',color:i.status?statusColor[i.status]:'var(--green)'}}>{i.status?statusLabel[i.status]:'Aprobado'}</span></span>
+          <span style={{fontSize:12,color:'var(--text2)'}}>{getNombre(i.created_by)}</span>
+        </div>
+      );})}
+    </div>}
   </div>;
 }
 
