@@ -760,29 +760,6 @@ function Control(){
         </div>;
       })}
     </div>}
-    {tab==='a'&&<>
-      {areas.length===0?<div className="nodata">No hay datos de área registrados aún. Las salidas aprobadas con área asignada aparecerán aquí.</div>:<>
-        <div className="metrics3" style={{gridTemplateColumns:`repeat(${Math.min(areas.length,3)},minmax(0,1fr))`}}>
-          {areas.map((a,i)=><div key={a} className="metric">
-            <span className="ml">Consumo total — {a}</span>
-            <span className="mv" style={{color:areaColors[i%areaColors.length]}}>{consumoPorArea(a)}<small style={{fontSize:12,fontWeight:400,color:'var(--text2)'}}> und</small></span>
-          </div>)}
-        </div>
-        {areas.map((a,i)=>{
-          const data=consumoAreaPorProducto(a);
-          return data.length>0&&<div key={a} className="chcard">
-            <div className="chtitle">Consumo por producto — {a}</div>
-            <BarChartSVG data={data.map(x=>({q:x.n.length>10?x.n.slice(0,10)+'…':x.n,v:x.v}))} color={areaColors[i%areaColors.length]} height={160}/>
-          </div>;
-        })}
-        <div className="chcard">
-          <div className="chtitle">Comparativo total por área</div>
-          <BarChartSVG data={areas.map((a,i)=>({q:a,v:consumoPorArea(a)}))} color="#4d9eff" height={140}/>
-        </div>
-      </>}
-    </>}
-  </div>;
-}
 function Graficos(){
   const {products,quincenas,salidas,getStock,getConsumo,getDias,getEstado,usuariosList}=useApp();
   const [sid,setSid]=useState(products[0]?.id??null);
