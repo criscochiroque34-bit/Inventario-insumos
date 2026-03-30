@@ -328,6 +328,11 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
     const sal=salidas.filter(s=>s.product_id===pid&&s.status==='approved'&&new Date(s.fecha)>=new Date(u.fecha)).reduce((t,s)=>t+s.cantidad,0);
     return base+ing-sal;
   }
+  function getStockDisponible(pid){
+    const stockReal=getStock(pid);
+    const salPend=salidas.filter(s=>s.product_id===pid&&s.status==='pending').reduce((t,s)=>t+s.cantidad,0);
+    return stockReal-salPend;
+  }
   function getConsumoDiario(pid){
     const validated=quincenasWithInv.filter(q=>q.status==='validated'||q.status===null||q.status===undefined);
     if(validated.length<2)return 0;
@@ -407,6 +412,7 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
     await logAction('Validó conteo',label);await load();return null;
   }
   async function addIng(pid,cant,fecha,nota){
+    if(!cant||parseInt(cant)<=0)return 'La cantidad debe ser mayor a 0';
     const uData=usuariosList.find(u=>u.nombre===userEmail);
     const {error}=await sb.from('ingresos').insert([{product_id:parseInt(pid),cantidad:parseInt(cant),fecha,nota,created_by:userEmail,status:'pending',area:uData?.area||null}]);
     if(error)return error.message;
@@ -429,8 +435,9 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
     await logAction('Rechazó ingreso',`${prodNombre}: +${cant}`);await load();return null;
   }
   async function addSalida(pid,cant,fecha){
-    const stock=getStock(parseInt(pid));
-    if(parseInt(cant)>stock)return `Stock insuficiente. Disponible: ${stock}`;
+    if(!cant||parseInt(cant)<=0)return 'La cantidad debe ser mayor a 0';
+    const stockDisp=getStockDisponible(parseInt(pid));
+    if(parseInt(cant)>stockDisp)return `Stock insuficiente. Disponible: ${stockDisp} (considera salidas pendientes de aprobación)`;
     const uData=usuariosList.find(u=>u.nombre===userEmail);
     const {error}=await sb.from('salidas').insert([{product_id:parseInt(pid),cantidad:parseInt(cant),fecha,status:'pending',created_by:userEmail,area:uData?.area||null}]);
     if(error)return error.message;
@@ -451,7 +458,7 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
   function csvInventario(){const rows=[['Criticidad','Código','Nombre','Flujo','Unidad','Stock','Días','Estado']];products.forEach(p=>{const e=getEstado(p.id);rows.push([p.criticidad,p.codigo,p.nombre,p.flujo,p.unidad,getStock(p.id),getDias(p.id)===999?'Sin hist.':getDias(p.id),e==='critico'?'Crítico':e==='alerta'?'Alerta':'En stock'])});dl(rows,'inventario');}
   function csvLista(){const rows=[['Código','Nombre','Stock','Consume/Q','Pedir','Unidad','Días']];getLista().forEach(p=>rows.push([p.codigo,p.nombre,p.stock,p.consumo,p.pedir,p.unidad,p.dias]));dl(rows,'lista-compra');}
   function csvConsolidado(){const qs=[...quincenasWithInv].sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));const headers=['Código','Nombre','Flujo','Unidad',...qs.map(q=>q.label)];const rows=[headers];products.forEach(p=>{rows.push([p.codigo,p.nombre,p.flujo,p.unidad,...qs.map(q=>q.inventario[p.id]??'')]);});dl(rows,'consolidado-conteos');}
-  return <Ctx.Provider value={{products,quincenas:quincenasWithInv,ingresos,salidas,actLog,usuariosList,loading,error,userEmail,isSupervisor,onLogout,getStock,getConsumo,getDias,getEstado,getLista,getAnomalias,addProd,updateProd,delProd,addQ,updateQ,validarQ,rechazarQ,addIng,aprobarIngreso,rechazarIngreso,addSalida,aprobarSalida,rechazarSalida,csvInventario,csvLista,csvConsolidado}}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{products,quincenas:quincenasWithInv,ingresos,salidas,actLog,usuariosList,loading,error,userEmail,isSupervisor,onLogout,getStock,getStockDisponible,getConsumo,getDias,getEstado,getLista,getAnomalias,addProd,updateProd,delProd,addQ,updateQ,validarQ,rechazarQ,addIng,aprobarIngreso,rechazarIngreso,addSalida,aprobarSalida,rechazarSalida,csvInventario,csvLista,csvConsolidado}}>{children}</Ctx.Provider>;
 }
 const useApp=()=>useContext(Ctx);
 
@@ -490,7 +497,7 @@ function LineChartSVG({data,height=180}){
 }
 
 function Dashboard(){
-  const {products,getStock,getConsumo,getDias,getEstado,getLista,csvLista,isSupervisor}=useApp();
+  const {products,getStock,getStockDisponible,getConsumo,getDias,getEstado,getLista,csvLista,isSupervisor}=useApp();
   const [show,setShow]=useState(false);
   const cr=products.filter(p=>getEstado(p.id)==='critico');
   const al=products.filter(p=>getEstado(p.id)==='alerta');
@@ -663,6 +670,7 @@ function Inventario(){
         <div className="field"><label>Flujo</label><select value={ing.flujoFil||''} onChange={e=>setIng(f=>({...f,flujoFil:e.target.value,productoId:''}))}><option value="">Todos</option>{[...new Set(products.map(p=>p.flujo).filter(Boolean))].map(f=><option key={f} value={f}>{f}</option>)}</select></div>
         <div className="field"><label>Producto *</label><select value={ing.productoId} onChange={e=>setIng(f=>({...f,productoId:e.target.value}))}><option value="">Seleccionar...</option>{products.filter(p=>!ing.flujoFil||p.flujo===ing.flujoFil).map(p=><option key={p.id} value={p.id}>{p.nombre}</option>)}</select></div>
         <div className="mrow"><div className="field"><label>Cantidad *</label><input type="number" min="1" value={ing.cantidad} onChange={e=>setIng(f=>({...f,cantidad:e.target.value}))} placeholder="0"/></div><div className="field"><label>Fecha</label><input type="date" value={ing.fecha} onChange={e=>setIng(f=>({...f,fecha:e.target.value}))}/></div></div>
+        {(()=>{const ul=[...quincenas].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha))[0];return ul&&ing.fecha&&ing.fecha<ul.fecha&&<div style={{background:'var(--amber-dim)',color:'var(--amber)',fontSize:11,padding:'6px 10px',borderRadius:6,border:'1px solid rgba(240,165,0,.2)'}}>⚠️ La fecha es anterior al último conteo ({ul.fecha}). El ingreso podría no sumarse al stock actual.</div>;})()}
         <div className="field"><label>Nota</label><input value={ing.nota} onChange={e=>setIng(f=>({...f,nota:e.target.value}))} placeholder="Proveedor..."/></div>
       </div>
       <div className="mactions"><button className="bp" onClick={saveIng} disabled={saving}>{saving?'Guardando...':'Registrar'}</button><button className="bs" onClick={()=>setSi(false)}>Cancelar</button></div>
@@ -671,7 +679,7 @@ function Inventario(){
       <div className="mtitle" style={{color:'var(--red)'}}>↓ Solicitar salida</div>
       <div className="mform">
         <div className="field"><label>Flujo</label><select value={sal.flujoFil||''} onChange={e=>setSal(f=>({...f,flujoFil:e.target.value,productoId:''}))}><option value="">Todos</option>{[...new Set(products.map(p=>p.flujo).filter(Boolean))].map(f=><option key={f} value={f}>{f}</option>)}</select></div>
-        <div className="field"><label>Producto *</label><select value={sal.productoId} onChange={e=>setSal(f=>({...f,productoId:e.target.value}))}><option value="">Seleccionar...</option>{products.filter(p=>!sal.flujoFil||p.flujo===sal.flujoFil).map(p=><option key={p.id} value={p.id}>{p.nombre} (Stock: {getStock(p.id)})</option>)}</select></div>
+        <div className="field"><label>Producto *</label><select value={sal.productoId} onChange={e=>setSal(f=>({...f,productoId:e.target.value}))}><option value="">Seleccionar...</option>{products.filter(p=>!sal.flujoFil||p.flujo===sal.flujoFil).map(p=><option key={p.id} value={p.id}>{p.nombre} (Disponible: {getStockDisponible(p.id)})</option>)}</select></div>
         <div className="mrow"><div className="field"><label>Cantidad *</label><input type="number" min="1" value={sal.cantidad} onChange={e=>setSal(f=>({...f,cantidad:e.target.value}))} placeholder="0"/></div><div className="field"><label>Fecha</label><input type="date" value={sal.fecha} onChange={e=>setSal(f=>({...f,fecha:e.target.value}))}/></div></div>
       </div>
       <div className="mactions"><button className="bp" style={{background:'var(--red)'}} onClick={saveSal} disabled={saving}>{saving?'Enviando...':'Solicitar salida'}</button><button className="bs" onClick={()=>setSs(false)}>Cancelar</button></div>
@@ -702,7 +710,19 @@ function Control(){
   function cancelEdit(){setEditQ(null);setCounts({});setEditLabel('');setEditFecha('');}
 
   async function guardar(){
-    if(!isSupervisor&&yaRegistroHoy){setMsg({text:'Ya registraste un conteo hoy.',type:'err'});return;}
+    if(!isSupervisor&&yaRegistroHoy){
+      const dup=quincenas.filter(q=>q.created_by===userEmail&&q.fecha===hoy);
+      setMsg({text:`Ya registraste un conteo hoy (${hoy}). Espera que el supervisor lo valide o rechace.`,type:'err'});return;
+    }
+    const fechaConteo=editQ?editFecha:fecha;
+    const ultimoValidado=[...quincenas].filter(q=>q.status==='validated').sort((a,b)=>new Date(b.fecha)-new Date(a.fecha))[0];
+    if(ultimoValidado&&fechaConteo<ultimoValidado.fecha){
+      setMsg({text:`La fecha del conteo (${fechaConteo}) es anterior al último conteo validado (${ultimoValidado.fecha}). Por favor verifica la fecha.`,type:'err'});return;
+    }
+    const negativo=Object.entries(counts).find(([,v])=>v!==''&&parseInt(v)<0);
+    if(negativo){const p=products.find(x=>x.id===parseInt(negativo[0]));setMsg({text:`La cantidad de "${p?.nombre||'un producto'}" no puede ser negativa.`,type:'err'});return;}
+    const dupFecha=!editQ&&quincenas.find(q=>q.fecha===fechaConteo&&q.created_by!==userEmail);
+    if(dupFecha){setMsg({text:`Ya existe un conteo del ${fechaConteo} registrado por ${dupFecha.created_by}. ¿Estás seguro de continuar?`,type:'err'});return;}
     setSaving(true);
     const inv={};products.forEach(p=>{const v=counts[p.id];inv[p.id]=v!==undefined&&v!==''?parseInt(v):getStock(p.id);});
     let err;
@@ -761,7 +781,8 @@ function Control(){
           <span style={{fontSize:11,color:'var(--text3)'}}>{q.created_by}</span>
           <span style={{marginLeft:'auto',display:'flex',gap:4}}>
             {isSupervisor&&isPending&&<button className="bval" onClick={()=>validarQ(q.id,q.label)}>✓ Validar</button>}
-            {isSupervisor&&<button className="bedit" title="Editar" onClick={()=>openEditQ(q)}>✏️</button>}
+            {isSupervisor&&q.status!=='validated'&&<button className="bedit" title="Editar" onClick={()=>openEditQ(q)}>✏️</button>}
+            {isSupervisor&&q.status==='validated'&&<button className="bedit" title="Solo supervisor puede editar validados" style={{opacity:.3,cursor:'not-allowed'}}>✏️</button>}
           </span>
         </div>;
       })}
