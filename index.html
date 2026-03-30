@@ -547,7 +547,7 @@ function Dashboard(){
 }
 
 function Inventario(){
-  const {products,salidas,getStock,getDias,getEstado,addProd,updateProd,delProd,addIng,addSalida,isSupervisor}=useApp();
+  const {products,salidas,getStock,getStockDisponible,getDias,getEstado,addProd,updateProd,delProd,addIng,addSalida,isSupervisor}=useApp();
   const [bus,setBus]=useState('');const [fil,setFil]=useState('Todos');
   const [sf,setSf]=useState(false);const [si,setSi]=useState(false);const [ss,setSs]=useState(false);
   const [editId,setEditId]=useState(null);
