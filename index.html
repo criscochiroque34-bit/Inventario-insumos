@@ -226,8 +226,8 @@ button{font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border:non
   .twrap{display:none}.clist{display:block}
   .fab{bottom:70px}
   .modal{left:12px;right:12px;width:auto;bottom:70px}
-  .t-ctrl .thead,.t-ctrl .trow{grid-template-columns:1fr 80px 100px}
-  .t-ctrl .thead span:nth-child(4),.t-ctrl .trow span:nth-child(4){display:none}
+  .t-ctrl .thead,.t-ctrl .trow{grid-template-columns:1.5fr 70px 90px}
+  .t-ctrl .thead span:nth-child(4),.t-ctrl .trow span:nth-child(4),.t-ctrl .thead span:nth-child(5),.t-ctrl .trow span:nth-child(5){display:none}
   .foot{flex-direction:column;align-items:stretch}
   .bpsave{width:100%;text-align:center;padding:12px;font-size:15px}
   .ptabs{width:100%}.ptab{flex:1;text-align:center;font-size:12px}
@@ -268,20 +268,7 @@ function AuthScreen({onLogin}){
     </form>
   </div></div>);
 }
-
-function PendingScreen({onLogout}){
-  return(<div className="pending-wrap"><div className="pending-card">
-    <span className="pending-icon">⏳</span>
-    <div className="pending-title">Acceso pendiente</div>
-    <div className="pending-badge"><div className="pending-dot"/>Esperando aprobación</div>
-    <div className="pending-sub">Tu solicitud fue enviada. El administrador revisará tu cuenta y te dará acceso en breve.</div>
-    <div className="pending-info"><strong>¿Cómo me aprueban?</strong><br/>El administrador revisará tu solicitud y te notificará cuando tengas acceso.</div>
-    <button className="pending-logout" onClick={onLogout}>Cerrar sesión</button>
-  </div></div>);
-}
-
-const Ctx=createContext(null);
-function Store({user,userEmail,isSupervisor,onLogout,children}){
+{
   const [products,setProducts]=useState([]);
   const [quincenas,setQuincenas]=useState([]);
   const [qItems,setQItems]=useState([]);
@@ -305,7 +292,7 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
       ]);
       if(p.error)throw p.error;
       setProducts(p.data||[]);setQuincenas(q.data||[]);setQItems(qi.data||[]);setIngresos(i.data||[]);setSalidas(sal.data||[]);setActLog(al.data||[]);setUsuariosList(u.data||[]);
-    }catch(e){setError(e.message);}
+    }catch(e){setError(String(e.message||e||'Error de conexión'));}
     setLoading(false);
   },[]);
 
@@ -497,7 +484,7 @@ function LineChartSVG({data,height=180}){
 }
 
 function Dashboard(){
-  const {products,getStock,getStockDisponible,getConsumo,getDias,getEstado,getLista,csvLista,isSupervisor}=useApp();
+  const {products,getStock,getConsumo,getDias,getEstado,getLista,csvLista,isSupervisor}=useApp();
   const [show,setShow]=useState(false);
   const cr=products.filter(p=>getEstado(p.id)==='critico');
   const al=products.filter(p=>getEstado(p.id)==='alerta');
