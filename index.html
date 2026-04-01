@@ -328,7 +328,11 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
     const sal=salidas.filter(s=>s.product_id===pid&&s.status==='approved'&&new Date(s.fecha)>=new Date(u.fecha)).reduce((t,s)=>t+s.cantidad,0);
     return base+ing-sal;
   }
-  function getConsumoDiario(pid){
+  function getStockDisponible(pid){
+    const stockReal=getStock(pid);
+    const salPend=(salidas||[]).filter(s=>s.product_id===pid&&s.status==='pending').reduce((t,s)=>t+s.cantidad,0);
+    return stockReal-salPend;
+  }
     const validated=quincenasWithInv.filter(q=>q.status==='validated'||q.status===null||q.status===undefined);
     if(validated.length<2)return 0;
     const s=[...validated].sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
