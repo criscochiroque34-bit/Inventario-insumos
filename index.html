@@ -328,19 +328,22 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
     const sal=salidas.filter(s=>s.product_id===pid&&s.status==='approved'&&new Date(s.fecha)>=new Date(u.fecha)).reduce((t,s)=>t+s.cantidad,0);
     return base+ing-sal;
   }
-  function getConsumo(pid){
+  function getConsumoDiario(pid){
     const validated=quincenasWithInv.filter(q=>q.status==='validated'||q.status===null||q.status===undefined);
     if(validated.length<2)return 0;
     const s=[...validated].sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
-    const cs=[];
+    let totalConsumo=0,totalDias=0;
     for(let i=1;i<s.length;i++){
-      const p=s[i-1].inventario[pid]??0,c=s[i].inventario[pid]??0;
+      const p=s[i-1].inventario[pid]??0,cv=s[i].inventario[pid]??0;
       const ing=ingresos.filter(x=>x.product_id===pid&&(x.status==='approved'||x.status===null||x.status===undefined)&&new Date(x.fecha)>=new Date(s[i-1].fecha)&&new Date(x.fecha)<new Date(s[i].fecha)).reduce((t,x)=>t+x.cantidad,0);
-      const v=p+ing-c;if(v>0)cs.push(v);
+      const consumo=p+ing-cv;
+      const dias=Math.round((new Date(s[i].fecha)-new Date(s[i-1].fecha))/(1000*60*60*24));
+      if(consumo>0&&dias>0){totalConsumo+=consumo;totalDias+=dias;}
     }
-    return cs.length?Math.round(cs.reduce((a,b)=>a+b)/cs.length):0;
+    return totalDias>0?totalConsumo/totalDias:0;
   }
-  function getDias(pid){const c=getConsumo(pid);if(!c)return 999;return Math.round((getStock(pid)/c)*15)}
+  function getConsumo(pid){const cd=getConsumoDiario(pid);return cd?Math.round(cd*15):0;}
+  function getDias(pid){const cd=getConsumoDiario(pid);if(!cd)return 999;return Math.round(getStock(pid)/cd);}
   function getEstado(pid){const d=getDias(pid);return d<=10?'critico':d<=20?'alerta':'stock'}
   function getLista(){
     return products.filter(p=>getEstado(p.id)!=='stock').map(p=>{
@@ -431,6 +434,16 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
     const p=products.find(x=>x.id===parseInt(pid));
     await logAction('Solicitó salida',`${p?.nombre||pid}: -${cant}`);await load();return null;
   }
+  async function updateIngreso(id,cant,fecha){
+    const {error}=await sb.from('ingresos').update({cantidad:parseInt(cant),fecha}).eq('id',id);
+    if(error)return error.message;
+    await logAction('Editó ingreso',`id:${id} cant:${cant} fecha:${fecha}`);await load();return null;
+  }
+  async function updateSalida(id,cant,fecha){
+    const {error}=await sb.from('salidas').update({cantidad:parseInt(cant),fecha}).eq('id',id);
+    if(error)return error.message;
+    await logAction('Editó salida',`id:${id} cant:${cant} fecha:${fecha}`);await load();return null;
+  }
   async function aprobarSalida(id,prodNombre,cant){
     const {error}=await sb.from('salidas').update({status:'approved',reviewed_by:userEmail,reviewed_at:new Date().toISOString()}).eq('id',id);
     if(error)return error.message;
@@ -445,7 +458,7 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
   function csvInventario(){const rows=[['Criticidad','Código','Nombre','Flujo','Unidad','Stock','Días','Estado']];products.forEach(p=>{const e=getEstado(p.id);rows.push([p.criticidad,p.codigo,p.nombre,p.flujo,p.unidad,getStock(p.id),getDias(p.id)===999?'Sin hist.':getDias(p.id),e==='critico'?'Crítico':e==='alerta'?'Alerta':'En stock'])});dl(rows,'inventario');}
   function csvLista(){const rows=[['Código','Nombre','Stock','Consume/Q','Pedir','Unidad','Días']];getLista().forEach(p=>rows.push([p.codigo,p.nombre,p.stock,p.consumo,p.pedir,p.unidad,p.dias]));dl(rows,'lista-compra');}
   function csvConsolidado(){const qs=[...quincenasWithInv].sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));const headers=['Código','Nombre','Flujo','Unidad',...qs.map(q=>q.label)];const rows=[headers];products.forEach(p=>{rows.push([p.codigo,p.nombre,p.flujo,p.unidad,...qs.map(q=>q.inventario[p.id]??'')]);});dl(rows,'consolidado-conteos');}
-  return <Ctx.Provider value={{products,quincenas:quincenasWithInv,ingresos,salidas,actLog,usuariosList,loading,error,userEmail,isSupervisor,onLogout,getStock,getConsumo,getDias,getEstado,getLista,getAnomalias,addProd,updateProd,delProd,addQ,updateQ,validarQ,rechazarQ,addIng,aprobarIngreso,rechazarIngreso,addSalida,aprobarSalida,rechazarSalida,csvInventario,csvLista,csvConsolidado}}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{products,quincenas:quincenasWithInv,ingresos,salidas,actLog,usuariosList,loading,error,userEmail,isSupervisor,onLogout,getStock,getConsumo,getDias,getEstado,getLista,getAnomalias,addProd,updateProd,delProd,addQ,updateQ,validarQ,rechazarQ,addIng,aprobarIngreso,rechazarIngreso,updateIngreso,addSalida,aprobarSalida,rechazarSalida,updateSalida,csvInventario,csvLista,csvConsolidado}}>{children}</Ctx.Provider>;
 }
 const useApp=()=>useContext(Ctx);
 
@@ -534,7 +547,7 @@ function Dashboard(){
 }
 
 function Inventario(){
-  const {products,salidas,getStock,getDias,getEstado,addProd,updateProd,delProd,addIng,addSalida,isSupervisor}=useApp();
+  const {products,quincenas,salidas,getStock,getStockDisponible,getDias,getEstado,addProd,updateProd,delProd,addIng,addSalida,isSupervisor,userEmail}=useApp();
   const [bus,setBus]=useState('');const [fil,setFil]=useState('Todos');
   const [sf,setSf]=useState(false);const [si,setSi]=useState(false);const [ss,setSs]=useState(false);
   const [editId,setEditId]=useState(null);
@@ -542,6 +555,7 @@ function Inventario(){
   const [form,setForm]=useState(empty);
   const [ing,setIng]=useState({productoId:'',cantidad:'',fecha:new Date().toISOString().slice(0,10),nota:''});
   const [sal,setSal]=useState({productoId:'',cantidad:'',fecha:new Date().toISOString().slice(0,10)});
+  const [confirmSal,setConfirmSal]=useState(false);
   const [msg,setMsg]=useState({text:'',type:'ok'});
   const [saving,setSaving]=useState(false);
   const flujos=['Todos',...new Set(products.map(p=>p.flujo).filter(Boolean))];
@@ -565,8 +579,12 @@ function Inventario(){
     err?showMsg(err,'err'):(setIng({productoId:'',cantidad:'',fecha:new Date().toISOString().slice(0,10),nota:''}),setSi(false),showMsg('Ingreso registrado ✓'));
     setSaving(false);
   }
+  function pedirConfirmSal(){
+    if(!sal.productoId||!sal.cantidad||parseInt(sal.cantidad)<=0){showMsg('Completa producto y cantidad','err');return;}
+    setConfirmSal(true);
+  }
   async function saveSal(){
-    if(!sal.productoId||!sal.cantidad||parseInt(sal.cantidad)<=0)return;setSaving(true);
+    setSaving(true);setConfirmSal(false);
     const err=await addSalida(sal.productoId,sal.cantidad,sal.fecha);
     err?showMsg(err,'err'):(setSal({productoId:'',cantidad:'',fecha:new Date().toISOString().slice(0,10)}),setSs(false),showMsg('Salida solicitada — pendiente de autorización ✓'));
     setSaving(false);
@@ -657,6 +675,7 @@ function Inventario(){
         <div className="field"><label>Flujo</label><select value={ing.flujoFil||''} onChange={e=>setIng(f=>({...f,flujoFil:e.target.value,productoId:''}))}><option value="">Todos</option>{[...new Set(products.map(p=>p.flujo).filter(Boolean))].map(f=><option key={f} value={f}>{f}</option>)}</select></div>
         <div className="field"><label>Producto *</label><select value={ing.productoId} onChange={e=>setIng(f=>({...f,productoId:e.target.value}))}><option value="">Seleccionar...</option>{products.filter(p=>!ing.flujoFil||p.flujo===ing.flujoFil).map(p=><option key={p.id} value={p.id}>{p.nombre}</option>)}</select></div>
         <div className="mrow"><div className="field"><label>Cantidad *</label><input type="number" min="1" value={ing.cantidad} onChange={e=>setIng(f=>({...f,cantidad:e.target.value}))} placeholder="0"/></div><div className="field"><label>Fecha</label><input type="date" value={ing.fecha} onChange={e=>setIng(f=>({...f,fecha:e.target.value}))}/></div></div>
+        {(()=>{const ul=[...quincenas].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha))[0];return ul&&ing.fecha&&ing.fecha<ul.fecha&&<div style={{background:'var(--amber-dim)',color:'var(--amber)',fontSize:11,padding:'6px 10px',borderRadius:6,marginBottom:4}}>⚠️ Fecha anterior al último conteo ({ul.fecha}). El ingreso podría no sumarse al stock.</div>;})()}
         <div className="field"><label>Nota</label><input value={ing.nota} onChange={e=>setIng(f=>({...f,nota:e.target.value}))} placeholder="Proveedor..."/></div>
       </div>
       <div className="mactions"><button className="bp" onClick={saveIng} disabled={saving}>{saving?'Guardando...':'Registrar'}</button><button className="bs" onClick={()=>setSi(false)}>Cancelar</button></div>
@@ -668,7 +687,13 @@ function Inventario(){
         <div className="field"><label>Producto *</label><select value={sal.productoId} onChange={e=>setSal(f=>({...f,productoId:e.target.value}))}><option value="">Seleccionar...</option>{products.filter(p=>!sal.flujoFil||p.flujo===sal.flujoFil).map(p=><option key={p.id} value={p.id}>{p.nombre} (Stock: {getStock(p.id)})</option>)}</select></div>
         <div className="mrow"><div className="field"><label>Cantidad *</label><input type="number" min="1" value={sal.cantidad} onChange={e=>setSal(f=>({...f,cantidad:e.target.value}))} placeholder="0"/></div><div className="field"><label>Fecha</label><input type="date" value={sal.fecha} onChange={e=>setSal(f=>({...f,fecha:e.target.value}))}/></div></div>
       </div>
-      <div className="mactions"><button className="bp" style={{background:'var(--red)'}} onClick={saveSal} disabled={saving}>{saving?'Enviando...':'Solicitar salida'}</button><button className="bs" onClick={()=>setSs(false)}>Cancelar</button></div>
+      {!confirmSal
+        ?<div className="mactions"><button className="bp" style={{background:'var(--red)'}} onClick={pedirConfirmSal}>Solicitar salida</button><button className="bs" onClick={()=>setSs(false)}>Cancelar</button></div>
+        :<div style={{background:'var(--red-dim)',border:'1px solid rgba(255,80,80,.2)',borderRadius:'var(--radius-sm)',padding:'10px 12px'}}>
+          <div style={{fontSize:12,color:'var(--red)',fontWeight:500,marginBottom:8}}>¿Confirmar salida de {sal.cantidad} {products.find(p=>p.id===parseInt(sal.productoId))?.unidad} de {products.find(p=>p.id===parseInt(sal.productoId))?.nombre}?</div>
+          <div className="mactions"><button className="bp" style={{background:'var(--red)'}} onClick={saveSal} disabled={saving}>{saving?'Enviando...':'Sí, confirmar'}</button><button className="bs" onClick={()=>setConfirmSal(false)}>No, volver</button></div>
+        </div>
+      }
     </div>}
   </div>;
 }
@@ -696,7 +721,14 @@ function Control(){
   function cancelEdit(){setEditQ(null);setCounts({});setEditLabel('');setEditFecha('');}
 
   async function guardar(){
-    if(!isSupervisor&&yaRegistroHoy){setMsg({text:'Ya registraste un conteo hoy.',type:'err'});return;}
+    if(!isSupervisor&&yaRegistroHoy){setMsg({text:`Ya registraste un conteo hoy (${hoy}). Espera que el supervisor lo valide o rechace.`,type:'err'});return;}
+    const fechaConteo=editQ?editFecha:fecha;
+    const ultimoValidado=[...quincenas].filter(q=>q.status==='validated').sort((a,b)=>new Date(b.fecha)-new Date(a.fecha))[0];
+    if(ultimoValidado&&fechaConteo<ultimoValidado.fecha){setMsg({text:`La fecha (${fechaConteo}) es anterior al último conteo validado (${ultimoValidado.fecha}).`,type:'err'});return;}
+    const negativo=Object.entries(counts).find(([,v])=>v!==''&&parseInt(v)<0);
+    if(negativo){const p=products.find(x=>x.id===parseInt(negativo[0]));setMsg({text:`La cantidad de "${p?.nombre||'un producto'}" no puede ser negativa.`,type:'err'});return;}
+    const dupFecha=!editQ&&quincenas.find(q=>q.fecha===fechaConteo&&q.created_by!==userEmail);
+    if(dupFecha){setMsg({text:`Ya existe un conteo del ${fechaConteo} registrado por ${dupFecha.created_by}.`,type:'err'});return;}
     setSaving(true);
     const inv={};products.forEach(p=>{const v=counts[p.id];inv[p.id]=v!==undefined&&v!==''?parseInt(v):getStock(p.id);});
     let err;
@@ -784,7 +816,12 @@ function Ingresos(){
 }
 
 function Graficos(){
-  const {products,quincenas,getStock,getConsumo,getDias,getEstado}=useApp();
+  const {products,quincenas,salidas,usuariosList,getStock,getConsumo,getDias,getEstado}=useApp();
+  const areaColors=['#00c97d','#4d9eff','#f0a500','#ff5050'];
+  const salAprobadas=(salidas||[]).filter(sv=>sv.status==='approved'&&sv.area);
+  const areas=[...new Set(salAprobadas.map(sv=>sv.area).filter(Boolean))];
+  function consumoPorArea(area){return salAprobadas.filter(sv=>sv.area===area).reduce((t,sv)=>t+sv.cantidad,0);}
+  function consumoAreaPorProd(area){return products.map(p=>({n:p.nombre,v:salAprobadas.filter(sv=>sv.area===area&&sv.product_id===p.id).reduce((t,sv)=>t+sv.cantidad,0)})).filter(x=>x.v>0).sort((a,b)=>b.v-a.v);}
   const [sid,setSid]=useState(products[0]?.id??null);
   const [tab,setTab]=useState('c');
   const sq=[...quincenas].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
@@ -802,7 +839,7 @@ function Graficos(){
   const td=comp.length?Math.round(comp.reduce((s,p)=>s+p.diff,0)/comp.length):0;
   return <div className="page">
     <div className="ph"><div><h1 className="pt">Gráficos</h1><p className="ps">Análisis de consumo y proyección</p></div></div>
-    <div className="ptabs"><button className={`ptab${tab==='c'?' on':''}`} onClick={()=>setTab('c')}>Consumo y proyección</button><button className={`ptab${tab==='k'?' on':''}`} onClick={()=>setTab('k')}>Comparativo</button></div>
+    <div className="ptabs"><button className={`ptab${tab==='c'?' on':''}`} onClick={()=>setTab('c')}>Consumo y proyección</button><button className={`ptab${tab==='k'?' on':''}`} onClick={()=>setTab('k')}>Comparativo</button><button className={`ptab${tab==='a'?' on':''}`} onClick={()=>setTab('a')}>Por área</button></div>
     {tab==='c'&&<>
       <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:'1rem'}}><label style={{fontSize:12,color:'var(--text2)'}}>Producto</label><select value={sid??''} onChange={e=>setSid(parseInt(e.target.value))} style={{minWidth:220,width:'auto'}}>{products.map(p=><option key={p.id} value={p.id}>{p.nombre}</option>)}</select></div>
       {prod&&<>
@@ -826,7 +863,26 @@ function Graficos(){
 }
 
 function Supervision(){
-  const {quincenas,ingresos,salidas,actLog,usuariosList,validarQ,rechazarQ,getAnomalias,aprobarIngreso,rechazarIngreso,aprobarSalida,rechazarSalida,products,isSupervisor}=useApp();
+  const {quincenas,ingresos,salidas,actLog,usuariosList,validarQ,rechazarQ,getAnomalias,aprobarIngreso,rechazarIngreso,updateIngreso,aprobarSalida,rechazarSalida,updateSalida,products,isSupervisor}=useApp();
+  const [editIng,setEditIng]=useState(null);
+  const [editSal,setEditSal]=useState(null);
+  const [editVals,setEditVals]=useState({cantidad:'',fecha:''});
+  const [savingEdit,setSavingEdit]=useState(false);
+  const [editMsg,setEditMsg]=useState('');
+  async function guardarEditIng(){
+    if(!editVals.cantidad||parseInt(editVals.cantidad)<=0){setEditMsg('Cantidad inválida');return;}
+    setSavingEdit(true);
+    const err=await updateIngreso(editIng.id,editVals.cantidad,editVals.fecha||editIng.fecha);
+    if(err)setEditMsg(err);else{setEditIng(null);setEditMsg('');}
+    setSavingEdit(false);
+  }
+  async function guardarEditSal(){
+    if(!editVals.cantidad||parseInt(editVals.cantidad)<=0){setEditMsg('Cantidad inválida');return;}
+    setSavingEdit(true);
+    const err=await updateSalida(editSal.id,editVals.cantidad,editVals.fecha||editSal.fecha);
+    if(err)setEditMsg(err);else{setEditSal(null);setEditMsg('');}
+    setSavingEdit(false);
+  }
   function getNombre(dni){const u=usuariosList.find(x=>x.nombre===dni||x.dni===dni);return u?`${u.nombre}${u.area?' · '+u.area:''}`:dni||'—';}
   const statusColor={pending:'var(--amber)',approved:'var(--green)',rejected:'var(--red)'};
   const statusLabel={pending:'Pendiente',approved:'Aprobada',rejected:'Rechazada'};
@@ -873,7 +929,17 @@ function Supervision(){
             <div style={{display:'flex',gap:8,marginTop:10}}>
               <button className="bval" onClick={()=>aprobarIngreso(ig.id,p?.nombre,ig.cantidad)}>✓ Aprobar</button>
               <button className="bdel" style={{padding:'4px 12px',border:'1px solid var(--border2)',borderRadius:4,fontSize:12}} onClick={()=>rechazarIngreso(ig.id,p?.nombre,ig.cantidad)}>✕ Rechazar</button>
+              <button className="bedit" style={{padding:'4px 10px',border:'1px solid var(--border2)',borderRadius:4,fontSize:12}} onClick={()=>{setEditIng(ig);setEditVals({cantidad:ig.cantidad,fecha:ig.fecha});setEditMsg('');}}>✏️ Editar</button>
             </div>
+            {editIng?.id===ig.id&&<div style={{marginTop:8,padding:'10px',background:'var(--bg3)',borderRadius:6}}>
+              {editMsg&&<div style={{color:'var(--red)',fontSize:12,marginBottom:6}}>{editMsg}</div>}
+              <div style={{display:'flex',gap:8,alignItems:'flex-end'}}>
+                <div className="field" style={{minWidth:0}}><label>Cantidad</label><input type="number" min="1" value={editVals.cantidad} onChange={e=>setEditVals(v=>({...v,cantidad:e.target.value}))} style={{width:80}}/></div>
+                <div className="field" style={{minWidth:0}}><label>Fecha</label><input type="date" value={editVals.fecha} onChange={e=>setEditVals(v=>({...v,fecha:e.target.value}))} style={{width:130}}/></div>
+                <button className="bp" style={{fontSize:11,padding:'6px 12px'}} onClick={guardarEditIng} disabled={savingEdit}>{savingEdit?'...':'Guardar'}</button>
+                <button className="bs" style={{fontSize:11,padding:'6px 10px'}} onClick={()=>setEditIng(null)}>✕</button>
+              </div>
+            </div>}
           </div>
         );})}
         <div className="stitle" style={{marginTop:'1.5rem',marginBottom:'.75rem'}}>Historial</div>
@@ -904,7 +970,17 @@ function Supervision(){
             <div style={{display:'flex',gap:8,marginTop:10}}>
               <button className="bval" onClick={()=>aprobarSalida(sv.id,p?.nombre,sv.cantidad)}>✓ Aprobar</button>
               <button className="bdel" style={{padding:'4px 12px',border:'1px solid var(--border2)',borderRadius:4,fontSize:12}} onClick={()=>rechazarSalida(sv.id,p?.nombre,sv.cantidad)}>✕ Rechazar</button>
+              <button className="bedit" style={{padding:'4px 10px',border:'1px solid var(--border2)',borderRadius:4,fontSize:12}} onClick={()=>{setEditSal(sv);setEditVals({cantidad:sv.cantidad,fecha:sv.fecha});setEditMsg('');}}>✏️ Editar</button>
             </div>
+            {editSal?.id===sv.id&&<div style={{marginTop:8,padding:'10px',background:'var(--bg3)',borderRadius:6}}>
+              {editMsg&&<div style={{color:'var(--red)',fontSize:12,marginBottom:6}}>{editMsg}</div>}
+              <div style={{display:'flex',gap:8,alignItems:'flex-end'}}>
+                <div className="field" style={{minWidth:0}}><label>Cantidad</label><input type="number" min="1" value={editVals.cantidad} onChange={e=>setEditVals(v=>({...v,cantidad:e.target.value}))} style={{width:80}}/></div>
+                <div className="field" style={{minWidth:0}}><label>Fecha</label><input type="date" value={editVals.fecha} onChange={e=>setEditVals(v=>({...v,fecha:e.target.value}))} style={{width:130}}/></div>
+                <button className="bp" style={{fontSize:11,padding:'6px 12px'}} onClick={guardarEditSal} disabled={savingEdit}>{savingEdit?'...':'Guardar'}</button>
+                <button className="bs" style={{fontSize:11,padding:'6px 10px'}} onClick={()=>setEditSal(null)}>✕</button>
+              </div>
+            </div>}
           </div>
         );})}
         <div className="stitle" style={{marginTop:'1.5rem',marginBottom:'.75rem'}}>Historial</div>
@@ -943,7 +1019,70 @@ function Supervision(){
   </div>;
 }
 
-const PAGES_OP=[{id:'dashboard',label:'Dashboard',icon:'▦'},{id:'inventario',label:'Inventario',icon:'≡'},{id:'control',label:'Control',icon:'⊞'},{id:'ingresos',label:'Ingresos',icon:'↑'},{id:'graficos',label:'Gráficos',icon:'∿'}];
+function MisMovimientos(){
+  const {quincenas,ingresos,salidas,products,userEmail}=useApp();
+  const statusColor={pending:'var(--amber)',approved:'var(--green)',rejected:'var(--red)',validated:'var(--green)'};
+  const statusLabel={pending:'Pendiente',approved:'Aprobado',rejected:'Rechazado',validated:'Validado'};
+  const misQ=[...quincenas].filter(q=>q.created_by===userEmail).sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
+  const misIng=[...ingresos].filter(i=>i.created_by===userEmail).sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
+  const misSal=[...salidas].filter(s=>s.created_by===userEmail).sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
+  const pendQ=misQ.filter(q=>!q.status||q.status==='pending').length;
+  const pendI=misIng.filter(i=>i.status==='pending').length;
+  const pendS=misSal.filter(s=>s.status==='pending').length;
+  const [tab,setTab]=useState('conteos');
+  return <div className="page">
+    <div className="ph"><div><h1 className="pt">Mis movimientos</h1><p className="ps">Estado de tus registros</p></div></div>
+    {(pendQ+pendI+pendS)>0&&<div style={{background:'var(--amber-dim)',border:'1px solid rgba(240,165,0,.2)',borderRadius:'var(--radius)',padding:'10px 16px',marginBottom:'1.25rem',fontSize:13,color:'var(--amber)'}}>
+      ⏳ Tienes {pendQ+pendI+pendS} movimiento{pendQ+pendI+pendS>1?'s':''} pendiente{pendQ+pendI+pendS>1?'s':''} de aprobación
+    </div>}
+    <div className="ptabs">
+      <button className={`ptab${tab==='conteos'?' on':''}`} onClick={()=>setTab('conteos')}>Conteos {pendQ>0&&<span style={{background:'var(--amber-dim)',color:'var(--amber)',fontSize:10,padding:'1px 6px',borderRadius:99,marginLeft:4}}>{pendQ}</span>}</button>
+      <button className={`ptab${tab==='ingresos'?' on':''}`} onClick={()=>setTab('ingresos')}>Ingresos {pendI>0&&<span style={{background:'var(--amber-dim)',color:'var(--amber)',fontSize:10,padding:'1px 6px',borderRadius:99,marginLeft:4}}>{pendI}</span>}</button>
+      <button className={`ptab${tab==='salidas'?' on':''}`} onClick={()=>setTab('salidas')}>Salidas {pendS>0&&<span style={{background:'var(--amber-dim)',color:'var(--amber)',fontSize:10,padding:'1px 6px',borderRadius:99,marginLeft:4}}>{pendS}</span>}</button>
+    </div>
+    {tab==='conteos'&&<div>
+      {misQ.length===0?<div className="nodata">No tienes conteos registrados</div>
+      :<div className="twrap">
+        <div className="thead" style={{gridTemplateColumns:'80px 1fr 100px'}}><span>Fecha</span><span>Etiqueta</span><span>Estado</span></div>
+        {misQ.map(q=><div key={q.id} className="trow" style={{gridTemplateColumns:'80px 1fr 100px'}}>
+          <span style={{fontSize:12,color:'var(--text2)'}}>{new Date(q.fecha).toLocaleDateString('es',{day:'2-digit',month:'short',year:'numeric'})}</span>
+          <span className="pname">{q.label}</span>
+          <span><span className="badge" style={{background:`${statusColor[q.status||'pending']}22`,color:statusColor[q.status||'pending']}}>{statusLabel[q.status||'pending']}</span></span>
+        </div>)}
+      </div>}
+    </div>}
+    {tab==='ingresos'&&<div>
+      {misIng.length===0?<div className="nodata">No tienes ingresos registrados</div>
+      :<div className="twrap">
+        <div className="thead" style={{gridTemplateColumns:'80px 2fr 80px 100px'}}><span>Fecha</span><span>Producto</span><span>Cant.</span><span>Estado</span></div>
+        {misIng.map(i=>{const p=products.find(x=>x.id===i.product_id);return(
+          <div key={i.id} className="trow" style={{gridTemplateColumns:'80px 2fr 80px 100px'}}>
+            <span style={{fontSize:12,color:'var(--text2)'}}>{new Date(i.fecha).toLocaleDateString('es',{day:'2-digit',month:'short',year:'numeric'})}</span>
+            <span><span className="pname">{p?.nombre||'—'}</span></span>
+            <span className="mono cg">+{i.cantidad}</span>
+            <span><span className="badge" style={{background:`${statusColor[i.status||'approved']}22`,color:statusColor[i.status||'approved']}}>{statusLabel[i.status||'approved']}</span></span>
+          </div>
+        );})}
+      </div>}
+    </div>}
+    {tab==='salidas'&&<div>
+      {misSal.length===0?<div className="nodata">No tienes salidas registradas</div>
+      :<div className="twrap">
+        <div className="thead" style={{gridTemplateColumns:'80px 2fr 80px 100px'}}><span>Fecha</span><span>Producto</span><span>Cant.</span><span>Estado</span></div>
+        {misSal.map(s=>{const p=products.find(x=>x.id===s.product_id);return(
+          <div key={s.id} className="trow" style={{gridTemplateColumns:'80px 2fr 80px 100px'}}>
+            <span style={{fontSize:12,color:'var(--text2)'}}>{new Date(s.fecha).toLocaleDateString('es',{day:'2-digit',month:'short',year:'numeric'})}</span>
+            <span><span className="pname">{p?.nombre||'—'}</span></span>
+            <span className="mono cr">-{s.cantidad}</span>
+            <span><span className="badge" style={{background:`${statusColor[s.status]}22`,color:statusColor[s.status]}}>{statusLabel[s.status]}</span></span>
+          </div>
+        );})}
+      </div>}
+    </div>}
+  </div>;
+}
+
+const PAGES_OP=[{id:'dashboard',label:'Dashboard',icon:'▦'},{id:'inventario',label:'Inventario',icon:'≡'},{id:'control',label:'Control',icon:'⊞'},{id:'ingresos',label:'Ingresos',icon:'↑'},{id:'graficos',label:'Gráficos',icon:'∿'},{id:'movimientos',label:'Mis movimientos',icon:'◎'}];
 const PAGES_SUP=[...PAGES_OP,{id:'supervision',label:'Supervisión',icon:'◈'}];
 
 function AppMain({user,profile,isSupervisor,onLogout}){
@@ -955,8 +1094,9 @@ function AppMain({user,profile,isSupervisor,onLogout}){
 }
 
 function AppInner({page,setPage,onLogout,userName,isSupervisor}){
-  const {getEstado,products,csvInventario,loading,error,quincenas,salidas,ingresos}=useApp();
+  const {getEstado,products,csvInventario,loading,error,quincenas,salidas,ingresos,userEmail,isSupervisor}=useApp();
   const nc=products.filter(p=>getEstado(p.id)==='critico').length;
+  const misPend=(ingresos||[]).filter(i=>i.created_by===userEmail&&i.status==='pending').length+(salidas||[]).filter(s=>s.created_by===userEmail&&s.status==='pending').length+(quincenas||[]).filter(q=>q.created_by===userEmail&&(!q.status||q.status==='pending')).length;
   const pendientes=quincenas.filter(q=>!q.status||q.status==='pending').length;
   const salPend=salidas?salidas.filter(s=>s.status==='pending').length:0;
   const ingPend=ingresos?ingresos.filter(i=>i.status==='pending').length:0;
@@ -974,6 +1114,7 @@ function AppInner({page,setPage,onLogout,userName,isSupervisor}){
         {PAGES.map(p=><button key={p.id} className={`nav-btn${page===p.id?' active':''}`} onClick={()=>setPage(p.id)}>
           <span className="nav-icon">{p.icon}</span><span>{p.label}</span>
           {p.id==='dashboard'&&nc>0&&<span className="nbadge">{nc}</span>}
+          {p.id==='movimientos'&&misPend>0&&<span className="nbadge" style={{background:'var(--amber)'}}>{misPend}</span>}
           {p.id==='supervision'&&totalPend>0&&<span className="nbadge" style={{background:'var(--amber)'}}>{totalPend}</span>}
         </button>)}
       </nav>
@@ -989,6 +1130,7 @@ function AppInner({page,setPage,onLogout,userName,isSupervisor}){
       {page==='control'&&<Control/>}
       {page==='ingresos'&&<Ingresos/>}
       {page==='graficos'&&<Graficos/>}
+      {page==='movimientos'&&!isSupervisor&&<MisMovimientos/>}
       {page==='supervision'&&isSupervisor&&<Supervision/>}
     </main>
     <nav className="bottom-nav">
@@ -996,6 +1138,7 @@ function AppInner({page,setPage,onLogout,userName,isSupervisor}){
         <div style={{position:'relative',display:'inline-block'}}>
           <span className="bnico">{p.icon}</span>
           {p.id==='dashboard'&&nc>0&&<span className="bnbadge">{nc}</span>}
+          {p.id==='movimientos'&&misPend>0&&<span className="bnbadge" style={{background:'var(--amber)'}}>{misPend}</span>}
           {p.id==='supervision'&&totalPend>0&&<span className="bnbadge" style={{background:'var(--amber)'}}>{totalPend}</span>}
         </div>
         <span className="bnlbl">{p.label}</span>
