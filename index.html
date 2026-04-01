@@ -859,6 +859,21 @@ function Graficos(){
         <div className="ctab"><div className="cthead"><span>Producto</span><span>Anterior</span><span>Actual</span><span>Variación</span></div>{[...comp].sort((a,b)=>b.diff-a.diff).map((p,i)=><div key={i} className="ctrow"><span className="pname">{p.n}</span><span className="mono">{p.ca}</span><span className="mono">{p.cb}</span><span className={`mono${p.diff>0?' cr':p.diff<0?' cg':''}`}>{p.diff>0?'+':''}{p.diff}%</span></div>)}</div>
       </>}
     </>}
+    {tab==='a'&&<>
+      {areas.length===0
+        ?<div className="nodata">Sin datos de área aún. Las salidas aprobadas con área asignada aparecerán aquí.</div>
+        :<>
+          <div className="metrics3" style={{gridTemplateColumns:`repeat(${Math.min(areas.length,4)},minmax(0,1fr))`,marginBottom:'1.25rem'}}>
+            {areas.map((a,i)=><div key={a} className="metric"><span className="ml">Total consumido — {a}</span><span className="mv" style={{color:areaColors[i%areaColors.length]}}>{consumoPorArea(a)}<small style={{fontSize:12,fontWeight:400,color:'var(--text2)'}}> und</small></span></div>)}
+          </div>
+          <div className="chcard">
+            <div className="chtitle">Comparativo total por área</div>
+            <BarChartSVG data={areas.map(a=>({q:a,v:consumoPorArea(a)}))} color="#4d9eff" height={140}/>
+          </div>
+          {areas.map((a,i)=>{const data=consumoAreaPorProd(a);return data.length>0&&<div key={a} className="chcard"><div className="chtitle">Consumo por producto — {a}</div><BarChartSVG data={data.map(x=>({q:x.n.length>12?x.n.slice(0,12)+'…':x.n,v:x.v}))} color={areaColors[i%areaColors.length]} height={160}/></div>;})}
+        </>
+      }
+    </>}
   </div>;
 }
 
@@ -1082,8 +1097,9 @@ function MisMovimientos(){
   </div>;
 }
 
-const PAGES_OP=[{id:'dashboard',label:'Dashboard',icon:'▦'},{id:'inventario',label:'Inventario',icon:'≡'},{id:'control',label:'Control',icon:'⊞'},{id:'ingresos',label:'Ingresos',icon:'↑'},{id:'graficos',label:'Gráficos',icon:'∿'},{id:'movimientos',label:'Mis movimientos',icon:'◎'}];
-const PAGES_SUP=[...PAGES_OP,{id:'supervision',label:'Supervisión',icon:'◈'}];
+const PAGES_BASE=[{id:'dashboard',label:'Dashboard',icon:'▦'},{id:'inventario',label:'Inventario',icon:'≡'},{id:'control',label:'Control',icon:'⊞'},{id:'ingresos',label:'Ingresos',icon:'↑'},{id:'graficos',label:'Gráficos',icon:'∿'}];
+const PAGES_OP=[...PAGES_BASE,{id:'movimientos',label:'Mis movimientos',icon:'◎'}];
+const PAGES_SUP=[...PAGES_BASE,{id:'supervision',label:'Supervisión',icon:'◈'}];
 
 function AppMain({user,profile,isSupervisor,onLogout}){
   const [page,setPage]=useState('dashboard');
