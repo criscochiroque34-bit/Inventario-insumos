@@ -1094,7 +1094,7 @@ function AppMain({user,profile,isSupervisor,onLogout}){
 }
 
 function AppInner({page,setPage,onLogout,userName,isSupervisor}){
-  const {getEstado,products,csvInventario,loading,error,quincenas,salidas,ingresos,userEmail,isSupervisor}=useApp();
+  const {getEstado,products,csvInventario,loading,error,quincenas,salidas,ingresos,userEmail}=useApp();
   const nc=products.filter(p=>getEstado(p.id)==='critico').length;
   const misPend=(ingresos||[]).filter(i=>i.created_by===userEmail&&i.status==='pending').length+(salidas||[]).filter(s=>s.created_by===userEmail&&s.status==='pending').length+(quincenas||[]).filter(q=>q.created_by===userEmail&&(!q.status||q.status==='pending')).length;
   const pendientes=quincenas.filter(q=>!q.status||q.status==='pending').length;
