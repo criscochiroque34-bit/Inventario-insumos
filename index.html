@@ -343,6 +343,13 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
     return totalDias>0?totalConsumo/totalDias:0;
   }
   function getConsumo(pid){const cd=getConsumoDiario(pid);return cd?Math.round(cd*15):0;}
+  function getConsumoLabel(pid){
+    const cd=getConsumoDiario(pid);
+    if(!cd)return null;
+    if(cd>=1)return {v:Math.round(cd*10)/10,u:'día'};
+    if(cd>=1/7)return {v:Math.round(cd*7*10)/10,u:'semana'};
+    return {v:Math.round(cd*30*10)/10,u:'mes'};
+  }
   function getDias(pid){const cd=getConsumoDiario(pid);if(!cd)return 999;return Math.round(getStock(pid)/cd);}
   function getEstado(pid){const d=getDias(pid);return d<=10?'critico':d<=20?'alerta':'stock'}
   function getLista(){
@@ -368,7 +375,7 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
           anomalias.push({producto:p.nombre,tipo:'Consumo inusualmente alto',detalle:`Consumió ${consumo} und (promedio: ${avg})`,conteo:sorted[i].label,qid:sorted[i].id});
         }
         if(curr===0&&prev>avg*0.5){
-          anomalias.push({producto:p.nombre,tipo:'Caída brusca a cero',detalle:`Stock cayó de ${prev} a 0 en una quincena`,conteo:sorted[i].label,qid:sorted[i].id});
+          anomalias.push({producto:p.nombre,tipo:'Caída brusca a cero',detalle:`Stock cayó de ${prev} a 0 en un período`,conteo:sorted[i].label,qid:sorted[i].id});
         }
       }
     });
@@ -456,7 +463,7 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
   }
   function dl(rows,name){const csv=rows.map(r=>r.map(c=>`"${c}"`).join(',')).join('\n');const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);a.download=`${name}-${new Date().toISOString().slice(0,10)}.csv`;a.click();}
   function csvInventario(){const rows=[['Criticidad','Código','Nombre','Flujo','Unidad','Stock','Días','Estado']];products.forEach(p=>{const e=getEstado(p.id);rows.push([p.criticidad,p.codigo,p.nombre,p.flujo,p.unidad,getStock(p.id),getDias(p.id)===999?'Sin hist.':getDias(p.id),e==='critico'?'Crítico':e==='alerta'?'Alerta':'En stock'])});dl(rows,'inventario');}
-  function csvLista(){const rows=[['Código','Nombre','Stock','Consume/Q','Pedir','Unidad','Días']];getLista().forEach(p=>rows.push([p.codigo,p.nombre,p.stock,p.consumo,p.pedir,p.unidad,p.dias]));dl(rows,'lista-compra');}
+  function csvLista(){const rows=[['Código','Nombre','Stock','Consumo','Unidad consumo','Pedir','Unidad','Días']];getLista().forEach(p=>rows.push([p.codigo,p.nombre,p.stock,p.consumo,p.pedir,p.unidad,p.dias]));dl(rows,'lista-compra');}
   function csvConsolidado(){const qs=[...quincenasWithInv].sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));const headers=['Código','Nombre','Flujo','Unidad',...qs.map(q=>q.label)];const rows=[headers];products.forEach(p=>{rows.push([p.codigo,p.nombre,p.flujo,p.unidad,...qs.map(q=>q.inventario[p.id]??'')]);});dl(rows,'consolidado-conteos');}
   return <Ctx.Provider value={{products,quincenas:quincenasWithInv,ingresos,salidas,actLog,usuariosList,loading,error,userEmail,isSupervisor,onLogout,getStock,getConsumo,getDias,getEstado,getLista,getAnomalias,addProd,updateProd,delProd,addQ,updateQ,validarQ,rechazarQ,addIng,aprobarIngreso,rechazarIngreso,updateIngreso,addSalida,aprobarSalida,rechazarSalida,updateSalida,csvInventario,csvLista,csvConsolidado}}>{children}</Ctx.Provider>;
 }
@@ -497,7 +504,7 @@ function LineChartSVG({data,height=180}){
 }
 
 function Dashboard(){
-  const {products,getStock,getConsumo,getDias,getEstado,getLista,csvLista,isSupervisor}=useApp();
+  const {products,getStock,getConsumo,getConsumoLabel,getDias,getEstado,getLista,csvLista,isSupervisor}=useApp();
   const [show,setShow]=useState(false);
   const cr=products.filter(p=>getEstado(p.id)==='critico');
   const al=products.filter(p=>getEstado(p.id)==='alerta');
@@ -515,9 +522,9 @@ function Dashboard(){
     {lista.length>0&&<div style={{marginBottom:'1.5rem'}}>
       <button className="cbtn" onClick={()=>setShow(v=>!v)}><span>🛒</span>Necesito comprar<span style={{background:'rgba(0,0,0,.2)',padding:'1px 8px',borderRadius:99,fontSize:12}}>{lista.length}</span><span style={{marginLeft:'auto',fontSize:10}}>{show?'▲':'▼'}</span></button>
       {show&&<div className="ccard">
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'.75rem'}}><span style={{fontSize:12,color:'var(--text2)'}}>Orden sugerida — cubre 2 quincenas</span><button className="bs" style={{fontSize:11,padding:'4px 10px'}} onClick={csvLista}>↓ CSV</button></div>
-        <div className="chead"><span>Producto</span><span>Stock</span><span>/Q</span><span>Pedir</span></div>
-        {lista.map(p=><div key={p.id} className="crow"><span><span className="pname">{p.nombre}</span><span className="pdesc">{p.codigo}</span></span><span className="mono">{p.stock}<small> {p.unidad}</small></span><span className="mono">~{p.consumo}</span><span className="mono cg">+{p.pedir}<small> {p.unidad}</small></span></div>)}
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'.75rem'}}><span style={{fontSize:12,color:'var(--text2)'}}>Orden sugerida — cubre ~2 períodos</span><button className="bs" style={{fontSize:11,padding:'4px 10px'}} onClick={csvLista}>↓ CSV</button></div>
+        <div className="chead"><span>Producto</span><span>Stock</span><span>Consumo</span><span>Pedir</span></div>
+        {lista.map(p=><div key={p.id} className="crow"><span><span className="pname">{p.nombre}</span><span className="pdesc">{p.codigo}</span></span><span className="mono">{p.stock}<small> {p.unidad}</small></span><span className="mono">{(()=>{const l=getConsumoLabel(p.id);return l?`~${l.v}/${l.u}`:'—';})()}</span><span className="mono cg">+{p.pedir}<small> {p.unidad}</small></span></div>)}
       </div>}
     </div>}
     {isSupervisor&&anomalias.length>0&&<div className="section">
@@ -530,11 +537,11 @@ function Dashboard(){
     </div>}
     {cr.length>0&&<div className="section">
       <h2 className="stitle"><span className="sdot" style={{background:'var(--red)'}}/>Críticos</h2>
-      <div className="alert-list">{cr.map(p=><div key={p.id} className="card card-red"><div className="atop"><span className="aname">{p.nombre}</span><DBadge d={getDias(p.id)}/></div><span className="acode">{p.codigo} · {p.flujo}</span><div className="astats"><span>Stock: <strong>{getStock(p.id)} {p.unidad}s</strong></span><span>Consume: <strong>~{getConsumo(p.id)}/Q</strong></span></div><Barra d={getDias(p.id)}/></div>)}</div>
+      <div className="alert-list">{cr.map(p=><div key={p.id} className="card card-red"><div className="atop"><span className="aname">{p.nombre}</span><DBadge d={getDias(p.id)}/></div><span className="acode">{p.codigo} · {p.flujo}</span><div className="astats"><span>Stock: <strong>{getStock(p.id)} {p.unidad}s</strong></span><span>Consume: <strong>{(()=>{const l=getConsumoLabel(p.id);return l?`~${l.v}/${l.u}`:'Sin datos';})()}</strong></span></div><Barra d={getDias(p.id)}/></div>)}</div>
     </div>}
     {al.length>0&&<div className="section">
       <h2 className="stitle"><span className="sdot" style={{background:'var(--amber)'}}/>Alertas</h2>
-      <div className="alert-list">{al.map(p=><div key={p.id} className="card card-amber"><div className="atop"><span className="aname">{p.nombre}</span><DBadge d={getDias(p.id)}/></div><span className="acode">{p.codigo} · {p.flujo}</span><div className="astats"><span>Stock: <strong>{getStock(p.id)} {p.unidad}s</strong></span><span>Consume: <strong>~{getConsumo(p.id)}/Q</strong></span></div><Barra d={getDias(p.id)}/></div>)}</div>
+      <div className="alert-list">{al.map(p=><div key={p.id} className="card card-amber"><div className="atop"><span className="aname">{p.nombre}</span><DBadge d={getDias(p.id)}/></div><span className="acode">{p.codigo} · {p.flujo}</span><div className="astats"><span>Stock: <strong>{getStock(p.id)} {p.unidad}s</strong></span><span>Consume: <strong>{(()=>{const l=getConsumoLabel(p.id);return l?`~${l.v}/${l.u}`:'Sin datos';})()}</strong></span></div><Barra d={getDias(p.id)}/></div>)}</div>
     </div>}
     <div className="section">
       <h2 className="stitle">Todos los productos</h2>
@@ -816,7 +823,7 @@ function Ingresos(){
 }
 
 function Graficos(){
-  const {products,quincenas,salidas,usuariosList,getStock,getConsumo,getDias,getEstado}=useApp();
+  const {products,quincenas,salidas,usuariosList,getStock,getConsumo,getConsumoLabel,getDias,getEstado}=useApp();
   const areaColors=['#00c97d','#4d9eff','#f0a500','#ff5050'];
   const salAprobadas=(salidas||[]).filter(sv=>sv.status==='approved'&&sv.area);
   const areas=[...new Set(salAprobadas.map(sv=>sv.area).filter(Boolean))];
@@ -828,7 +835,7 @@ function Graficos(){
   const [qa,setQa]=useState(sq[0]?.id??null);
   const [qb,setQb]=useState(sq[1]?.id??null);
   const prod=products.find(p=>p.id===sid);
-  const avg=getConsumo(sid),stock=getStock(sid),dias=getDias(sid),est=getEstado(sid);
+  const avg=getConsumo(sid),stock=getStock(sid),dias=getDias(sid),est=getEstado(sid),consumoLabel=getConsumoLabel(sid);
   const qs=[...quincenas].sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
   const cd=[];for(let i=1;i<qs.length;i++){const p=qs[i-1].inventario[sid]??0,c=qs[i].inventario[sid]??0;cd.push({q:qs[i].label,v:Math.max(0,p-c)});}
   const sr=qs.map(q=>({q:q.label,s:q.inventario[sid]??0}));
@@ -843,8 +850,8 @@ function Graficos(){
     {tab==='c'&&<>
       <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:'1rem'}}><label style={{fontSize:12,color:'var(--text2)'}}>Producto</label><select value={sid??''} onChange={e=>setSid(parseInt(e.target.value))} style={{minWidth:220,width:'auto'}}>{products.map(p=><option key={p.id} value={p.id}>{p.nombre}</option>)}</select></div>
       {prod&&<>
-        <div className="metrics3"><div className="metric"><span className="ml">Stock actual</span><span className={`mv ${est}`}>{stock}<small style={{fontSize:12,fontWeight:400,color:'var(--text2)'}}> {prod.unidad}s</small></span></div><div className="metric"><span className="ml">Consume prom/Q</span><span className="mv">{avg}<small style={{fontSize:12,fontWeight:400,color:'var(--text2)'}}> {prod.unidad}s</small></span></div><div className="metric"><span className="ml">Días restantes</span><span className={`mv ${est}`}>{dias===999?'—':`${dias}d`}</span></div></div>
-        <div className="chcard"><div className="chtitle">Consumo por quincena</div><BarChartSVG data={cd} color="#00c97d" height={160}/></div>
+        <div className="metrics3"><div className="metric"><span className="ml">Stock actual</span><span className={`mv ${est}`}>{stock}<small style={{fontSize:12,fontWeight:400,color:'var(--text2)'}}> {prod.unidad}s</small></span></div><div className="metric"><span className="ml">Consume prom</span><span className="mv">{consumoLabel?consumoLabel.v:avg}<small style={{fontSize:12,fontWeight:400,color:'var(--text2)'}}> {prod.unidad}/{consumoLabel?consumoLabel.u:'período'}</small></span></div><div className="metric"><span className="ml">Días restantes</span><span className={`mv ${est}`}>{dias===999?'—':`${dias}d`}</span></div></div>
+        <div className="chcard"><div className="chtitle">Consumo por conteo</div><BarChartSVG data={cd} color="#00c97d" height={160}/></div>
         <div className="chcard"><div className="chrow"><div className="chtitle">Stock real vs proyección</div><div className="legend"><span><span className="ldot" style={{background:'#00c97d'}}/>Real</span><span><span className="ldot" style={{background:'#4d9eff'}}/>Proyección</span></div></div><LineChartSVG data={comb} height={180}/></div>
       </>}
     </>}
