@@ -466,7 +466,7 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
     if(error)return error.message;
     await logAction('Rechazó salida',`${prodNombre}: -${cant}`);await load();return null;
   }
-  function dl(rows,name){const csv=rows.map(r=>r.map(c=>`"${c}"`).join(',')).join('\n');const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);a.download=`${name}-${new Date().toISOString().slice(0,10)}.csv`;a.click();}
+  function dl(rows,name){const csv=rows.map(r=>r.map(c=>`"${c}"`).join(',')).join('\n');const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);a.download=`${name}-${new Date().toLocaleDateString('en-CA')}.csv`;a.click();}
   function csvInventario(){const rows=[['Criticidad','Código','Nombre','Flujo','Unidad','Stock','Días','Estado']];products.forEach(p=>{const e=getEstado(p.id);rows.push([p.criticidad,p.codigo,p.nombre,p.flujo,p.unidad,getStock(p.id),getDias(p.id)===999?'Sin hist.':getDias(p.id),e==='critico'?'Crítico':e==='alerta'?'Alerta':'En stock'])});dl(rows,'inventario');}
   function csvLista(){const rows=[['Código','Nombre','Stock','Consumo','Unidad consumo','Pedir','Unidad','Días']];getLista().forEach(p=>rows.push([p.codigo,p.nombre,p.stock,p.consumo,p.pedir,p.unidad,p.dias]));dl(rows,'lista-compra');}
   function csvConsolidado(){const qs=[...quincenasWithInv].sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));const headers=['Código','Nombre','Flujo','Unidad',...qs.map(q=>q.label)];const rows=[headers];products.forEach(p=>{rows.push([p.codigo,p.nombre,p.flujo,p.unidad,...qs.map(q=>q.inventario[p.id]??'')]);});dl(rows,'consolidado-conteos');}
@@ -565,8 +565,8 @@ function Inventario(){
   const [editId,setEditId]=useState(null);
   const empty={criticidad:'Alto',codigo:'',nombre:'',descripcion:'',flujo:'',unidad:'',conversion:'',stockInicial:''};
   const [form,setForm]=useState(empty);
-  const [ing,setIng]=useState({productoId:'',cantidad:'',fecha:new Date().toISOString().slice(0,10),nota:''});
-  const [sal,setSal]=useState({productoId:'',cantidad:'',fecha:new Date().toISOString().slice(0,10)});
+  const [ing,setIng]=useState({productoId:'',cantidad:'',fecha:new Date().toLocaleDateString('en-CA'),nota:''});
+  const [sal,setSal]=useState({productoId:'',cantidad:'',fecha:new Date().toLocaleDateString('en-CA')});
   const [confirmSal,setConfirmSal]=useState(false);
   const [msg,setMsg]=useState({text:'',type:'ok'});
   const [saving,setSaving]=useState(false);
@@ -588,7 +588,7 @@ function Inventario(){
   async function saveIng(){
     if(!ing.productoId||!ing.cantidad||parseInt(ing.cantidad)<=0)return;setSaving(true);
     const err=await addIng(ing.productoId,ing.cantidad,ing.fecha,ing.nota);
-    err?showMsg(err,'err'):(setIng({productoId:'',cantidad:'',fecha:new Date().toISOString().slice(0,10),nota:''}),setSi(false),showMsg('Ingreso registrado ✓'));
+    err?showMsg(err,'err'):(setIng({productoId:'',cantidad:'',fecha:new Date().toLocaleDateString('en-CA'),nota:''}),setSi(false),showMsg('Ingreso registrado ✓'));
     setSaving(false);
   }
   function pedirConfirmSal(){
@@ -598,7 +598,7 @@ function Inventario(){
   async function saveSal(){
     setSaving(true);setConfirmSal(false);
     const err=await addSalida(sal.productoId,sal.cantidad,sal.fecha);
-    err?showMsg(err,'err'):(setSal({productoId:'',cantidad:'',fecha:new Date().toISOString().slice(0,10)}),setSs(false),showMsg('Salida solicitada — pendiente de autorización ✓'));
+    err?showMsg(err,'err'):(setSal({productoId:'',cantidad:'',fecha:new Date().toLocaleDateString('en-CA')}),setSs(false),showMsg('Salida solicitada — pendiente de autorización ✓'));
     setSaving(false);
   }
   const statusColor={pending:'var(--amber)',approved:'var(--green)',rejected:'var(--red)'};
@@ -714,7 +714,7 @@ function Control(){
   const {products,quincenas,addQ,updateQ,getStock,csvConsolidado,isSupervisor,validarQ,userEmail}=useApp();
   const [filtroC,setFiltroC]=useState('Todos');
   const productosFiltrados=products.filter(p=>filtroC==='Todos'||p.criticidad===filtroC);
-  const hoy=new Date().toISOString().slice(0,10);
+  const hoy=new Date().toLocaleDateString('en-CA');
   const m=new Date().getDate()<=15?1:2,mes=new Date().toLocaleString('es',{month:'short'});
   const defLabel=`Q${m} ${mes[0].toUpperCase()+mes.slice(1)}`;
   const [label,setLabel]=useState(defLabel);
