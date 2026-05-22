@@ -269,17 +269,6 @@ function AuthScreen({onLogin}){
   </div></div>);
 }
 
-function PendingScreen({onLogout}){
-  return(<div className="pending-wrap"><div className="pending-card">
-    <span className="pending-icon">⏳</span>
-    <div className="pending-title">Acceso pendiente</div>
-    <div className="pending-badge"><div className="pending-dot"/>Esperando aprobación</div>
-    <div className="pending-sub">Tu solicitud fue enviada. El administrador revisará tu cuenta y te dará acceso en breve.</div>
-    <div className="pending-info"><strong>¿Cómo me aprueban?</strong><br/>El administrador revisará tu solicitud y te notificará cuando tengas acceso.</div>
-    <button className="pending-logout" onClick={onLogout}>Cerrar sesión</button>
-  </div></div>);
-}
-
 const Ctx=createContext(null);
 function Store({user,userEmail,isSupervisor,onLogout,children}){
   const [products,setProducts]=useState([]);
@@ -416,6 +405,7 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
     await logAction('Validó conteo',label);await load();return null;
   }
   async function addIng(pid,cant,fecha,nota){
+    if(!cant||parseInt(cant)<=0)return 'La cantidad debe ser mayor a 0';
     const uData=usuariosList.find(u=>u.nombre===userEmail);
     const {error}=await sb.from('ingresos').insert([{product_id:parseInt(pid),cantidad:parseInt(cant),fecha,nota,created_by:userEmail,status:'pending',area:uData?.area||null}]);
     if(error)return error.message;
@@ -799,7 +789,8 @@ function Control(){
           <span style={{fontSize:11,color:'var(--text3)'}}>{q.created_by}</span>
           <span style={{marginLeft:'auto',display:'flex',gap:4}}>
             {isSupervisor&&isPending&&<button className="bval" onClick={()=>validarQ(q.id,q.label)}>✓ Validar</button>}
-            {isSupervisor&&<button className="bedit" title="Editar" onClick={()=>openEditQ(q)}>✏️</button>}
+            {isSupervisor&&q.status!=='validated'&&<button className="bedit" title="Editar" onClick={()=>openEditQ(q)}>✏️</button>}
+          {isSupervisor&&q.status==='validated'&&<button className="bedit" title="Solo supervisor puede editar validados" style={{opacity:.3,cursor:'not-allowed'}} disabled>✏️</button>}
           </span>
         </div>;
       })}
@@ -871,22 +862,86 @@ function Graficos(){
         <div className="ctab"><div className="cthead"><span>Producto</span><span>Anterior</span><span>Actual</span><span>Variación</span></div>{[...comp].sort((a,b)=>b.diff-a.diff).map((p,i)=><div key={i} className="ctrow"><span className="pname">{p.n}</span><span className="mono">{p.ca}</span><span className="mono">{p.cb}</span><span className={`mono${p.diff>0?' cr':p.diff<0?' cg':''}`}>{p.diff>0?'+':''}{p.diff}%</span></div>)}</div>
       </>}
     </>}
-    {tab==='a'&&<AreaTab salAprobadas={salAprobadas} areas={areas} areaColors={areaColors} consumoPorArea={consumoPorArea} consumoAreaPorProd={consumoAreaPorProd} products={products}/>}
+    {tab==='a'&&<AreaTab salidas={salidas||[]} products={products} areaColors={areaColors}/>}
   </div>;
 }
 
-function AreaTab({salAprobadas,areas,areaColors,consumoPorArea,consumoAreaPorProd,products}){
+function AreaTab({salidas,products,areaColors}){
+  const [periodo,setPeriodo]=useState('30');
   const [filProd,setFilProd]=useState('');
+  
+  const hoy=new Date();
+  const diasPeriodo=periodo==='all'?9999:parseInt(periodo);
+  const desde=new Date(hoy);desde.setDate(desde.getDate()-diasPeriodo);
+  const desdeAnt=new Date(desde);desdeAnt.setDate(desdeAnt.getDate()-diasPeriodo);
+  
+  // Filtrar salidas aprobadas del período actual
+  const salAprob=salidas.filter(s=>s.status==='approved'&&s.area);
+  const salPeriodo=salAprob.filter(s=>new Date(s.fecha)>=desde);
+  const salPeriodoAnt=salAprob.filter(s=>{const f=new Date(s.fecha);return f>=desdeAnt&&f<desde;});
+  
+  const areas=[...new Set(salAprob.map(s=>s.area).filter(Boolean))].sort();
   if(areas.length===0)return <div className="nodata">Sin datos de área aún. Las salidas aprobadas con área asignada aparecerán aquí.</div>;
-  const totalGeneral=areas.reduce((t,a)=>t+consumoPorArea(a),0);
-  const prodFil=products.find(p=>p.id===parseInt(filProd));
-  const consumoProdArea=(area,pid)=>salAprobadas.filter(s=>s.area===area&&s.product_id===pid).reduce((t,s)=>t+s.cantidad,0);
+  
+  // Cálculos
+  const consumoArea=(arr,area)=>arr.filter(s=>s.area===area).reduce((t,s)=>t+s.cantidad,0);
+  const promedioDiario=(area)=>{
+    const total=consumoArea(salPeriodo,area);
+    const dias=Math.min(diasPeriodo,Math.max(1,Math.round((hoy-new Date(salPeriodo[salPeriodo.length-1]?.fecha||hoy))/(1000*60*60*24))+1));
+    return diasPeriodo===9999?Math.round(total/Math.max(dias,1)*10)/10:Math.round(total/diasPeriodo*10)/10;
+  };
+  const tendencia=(area)=>{
+    const act=consumoArea(salPeriodo,area);
+    const ant=consumoArea(salPeriodoAnt,area);
+    if(ant===0)return act>0?100:0;
+    return Math.round(((act-ant)/ant)*100);
+  };
+  const totalPeriodo=areas.reduce((t,a)=>t+consumoArea(salPeriodo,a),0);
+  
+  // Productos exclusivos
+  const productosArea=(area)=>new Set(salPeriodo.filter(s=>s.area===area).map(s=>s.product_id));
+  const productosOtras=(area)=>new Set(salPeriodo.filter(s=>s.area!==area).map(s=>s.product_id));
+  const exclusivos=(area)=>{const otras=productosOtras(area);return [...productosArea(area)].filter(pid=>!otras.has(pid)).map(pid=>products.find(p=>p.id===pid)).filter(Boolean);};
+  
+  // Evolución por mes (últimos 6 meses)
+  const mesesEvo=[];
+  for(let i=5;i>=0;i--){
+    const d=new Date(hoy);d.setMonth(d.getMonth()-i);
+    const mes=d.getMonth(),ano=d.getFullYear();
+    const label=d.toLocaleDateString('es',{month:'short'});
+    const datos={mes:label};
+    areas.forEach(a=>{
+      datos[a]=salAprob.filter(s=>{const f=new Date(s.fecha);return f.getMonth()===mes&&f.getFullYear()===ano&&s.area===a;}).reduce((t,s)=>t+s.cantidad,0);
+    });
+    mesesEvo.push(datos);
+  }
+  const maxMes=Math.max(...mesesEvo.map(m=>Math.max(...areas.map(a=>m[a]||0))),1);
+  
+  // Consumo por producto y area con filtro
+  const consumoProdArea=(area,pid)=>salPeriodo.filter(s=>s.area===area&&s.product_id===pid).reduce((t,s)=>t+s.cantidad,0);
+  const consumoAreaPorProd=(area)=>products.map(p=>({n:p.nombre,id:p.id,v:consumoProdArea(area,p.id)})).filter(x=>x.v>0).sort((a,b)=>b.v-a.v);
   const top5=(area)=>consumoAreaPorProd(area).slice(0,5);
+  
   return <>
+    {/* FILTRO DE PERÍODO */}
+    <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:'1.25rem',flexWrap:'wrap'}}>
+      <label style={{fontSize:11,textTransform:'uppercase',letterSpacing:'.05em',color:'var(--text2)'}}>Período</label>
+      <select value={periodo} onChange={e=>setPeriodo(e.target.value)} style={{minWidth:160,width:'auto'}}>
+        <option value="7">Últimos 7 días</option>
+        <option value="30">Últimos 30 días</option>
+        <option value="90">Últimos 90 días</option>
+        <option value="all">Todo el tiempo</option>
+      </select>
+      <span style={{fontSize:11,color:'var(--text3)'}}>· {salPeriodo.length} movimientos</span>
+    </div>
+    
+    {/* MÉTRICAS PRINCIPALES */}
     <div style={{display:'grid',gridTemplateColumns:`repeat(${Math.min(areas.length+1,4)},minmax(0,1fr))`,gap:10,marginBottom:'1.25rem'}}>
       {areas.map((a,i)=>{
-        const v=consumoPorArea(a);
-        const pct=totalGeneral>0?Math.round(v/totalGeneral*100):0;
+        const v=consumoArea(salPeriodo,a);
+        const pct=totalPeriodo>0?Math.round(v/totalPeriodo*100):0;
+        const tend=tendencia(a);
+        const prom=promedioDiario(a);
         return <div key={a} className="metric">
           <span className="ml">{a}</span>
           <span className="mv" style={{color:areaColors[i%areaColors.length]}}>{v}<small style={{fontSize:12,fontWeight:400,color:'var(--text2)'}}> und</small></span>
@@ -894,21 +949,63 @@ function AreaTab({salAprobadas,areas,areaColors,consumoPorArea,consumoAreaPorPro
             <div style={{height:4,background:'var(--bg4)',borderRadius:99,overflow:'hidden'}}>
               <div style={{height:'100%',width:`${pct}%`,background:areaColors[i%areaColors.length],borderRadius:99}}/>
             </div>
-            <span style={{fontSize:11,color:'var(--text2)',marginTop:3,display:'block'}}>{pct}% del total</span>
+            <div style={{display:'flex',justifyContent:'space-between',marginTop:5,fontSize:11}}>
+              <span style={{color:'var(--text2)'}}>{pct}% del total</span>
+              <span style={{color:tend>0?'var(--red)':tend<0?'var(--green)':'var(--text2)',fontWeight:500}}>
+                {tend>0?'↑':tend<0?'↓':'='} {Math.abs(tend)}%
+              </span>
+            </div>
+            <div style={{fontSize:10,color:'var(--text3)',marginTop:3}}>Prom: {prom} /día</div>
           </div>
         </div>;
       })}
       <div className="metric">
-        <span className="ml">Total general</span>
-        <span className="mv">{totalGeneral}<small style={{fontSize:12,fontWeight:400,color:'var(--text2)'}}> und</small></span>
+        <span className="ml">Total período</span>
+        <span className="mv">{totalPeriodo}<small style={{fontSize:12,fontWeight:400,color:'var(--text2)'}}> und</small></span>
+        <div style={{fontSize:10,color:'var(--text3)',marginTop:8}}>vs período anterior</div>
+        {(()=>{const tA=areas.reduce((t,a)=>t+consumoArea(salPeriodoAnt,a),0);const dif=tA===0?0:Math.round(((totalPeriodo-tA)/tA)*100);return <div style={{fontSize:12,fontWeight:500,color:dif>0?'var(--red)':dif<0?'var(--green)':'var(--text2)'}}>{dif>0?'↑':dif<0?'↓':'='} {Math.abs(dif)}%</div>;})()}
       </div>
     </div>
+    
+    {/* GRÁFICO COMPARATIVO GENERAL */}
     <div className="chcard">
-      <div className="chtitle">Comparativo general por área</div>
-      <BarChartSVG data={areas.map((a,i)=>({q:`${a} (${totalGeneral>0?Math.round(consumoPorArea(a)/totalGeneral*100):0}%)`,v:consumoPorArea(a)}))} color="#4d9eff" height={140}/>
+      <div className="chtitle">Comparativo del período seleccionado</div>
+      <BarChartSVG data={areas.map(a=>({q:`${a} (${totalPeriodo>0?Math.round(consumoArea(salPeriodo,a)/totalPeriodo*100):0}%)`,v:consumoArea(salPeriodo,a)}))} color="#4d9eff" height={140}/>
     </div>
+    
+    {/* EVOLUCIÓN TEMPORAL */}
     <div className="chcard">
-      <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:'1rem'}}>
+      <div className="chrow">
+        <div className="chtitle">Evolución últimos 6 meses</div>
+        <div className="legend">{areas.map((a,i)=><span key={a}><span className="ldot" style={{background:areaColors[i%areaColors.length]}}/>{a}</span>)}</div>
+      </div>
+      <svg viewBox="0 0 600 180" style={{width:'100%',height:180}}>
+        {mesesEvo.map((m,idx)=>{
+          const x=40+idx*((600-60)/Math.max(mesesEvo.length-1,1));
+          return <text key={idx} x={x} y={170} fill="var(--text3)" fontSize="10" textAnchor="middle">{m.mes}</text>;
+        })}
+        {[0,0.25,0.5,0.75,1].map((p,i)=><line key={i} x1="40" x2="580" y1={20+p*120} y2={20+p*120} stroke="var(--border)" strokeWidth="0.5"/>)}
+        {areas.map((a,ai)=>{
+          const points=mesesEvo.map((m,idx)=>{
+            const x=40+idx*((600-60)/Math.max(mesesEvo.length-1,1));
+            const y=140-((m[a]||0)/maxMes)*120;
+            return `${x},${y}`;
+          }).join(' ');
+          return <g key={a}>
+            <polyline points={points} fill="none" stroke={areaColors[ai%areaColors.length]} strokeWidth="2"/>
+            {mesesEvo.map((m,idx)=>{
+              const x=40+idx*((600-60)/Math.max(mesesEvo.length-1,1));
+              const y=140-((m[a]||0)/maxMes)*120;
+              return <circle key={idx} cx={x} cy={y} r="3" fill={areaColors[ai%areaColors.length]}/>;
+            })}
+          </g>;
+        })}
+      </svg>
+    </div>
+    
+    {/* DETALLE POR PRODUCTO */}
+    <div className="chcard">
+      <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:'1rem',flexWrap:'wrap'}}>
         <div className="chtitle" style={{margin:0}}>Consumo por producto</div>
         <select value={filProd} onChange={e=>setFilProd(e.target.value)} style={{minWidth:200,width:'auto',fontSize:12}}>
           <option value="">Todos los productos</option>
@@ -920,15 +1017,16 @@ function AreaTab({salAprobadas,areas,areaColors,consumoPorArea,consumoAreaPorPro
           <div style={{display:'grid',gridTemplateColumns:`repeat(${Math.min(areas.length,4)},minmax(0,1fr))`,gap:10,marginBottom:'1rem'}}>
             {areas.map((a,i)=>{
               const v=consumoProdArea(a,parseInt(filProd));
-              const pct=totalGeneral>0?Math.round(v/areas.reduce((t,ax)=>t+consumoProdArea(ax,parseInt(filProd)),0)*100):0;
+              const totProd=areas.reduce((t,ax)=>t+consumoProdArea(ax,parseInt(filProd)),0);
+              const pct=totProd>0?Math.round(v/totProd*100):0;
               return <div key={a} className="metric">
                 <span className="ml">{a}</span>
                 <span className="mv" style={{color:areaColors[i%areaColors.length]}}>{v}<small style={{fontSize:12,fontWeight:400,color:'var(--text2)'}}> und</small></span>
-                <span style={{fontSize:11,color:'var(--text2)'}}>{isNaN(pct)?0:pct}% del consumo</span>
+                <span style={{fontSize:11,color:'var(--text2)'}}>{pct}% del consumo</span>
               </div>;
             })}
           </div>
-          <BarChartSVG data={areas.map((a,i)=>({q:a,v:consumoProdArea(a,parseInt(filProd))}))} color="#f0a500" height={120}/>
+          <BarChartSVG data={areas.map(a=>({q:a,v:consumoProdArea(a,parseInt(filProd))}))} color="#f0a500" height={120}/>
         </>
         :<div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(0,1fr))',gap:16}}>
           {areas.map((a,i)=><div key={a}>
@@ -938,16 +1036,18 @@ function AreaTab({salAprobadas,areas,areaColors,consumoPorArea,consumoAreaPorPro
         </div>
       }
     </div>
-    <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(280px,1fr))',gap:12}}>
+    
+    {/* TOP 5 POR ÁREA */}
+    <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(280px,1fr))',gap:12,marginBottom:'1rem'}}>
       {areas.map((a,i)=>{
         const top=top5(a);
         return top.length>0&&<div key={a} className="chcard">
-          <div className="chtitle">Top 5 productos — {a}</div>
+          <div className="chtitle">Top 5 — {a}</div>
           {top.map((p,idx)=>{
             const maxV=top[0].v;
             return <div key={idx} style={{marginBottom:8}}>
               <div style={{display:'flex',justifyContent:'space-between',fontSize:12,marginBottom:3}}>
-                <span style={{color:'var(--text)',fontWeight:500}}>{p.n.length>20?p.n.slice(0,20)+'…':p.n}</span>
+                <span style={{color:'var(--text)',fontWeight:500}}>{p.n.length>22?p.n.slice(0,22)+'…':p.n}</span>
                 <span style={{color:areaColors[i%areaColors.length],fontWeight:500,fontFamily:'DM Mono,monospace'}}>{p.v}</span>
               </div>
               <div style={{height:4,background:'var(--bg4)',borderRadius:99,overflow:'hidden'}}>
@@ -955,6 +1055,26 @@ function AreaTab({salAprobadas,areas,areaColors,consumoPorArea,consumoAreaPorPro
               </div>
             </div>;
           })}
+        </div>;
+      })}
+    </div>
+    
+    {/* PRODUCTOS EXCLUSIVOS */}
+    <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(280px,1fr))',gap:12}}>
+      {areas.map((a,i)=>{
+        const exc=exclusivos(a);
+        return <div key={a} className="chcard">
+          <div className="chtitle">Solo consume {a}</div>
+          {exc.length===0
+            ?<div style={{fontSize:12,color:'var(--text3)',padding:'8px 0'}}>Sin productos exclusivos en este período</div>
+            :<div style={{display:'flex',flexDirection:'column',gap:6}}>
+              {exc.slice(0,8).map(p=><div key={p.id} style={{display:'flex',justifyContent:'space-between',fontSize:12,padding:'4px 0',borderBottom:'1px solid var(--border)'}}>
+                <span>{p.nombre.length>26?p.nombre.slice(0,26)+'…':p.nombre}</span>
+                <span style={{fontFamily:'DM Mono,monospace',color:areaColors[i%areaColors.length]}}>{consumoProdArea(a,p.id)}</span>
+              </div>)}
+              {exc.length>8&&<div style={{fontSize:11,color:'var(--text3)',marginTop:4}}>+ {exc.length-8} más</div>}
+            </div>
+          }
         </div>;
       })}
     </div>
