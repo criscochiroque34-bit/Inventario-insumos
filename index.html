@@ -117,7 +117,7 @@ button{font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border:non
 .trow{display:grid;padding:10px 1rem;border-top:1px solid var(--border);gap:10px;align-items:center;transition:background .1s}
 .trow:hover{background:var(--bg3)}
 .t-dash .thead,.t-dash .trow{grid-template-columns:2.5fr 1fr 80px 90px}
-.t-inv .thead,.t-inv .trow{grid-template-columns:36px 100px 2fr 70px 90px 60px 55px 75px 70px}
+.t-inv .thead,.t-inv .trow{grid-template-columns:36px 95px 2fr 70px 80px 55px 70px 50px 75px 60px}
 .t-ctrl .thead,.t-ctrl .trow{grid-template-columns:2fr 100px 130px 100px 110px}
 .t-ing .thead,.t-ing .trow{grid-template-columns:110px 2fr 110px 1fr}
 .t-sup .thead,.t-sup .trow{grid-template-columns:80px 2fr 120px 80px 100px}
@@ -231,6 +231,7 @@ button{font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border:non
   .foot{flex-direction:column;align-items:stretch}
   .bpsave{width:100%;text-align:center;padding:12px;font-size:15px}
   .ptabs{width:100%}.ptab{flex:1;text-align:center;font-size:12px}
+  .t-inv .thead span:nth-child(7),.t-inv .trow span:nth-child(7){display:none}
   .t-ing .thead,.t-ing .trow{grid-template-columns:90px 1fr 90px}
   .t-ing .thead span:last-child,.t-ing .trow span:last-child{display:none}
   .chead{grid-template-columns:2fr 60px 50px 60px}.crow{grid-template-columns:2fr 60px 50px 60px}
@@ -540,8 +541,8 @@ function Dashboard(){
 }
 
 function Inventario(){
-  const {products,quincenas,salidas,getStock,getStockDisponible,getDias,getEstado,addProd,updateProd,delProd,addIng,addSalida,isSupervisor,userEmail}=useApp();
-  const [bus,setBus]=useState('');const [fil,setFil]=useState('Todos');
+  const {products,quincenas,salidas,getStock,getStockDisponible,getConsumoDiario,getConsumoLabel,getDias,getEstado,addProd,updateProd,delProd,addIng,addSalida,isSupervisor,userEmail}=useApp();
+  const [bus,setBus]=useState('');const [fil,setFil]=useState('Todos');const [orden,setOrden]=useState('');
   const [sf,setSf]=useState(false);const [si,setSi]=useState(false);const [ss,setSs]=useState(false);
   const [editId,setEditId]=useState(null);
   const empty={codigo:'',nombre:'',descripcion:'',flujo:'',unidad:'',conversion:'',stockInicial:''};
@@ -556,6 +557,12 @@ function Inventario(){
     const mf=fil==='Todos'||p.flujo.toLowerCase()===fil.toLowerCase();
     const mb=!bus||p.nombre.toLowerCase().includes(bus.toLowerCase())||p.codigo.toLowerCase().includes(bus.toLowerCase());
     return mf&&mb;
+  }).sort((a,b)=>{
+    if(orden==='dias_asc')return getDias(a.id)-getDias(b.id);
+    if(orden==='dias_desc')return getDias(b.id)-getDias(a.id);
+    if(orden==='consumo_desc')return getConsumoDiario(b.id)-getConsumoDiario(a.id);
+    if(orden==='consumo_asc')return getConsumoDiario(a.id)-getConsumoDiario(b.id);
+    return 0;
   });
   function showMsg(t,type='ok'){setMsg({text:t,type});setTimeout(()=>setMsg({text:'',type:'ok'}),3000)}
   function openEdit(p){setEditId(p.id);setForm({codigo:p.codigo,nombre:p.nombre,descripcion:p.descripcion||'',flujo:p.flujo||'',unidad:p.unidad||'',conversion:p.conversion||'',stockInicial:''});setSf(true);setSi(false);setSs(false);}
@@ -608,9 +615,16 @@ function Inventario(){
     <div className="filters">
       <input className="search" value={bus} onChange={e=>setBus(e.target.value)} placeholder="Buscar..."/>
       <div className="tabs">{flujos.map(f=><button key={f} className={`tab${fil===f?' on':''}`} onClick={()=>setFil(f)}>{f}</button>)}</div>
+      <select value={orden} onChange={e=>setOrden(e.target.value)} style={{minWidth:180,width:'auto'}}>
+        <option value="">Ordenar por...</option>
+        <option value="dias_asc">Días restantes ↑ (urgentes primero)</option>
+        <option value="dias_desc">Días restantes ↓</option>
+        <option value="consumo_desc">Consumo ↓ (mayor primero)</option>
+        <option value="consumo_asc">Consumo ↑ (menor primero)</option>
+      </select>
     </div>
     <div className="twrap t-inv">
-      <div className="thead"><span>Crit.</span><span>Código</span><span>Nombre</span><span>Flujo</span><span>Unidad</span><span>Stock</span><span>Días</span><span>Estado</span><span>Acc.</span></div>
+      <div className="thead"><span>Crit.</span><span>Código</span><span>Nombre</span><span>Flujo</span><span>Unidad</span><span>Stock</span><span>Consumo</span><span>Días</span><span>Estado</span><span>Acc.</span></div>
       {filtered.map(p=>{const s=getStock(p.id),d=getDias(p.id),e=getEstado(p.id);return(
         <div key={p.id} className="trow">
           <span>{(()=>{const e=getEstado(p.id);const map={critico:'A',alerta:'M',stock:'B'};const l=map[e]||'—';return<span className={`cbadge c${l}`}>{l}</span>;})()}</span>
@@ -619,6 +633,7 @@ function Inventario(){
           <span><span className="chip">{p.flujo}</span></span>
           <span><span className="pname">{p.unidad}</span><span className="pdesc">{p.conversion}</span></span>
           <span className={`mono ${e}`}>{s}</span>
+          <span style={{fontSize:12,color:'var(--text2)'}}>{(()=>{const l=getConsumoLabel(p.id);return l?`${l.v}/d`:'—';})()}</span>
           <span className="mono">{d===999?'—':`${d}d`}</span>
           <span><span className={`badge ${e}`}>{lbl(e)}</span></span>
           <span className="row-actions">
@@ -1390,5 +1405,3 @@ ReactDOM.createRoot(document.getElementById('root')).render(<Root/>);
 </script>
 </body>
 </html>
-
-   
