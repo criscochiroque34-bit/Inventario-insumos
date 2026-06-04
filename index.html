@@ -340,9 +340,7 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
   function getConsumoLabel(pid){
     const cd=getConsumoDiario(pid);
     if(!cd)return null;
-    if(cd>=1)return {v:Math.round(cd*10)/10,u:'día'};
-    if(cd>=1/7)return {v:Math.round(cd*7*10)/10,u:'semana'};
-    return {v:Math.round(cd*30*10)/10,u:'mes'};
+    return {v:Math.round(cd*10)/10,u:'día'};
   }
   function getDias(pid){const cd=getConsumoDiario(pid);if(!cd)return 999;return Math.round(getStock(pid)/cd);}
   function getEstado(pid){const d=getDias(pid);return d<=10?'critico':d<=20?'alerta':'stock'}
@@ -428,8 +426,9 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
     await logAction('Rechazó ingreso',`${prodNombre}: +${cant}`);await load();return null;
   }
   async function addSalida(pid,cant,fecha){
-    const stock=getStock(parseInt(pid));
-    if(parseInt(cant)>stock)return `Stock insuficiente. Disponible: ${stock}`;
+    if(!cant||parseInt(cant)<=0)return 'La cantidad debe ser mayor a 0';
+    const stockDisp=getStockDisponible(parseInt(pid));
+    if(parseInt(cant)>stockDisp)return `Stock insuficiente. Disponible: ${stockDisp} und (incluye salidas pendientes)`;
     const uData=usuariosList.find(u=>u.nombre===userEmail);
     const {error}=await sb.from('salidas').insert([{product_id:parseInt(pid),cantidad:parseInt(cant),fecha,status:'pending',created_by:userEmail,area:uData?.area||null}]);
     if(error)return error.message;
@@ -458,7 +457,7 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
   }
   function dl(rows,name){const csv=rows.map(r=>r.map(c=>`"${c}"`).join(',')).join('\n');const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);a.download=`${name}-${new Date().toLocaleDateString('en-CA')}.csv`;a.click();}
   function csvInventario(){const rows=[['Criticidad','Código','Nombre','Flujo','Unidad','Stock','Días','Estado']];products.forEach(p=>{const e=getEstado(p.id);const crit=e==='critico'?'A':e==='alerta'?'M':'B';rows.push([crit,p.codigo,p.nombre,p.flujo,p.unidad,getStock(p.id),getDias(p.id)===999?'Sin hist.':getDias(p.id),e==='critico'?'Crítico':e==='alerta'?'Alerta':'En stock'])});dl(rows,'inventario');}
-  function csvLista(){const rows=[['Código','Nombre','Stock','Consumo','Unidad consumo','Pedir','Unidad','Días']];getLista().forEach(p=>rows.push([p.codigo,p.nombre,p.stock,p.consumo,p.pedir,p.unidad,p.dias]));dl(rows,'lista-compra');}
+  function csvLista(){const rows=[['Código','Nombre','Stock','Consumo/día','Pedir','Unidad','Días']];getLista().forEach(p=>{const cd=getConsumoDiario(p.id);const consumoDia=cd?Math.round(cd*10)/10:0;rows.push([p.codigo,p.nombre,p.stock,consumoDia,p.pedir,p.unidad,p.dias===999?'Sin hist.':p.dias])});dl(rows,'lista-compra');}
   function csvConsolidado(){const qs=[...quincenasWithInv].sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));const headers=['Código','Nombre','Flujo','Unidad',...qs.map(q=>q.label)];const rows=[headers];products.forEach(p=>{rows.push([p.codigo,p.nombre,p.flujo,p.unidad,...qs.map(q=>q.inventario[p.id]??'')]);});dl(rows,'consolidado-conteos');}
   return <Ctx.Provider value={{products,quincenas:quincenasWithInv,ingresos,salidas,actLog,usuariosList,loading,error,userEmail,isSupervisor,onLogout,getStock,getStockDisponible,getConsumo,getConsumoDiario,getConsumoLabel,getDias,getEstado,getLista,getAnomalias,addProd,updateProd,delProd,addQ,updateQ,validarQ,rechazarQ,addIng,aprobarIngreso,rechazarIngreso,updateIngreso,addSalida,aprobarSalida,rechazarSalida,updateSalida,csvInventario,csvLista,csvConsolidado}}>{children}</Ctx.Provider>;
 }
@@ -505,7 +504,6 @@ function Dashboard(){
   const al=products.filter(p=>getEstado(p.id)==='alerta');
   const ok=products.filter(p=>getEstado(p.id)==='stock');
   const lista=getLista();
-  const anomalias=[];
   return <div className="page">
     <div className="ph"><div><h1 className="pt">Dashboard</h1><p className="ps">Resumen del inventario actual</p></div></div>
     <div className="metrics">
@@ -522,14 +520,7 @@ function Dashboard(){
         {lista.map(p=><div key={p.id} className="crow"><span><span className="pname">{p.nombre}</span><span className="pdesc">{p.codigo}</span></span><span className="mono">{p.stock}<small> {p.unidad}</small></span><span className="mono">{(()=>{const l=getConsumoLabel(p.id);return l?`~${l.v}/${l.u}`:'—';})()}</span><span className="mono cg">+{p.pedir}<small> {p.unidad}</small></span></div>)}
       </div>}
     </div>}
-    {isSupervisor&&anomalias.length>0&&<div className="section">
-      <h2 className="stitle"><span className="sdot" style={{background:'var(--amber)'}}/>Anomalías detectadas — solo visible para supervisores</h2>
-      {anomalias.map((a,i)=><div key={i} className="anomaly-card">
-        <div className="anomaly-title">⚠️ {a.tipo} — {a.producto}</div>
-        <div className="anomaly-desc">{a.detalle}</div>
-        <div className="anomaly-meta">Conteo: {a.conteo}</div>
-      </div>)}
-    </div>}
+
     {cr.length>0&&<div className="section">
       <h2 className="stitle"><span className="sdot" style={{background:'var(--red)'}}/>Críticos</h2>
       <div className="alert-list">{cr.map(p=><div key={p.id} className="card card-red"><div className="atop"><span className="aname">{p.nombre}</span><DBadge d={getDias(p.id)}/></div><span className="acode">{p.codigo} · {p.flujo}</span><div className="astats"><span>Stock: <strong>{getStock(p.id)} {p.unidad}s</strong></span><span>Consume: <strong>{(()=>{const l=getConsumoLabel(p.id);return l?`~${l.v}/${l.u}`:'Sin datos';})()}</strong></span></div><Barra d={getDias(p.id)}/></div>)}</div>
@@ -549,7 +540,7 @@ function Dashboard(){
 }
 
 function Inventario(){
-  const {products,quincenas,salidas,getStock,getStockDisponible,getConsumoDiario,getDias,getEstado,addProd,updateProd,delProd,addIng,addSalida,isSupervisor,userEmail}=useApp();
+  const {products,quincenas,salidas,getStock,getStockDisponible,getDias,getEstado,addProd,updateProd,delProd,addIng,addSalida,isSupervisor,userEmail}=useApp();
   const [bus,setBus]=useState('');const [fil,setFil]=useState('Todos');
   const [sf,setSf]=useState(false);const [si,setSi]=useState(false);const [ss,setSs]=useState(false);
   const [editId,setEditId]=useState(null);
@@ -686,7 +677,7 @@ function Inventario(){
       <div className="mtitle" style={{color:'var(--red)'}}>↓ Solicitar salida</div>
       <div className="mform">
         <div className="field"><label>Flujo</label><select value={sal.flujoFil||''} onChange={e=>setSal(f=>({...f,flujoFil:e.target.value,productoId:''}))}><option value="">Todos</option>{[...new Set(products.map(p=>p.flujo).filter(Boolean))].map(f=><option key={f} value={f}>{f}</option>)}</select></div>
-        <div className="field"><label>Producto *</label><select value={sal.productoId} onChange={e=>setSal(f=>({...f,productoId:e.target.value}))}><option value="">Seleccionar...</option>{products.filter(p=>!sal.flujoFil||p.flujo===sal.flujoFil).map(p=><option key={p.id} value={p.id}>{p.nombre} (Stock: {getStock(p.id)})</option>)}</select></div>
+        <div className="field"><label>Producto *</label><select value={sal.productoId} onChange={e=>setSal(f=>({...f,productoId:e.target.value}))}><option value="">Seleccionar...</option>{products.filter(p=>!sal.flujoFil||p.flujo===sal.flujoFil).map(p=><option key={p.id} value={p.id}>{p.nombre} (Disp: {getStockDisponible(p.id)})</option>)}</select></div>
         <div className="mrow"><div className="field"><label>Cantidad *</label><input type="number" min="1" value={sal.cantidad} onChange={e=>setSal(f=>({...f,cantidad:e.target.value}))} placeholder="0"/></div><div className="field"><label>Fecha</label><input type="date" value={sal.fecha} onChange={e=>setSal(f=>({...f,fecha:e.target.value}))}/></div></div>
       </div>
       {!confirmSal
@@ -1400,6 +1391,4 @@ ReactDOM.createRoot(document.getElementById('root')).render(<Root/>);
 </body>
 </html>
 
-
-<!-- update -->
-     
+   
