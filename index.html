@@ -825,7 +825,7 @@ function Ingresos(){
 }
 
 function Graficos(){
-  const {products,quincenas,salidas,usuariosList,getStock,getConsumo,getConsumoLabel,getDias,getEstado}=useApp();
+  const {products,quincenas,salidas,ingresos,usuariosList,getStock,getConsumo,getConsumoLabel,getDias,getEstado}=useApp();
   const areaColors=['#00c97d','#4d9eff','#f0a500','#ff5050'];
   const salAprobadas=(salidas||[]).filter(sv=>sv.status==='approved'&&sv.area);
   const areas=[...new Set(salAprobadas.map(sv=>sv.area).filter(Boolean))];
@@ -833,39 +833,49 @@ function Graficos(){
   function consumoAreaPorProd(area){return products.map(p=>({n:p.nombre,v:salAprobadas.filter(sv=>sv.area===area&&sv.product_id===p.id).reduce((t,sv)=>t+sv.cantidad,0)})).filter(x=>x.v>0).sort((a,b)=>b.v-a.v);}
   const [sid,setSid]=useState(products[0]?.id??null);
   const [tab,setTab]=useState('c');
-  const sq=[...quincenas].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
-  const [qa,setQa]=useState(sq[0]?.id??null);
-  const [qb,setQb]=useState(sq[1]?.id??null);
   const prod=products.find(p=>p.id===sid);
   const avg=getConsumo(sid),stock=getStock(sid),dias=getDias(sid),est=getEstado(sid),consumoLabel=getConsumoLabel(sid);
   const qs=[...quincenas].sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
   const cd=[];for(let i=1;i<qs.length;i++){const p=qs[i-1].inventario[sid]??0,c=qs[i].inventario[sid]??0;cd.push({q:qs[i].label,v:Math.max(0,p-c)});}
-  const sr=qs.map(q=>({q:q.label,s:q.inventario[sid]??0}));
-  let s=stock;const py=['Próx.1','Próx.2','Próx.3','Próx.4'].map(l=>{s=Math.max(0,s-avg);return{q:l,p:s};});
-  const comb=[...sr.slice(-3).map(d=>({q:d.q,r:d.s})),{q:py[0]?.q,r:stock,p:stock},...py.map(d=>({q:d.q,p:d.p}))];
-  const qAobj=quincenas.find(q=>q.id===parseInt(qa)),qBobj=quincenas.find(q=>q.id===parseInt(qb));
-  const comp=(qAobj&&qBobj)?products.map(p=>{const ca=Math.max(0,(qAobj.inventario[p.id]??0)-(qBobj.inventario[p.id]??0));const cb=getConsumo(p.id);const diff=ca===0?0:Math.round(((cb-ca)/ca)*100);return{n:p.nombre,ca,cb,diff};}):[];
-  const td=comp.length?Math.round(comp.reduce((s,p)=>s+p.diff,0)/comp.length):0;
   return <div className="page">
     <div className="ph"><div><h1 className="pt">Gráficos</h1><p className="ps">Análisis de consumo y proyección</p></div></div>
-    <div className="ptabs"><button className={`ptab${tab==='c'?' on':''}`} onClick={()=>setTab('c')}>Consumo y proyección</button><button className={`ptab${tab==='k'?' on':''}`} onClick={()=>setTab('k')}>Comparativo</button><button className={`ptab${tab==='a'?' on':''}`} onClick={()=>setTab('a')}>Por área</button></div>
+    <div className="ptabs"><button className={`ptab${tab==='c'?' on':''}`} onClick={()=>setTab('c')}>Consumo y proyección</button><button className={`ptab${tab==='a'?' on':''}`} onClick={()=>setTab('a')}>Por área</button></div>
     {tab==='c'&&<>
       <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:'1rem'}}><label style={{fontSize:12,color:'var(--text2)'}}>Producto</label><select value={sid??''} onChange={e=>setSid(parseInt(e.target.value))} style={{minWidth:220,width:'auto'}}>{products.map(p=><option key={p.id} value={p.id}>{p.nombre}</option>)}</select></div>
       {prod&&<>
         <div className="metrics3"><div className="metric"><span className="ml">Stock actual</span><span className={`mv ${est}`}>{stock}<small style={{fontSize:12,fontWeight:400,color:'var(--text2)'}}> {prod.unidad}s</small></span></div><div className="metric"><span className="ml">Consume prom</span><span className="mv">{consumoLabel?consumoLabel.v:avg}<small style={{fontSize:12,fontWeight:400,color:'var(--text2)'}}> {prod.unidad}/{consumoLabel?consumoLabel.u:'período'}</small></span></div><div className="metric"><span className="ml">Días restantes</span><span className={`mv ${est}`}>{dias===999?'—':`${dias}d`}</span></div></div>
         <div className="chcard"><div className="chtitle">Consumo por conteo</div><BarChartSVG data={cd} color="#00c97d" height={160}/></div>
-        <div className="chcard"><div className="chrow"><div className="chtitle">Stock real vs proyección</div><div className="legend"><span><span className="ldot" style={{background:'#00c97d'}}/>Real</span><span><span className="ldot" style={{background:'#4d9eff'}}/>Proyección</span></div></div><LineChartSVG data={comb} height={180}/></div>
-      </>}
-    </>}
-    {tab==='k'&&<>
-      <div className="csrow">
-        <div className="field"><label style={{fontSize:11,textTransform:'uppercase',letterSpacing:'.05em',color:'var(--text2)'}}>Quincena actual</label><select value={qa??''} onChange={e=>setQa(e.target.value)} style={{minWidth:150,width:'auto'}}>{sq.map(q=><option key={q.id} value={q.id}>{q.label}</option>)}</select></div>
-        <span className="vs">vs</span>
-        <div className="field"><label style={{fontSize:11,textTransform:'uppercase',letterSpacing:'.05em',color:'var(--text2)'}}>Quincena anterior</label><select value={qb??''} onChange={e=>setQb(e.target.value)} style={{minWidth:150,width:'auto'}}>{sq.map(q=><option key={q.id} value={q.id}>{q.label}</option>)}</select></div>
-      </div>
-      {quincenas.length<2?<div className="nodata">Necesitas al menos 2 conteos registrados</div>:<>
-        <div className="metrics3"><div className="metric"><span className="ml">Variación prom.</span><span className={`mv${td>0?' cr':td<0?' cg':''}`}>{td>0?'+':''}{td}%</span></div><div className="metric"><span className="ml">Subieron</span><span className="mv cr">{comp.filter(p=>p.diff>0).length}</span></div><div className="metric"><span className="ml">Bajaron</span><span className="mv cg">{comp.filter(p=>p.diff<0).length}</span></div></div>
-        <div className="ctab"><div className="cthead"><span>Producto</span><span>Anterior</span><span>Actual</span><span>Variación</span></div>{[...comp].sort((a,b)=>b.diff-a.diff).map((p,i)=><div key={i} className="ctrow"><span className="pname">{p.n}</span><span className="mono">{p.ca}</span><span className="mono">{p.cb}</span><span className={`mono${p.diff>0?' cr':p.diff<0?' cg':''}`}>{p.diff>0?'+':''}{p.diff}%</span></div>)}</div>
+        {(()=>{
+          const cons=[];
+          for(let i=1;i<qs.length;i++){
+            const pv=qs[i-1].inventario[sid]??0,cu=qs[i].inventario[sid]??0;
+            const ing=ingresos.filter(x=>x.product_id===sid&&(x.status==='approved'||x.status==null)&&new Date(x.fecha)>=new Date(qs[i-1].fecha)&&new Date(x.fecha)<new Date(qs[i].fecha)).reduce((t,x)=>t+x.cantidad,0);
+            const ds=Math.round((new Date(qs[i].fecha)-new Date(qs[i-1].fecha))/(1000*60*60*24));
+            const consumoP=Math.max(0,pv+ing-cu);
+            cons.push({label:qs[i].label,diario:ds>0?consumoP/ds:0});
+          }
+          if(cons.length<2)return <div className="chcard"><div className="chtitle">Tendencia de consumo</div><div className="nodata">Necesitas al menos 2 conteos para ver la tendencia</div></div>;
+          const ult=cons[cons.length-1],pen=cons[cons.length-2];
+          const dif=pen.diario===0?(ult.diario>0?100:0):Math.round(((ult.diario-pen.diario)/pen.diario)*100);
+          const sube=dif>5,baja=dif<-5;
+          const color=sube?'var(--red)':baja?'var(--green)':'var(--text2)';
+          const flecha=sube?'↑':baja?'↓':'→';
+          const texto=sube?'El consumo está subiendo':baja?'El consumo está bajando':'El consumo se mantiene estable';
+          return <div className="chcard">
+            <div className="chtitle">Tendencia de consumo</div>
+            <div style={{display:'flex',alignItems:'center',gap:20,flexWrap:'wrap'}}>
+              <div style={{display:'flex',alignItems:'center',gap:12}}>
+                <span style={{fontSize:42,color,lineHeight:1}}>{flecha}</span>
+                <div><div style={{fontSize:24,fontWeight:600,color}}>{dif>0?'+':''}{dif}%</div><div style={{fontSize:13,color:'var(--text2)'}}>{texto}</div></div>
+              </div>
+              <div style={{display:'flex',gap:24,marginLeft:'auto',flexWrap:'wrap'}}>
+                <div><div style={{fontSize:11,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'.05em'}}>Período anterior</div><div style={{fontSize:18,fontWeight:500,fontFamily:'DM Mono,monospace'}}>{Math.round(pen.diario*10)/10}<small style={{fontSize:11,color:'var(--text2)'}}> /día</small></div><div style={{fontSize:11,color:'var(--text3)'}}>{pen.label}</div></div>
+                <div><div style={{fontSize:11,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'.05em'}}>Último período</div><div style={{fontSize:18,fontWeight:500,fontFamily:'DM Mono,monospace',color}}>{Math.round(ult.diario*10)/10}<small style={{fontSize:11,color:'var(--text2)'}}> /día</small></div><div style={{fontSize:11,color:'var(--text3)'}}>{ult.label}</div></div>
+              </div>
+            </div>
+            <div style={{marginTop:16,padding:'10px 12px',background:'var(--bg3)',borderRadius:8,fontSize:12,color:'var(--text2)'}}>{sube?`⚠️ Este producto se consume ${dif}% más rápido que antes. Considera reabastecer antes de lo previsto.`:baja?`✓ El consumo bajó ${Math.abs(dif)}%. El stock durará más de lo habitual.`:'El ritmo de consumo es estable y predecible.'}</div>
+          </div>;
+        })()}
       </>}
     </>}
     {tab==='a'&&<AreaTab salidas={salidas||[]} products={products} areaColors={areaColors}/>}
@@ -875,6 +885,7 @@ function Graficos(){
 function AreaTab({salidas,products,areaColors}){
   const [periodo,setPeriodo]=useState('30');
   const [filProd,setFilProd]=useState('');
+  const [filtroArea,setFiltroArea]=useState('todos');
   
   const hoy=new Date();
   const diasPeriodo=periodo==='all'?9999:parseInt(periodo);
@@ -886,8 +897,9 @@ function AreaTab({salidas,products,areaColors}){
   const salPeriodo=salAprob.filter(s=>new Date(s.fecha)>=desde);
   const salPeriodoAnt=salAprob.filter(s=>{const f=new Date(s.fecha);return f>=desdeAnt&&f<desde;});
   
-  const areas=[...new Set(salAprob.map(s=>s.area).filter(Boolean))].sort();
-  if(areas.length===0)return <div className="nodata">Sin datos de área aún. Las salidas aprobadas con área asignada aparecerán aquí.</div>;
+  const areasTodas=[...new Set(salAprob.map(s=>s.area).filter(Boolean))].sort();
+  if(areasTodas.length===0)return <div className="nodata">Sin datos de área aún. Las salidas aprobadas con área asignada aparecerán aquí.</div>;
+  const areas=filtroArea==='todos'?areasTodas:areasTodas.filter(a=>a===filtroArea);
   
   // Cálculos
   const consumoArea=(arr,area)=>arr.filter(s=>s.area===area).reduce((t,s)=>t+s.cantidad,0);
@@ -929,6 +941,12 @@ function AreaTab({salidas,products,areaColors}){
   const top5=(area)=>consumoAreaPorProd(area).slice(0,5);
   
   return <>
+    {/* FILTRO DE ÁREA */}
+    <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:'1rem',flexWrap:'wrap'}}>
+      <span style={{fontSize:11,textTransform:'uppercase',letterSpacing:'.05em',color:'var(--text2)',marginRight:4}}>Área</span>
+      <button className={`tab${filtroArea==='todos'?' on':''}`} onClick={()=>setFiltroArea('todos')}>Ambos</button>
+      {areasTodas.map((a,i)=><button key={a} className={`tab${filtroArea===a?' on':''}`} onClick={()=>setFiltroArea(a)} style={filtroArea===a?{borderLeft:`3px solid ${areaColors[areasTodas.indexOf(a)%areaColors.length]}`}:{}}>{a}</button>)}
+    </div>
     {/* FILTRO DE PERÍODO */}
     <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:'1.25rem',flexWrap:'wrap'}}>
       <label style={{fontSize:11,textTransform:'uppercase',letterSpacing:'.05em',color:'var(--text2)'}}>Período</label>
@@ -950,10 +968,10 @@ function AreaTab({salidas,products,areaColors}){
         const prom=promedioDiario(a);
         return <div key={a} className="metric">
           <span className="ml">{a}</span>
-          <span className="mv" style={{color:areaColors[i%areaColors.length]}}>{v}<small style={{fontSize:12,fontWeight:400,color:'var(--text2)'}}> und</small></span>
+          <span className="mv" style={{color:areaColors[areasTodas.indexOf(a)%areaColors.length]}}>{v}<small style={{fontSize:12,fontWeight:400,color:'var(--text2)'}}> und</small></span>
           <div style={{marginTop:4}}>
             <div style={{height:4,background:'var(--bg4)',borderRadius:99,overflow:'hidden'}}>
-              <div style={{height:'100%',width:`${pct}%`,background:areaColors[i%areaColors.length],borderRadius:99}}/>
+              <div style={{height:'100%',width:`${pct}%`,background:areaColors[areasTodas.indexOf(a)%areaColors.length],borderRadius:99}}/>
             </div>
             <div style={{display:'flex',justifyContent:'space-between',marginTop:5,fontSize:11}}>
               <span style={{color:'var(--text2)'}}>{pct}% del total</span>
@@ -983,7 +1001,7 @@ function AreaTab({salidas,products,areaColors}){
     <div className="chcard">
       <div className="chrow">
         <div className="chtitle">Evolución últimos 6 meses</div>
-        <div className="legend">{areas.map((a,i)=><span key={a}><span className="ldot" style={{background:areaColors[i%areaColors.length]}}/>{a}</span>)}</div>
+        <div className="legend">{areas.map((a,i)=><span key={a}><span className="ldot" style={{background:areaColors[areasTodas.indexOf(a)%areaColors.length]}}/>{a}</span>)}</div>
       </div>
       <svg viewBox="0 0 600 180" style={{width:'100%',height:180}}>
         {mesesEvo.map((m,idx)=>{
@@ -1027,7 +1045,7 @@ function AreaTab({salidas,products,areaColors}){
               const pct=totProd>0?Math.round(v/totProd*100):0;
               return <div key={a} className="metric">
                 <span className="ml">{a}</span>
-                <span className="mv" style={{color:areaColors[i%areaColors.length]}}>{v}<small style={{fontSize:12,fontWeight:400,color:'var(--text2)'}}> und</small></span>
+                <span className="mv" style={{color:areaColors[areasTodas.indexOf(a)%areaColors.length]}}>{v}<small style={{fontSize:12,fontWeight:400,color:'var(--text2)'}}> und</small></span>
                 <span style={{fontSize:11,color:'var(--text2)'}}>{pct}% del consumo</span>
               </div>;
             })}
@@ -1036,8 +1054,8 @@ function AreaTab({salidas,products,areaColors}){
         </>
         :<div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(0,1fr))',gap:16}}>
           {areas.map((a,i)=><div key={a}>
-            <div style={{fontSize:11,fontWeight:500,color:areaColors[i%areaColors.length],marginBottom:8,textTransform:'uppercase',letterSpacing:'.05em'}}>{a}</div>
-            <BarChartSVG data={consumoAreaPorProd(a).slice(0,8).map(x=>({q:x.n.length>10?x.n.slice(0,10)+'…':x.n,v:x.v}))} color={areaColors[i%areaColors.length]} height={160}/>
+            <div style={{fontSize:11,fontWeight:500,color:areaColors[areasTodas.indexOf(a)%areaColors.length],marginBottom:8,textTransform:'uppercase',letterSpacing:'.05em'}}>{a}</div>
+            <BarChartSVG data={consumoAreaPorProd(a).slice(0,8).map(x=>({q:x.n.length>10?x.n.slice(0,10)+'…':x.n,v:x.v}))} color={areaColors[areasTodas.indexOf(a)%areaColors.length]} height={160}/>
           </div>)}
         </div>
       }
@@ -1054,10 +1072,10 @@ function AreaTab({salidas,products,areaColors}){
             return <div key={idx} style={{marginBottom:8}}>
               <div style={{display:'flex',justifyContent:'space-between',fontSize:12,marginBottom:3}}>
                 <span style={{color:'var(--text)',fontWeight:500}}>{p.n.length>22?p.n.slice(0,22)+'…':p.n}</span>
-                <span style={{color:areaColors[i%areaColors.length],fontWeight:500,fontFamily:'DM Mono,monospace'}}>{p.v}</span>
+                <span style={{color:areaColors[areasTodas.indexOf(a)%areaColors.length],fontWeight:500,fontFamily:'DM Mono,monospace'}}>{p.v}</span>
               </div>
               <div style={{height:4,background:'var(--bg4)',borderRadius:99,overflow:'hidden'}}>
-                <div style={{height:'100%',width:`${Math.round(p.v/maxV*100)}%`,background:areaColors[i%areaColors.length],borderRadius:99}}/>
+                <div style={{height:'100%',width:`${Math.round(p.v/maxV*100)}%`,background:areaColors[areasTodas.indexOf(a)%areaColors.length],borderRadius:99}}/>
               </div>
             </div>;
           })}
@@ -1076,7 +1094,7 @@ function AreaTab({salidas,products,areaColors}){
             :<div style={{display:'flex',flexDirection:'column',gap:6}}>
               {exc.slice(0,8).map(p=><div key={p.id} style={{display:'flex',justifyContent:'space-between',fontSize:12,padding:'4px 0',borderBottom:'1px solid var(--border)'}}>
                 <span>{p.nombre.length>26?p.nombre.slice(0,26)+'…':p.nombre}</span>
-                <span style={{fontFamily:'DM Mono,monospace',color:areaColors[i%areaColors.length]}}>{consumoProdArea(a,p.id)}</span>
+                <span style={{fontFamily:'DM Mono,monospace',color:areaColors[areasTodas.indexOf(a)%areaColors.length]}}>{consumoProdArea(a,p.id)}</span>
               </div>)}
               {exc.length>8&&<div style={{fontSize:11,color:'var(--text3)',marginTop:4}}>+ {exc.length-8} más</div>}
             </div>
