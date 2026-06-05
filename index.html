@@ -117,7 +117,7 @@ button{font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border:non
 .trow{display:grid;padding:10px 1rem;border-top:1px solid var(--border);gap:10px;align-items:center;transition:background .1s}
 .trow:hover{background:var(--bg3)}
 .t-dash .thead,.t-dash .trow{grid-template-columns:2.5fr 1fr 80px 90px}
-.t-inv .thead,.t-inv .trow{grid-template-columns:36px 95px 2fr 70px 80px 55px 70px 50px 75px 60px}
+.t-inv .thead,.t-inv .trow{grid-template-columns:36px 95px 2fr 80px 55px 70px 50px 75px 60px}
 .t-ctrl .thead,.t-ctrl .trow{grid-template-columns:2fr 100px 130px 100px 110px}
 .t-ing .thead,.t-ing .trow{grid-template-columns:110px 2fr 110px 1fr}
 .t-sup .thead,.t-sup .trow{grid-template-columns:80px 2fr 120px 80px 100px}
@@ -128,7 +128,7 @@ button{font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border:non
 .mono small{font-size:10px;color:var(--text2)}
 .chip{font-size:11px;background:var(--bg4);padding:3px 8px;border-radius:99px;color:var(--text2);display:inline-block}
 .cbadge{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;font-size:11px;font-weight:600}
-.cA{background:var(--red-dim);color:var(--red)}.cM{background:var(--amber-dim);color:var(--amber)}.cB{background:var(--green-dim);color:var(--green)}
+.cA{background:var(--red-dim);color:var(--red)}.cB{background:var(--amber-dim);color:var(--amber)}.cC{background:var(--green-dim);color:var(--green)}
 .row-actions{display:flex;gap:2px;align-items:center}
 .bdel{background:transparent;color:var(--text3);padding:4px 6px;border-radius:4px;font-size:11px}
 .bdel:hover{background:var(--red-dim);color:var(--red)}
@@ -338,6 +338,17 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
     return totalDias>0?totalConsumo/totalDias:0;
   }
   function getConsumo(pid){const cd=getConsumoDiario(pid);return cd?Math.round(cd*15):0;}
+  function getClasificacion(pid){
+    const consumos=products.map(p=>({id:p.id,cd:getConsumoDiario(p.id)})).filter(x=>x.cd>0).sort((a,b)=>b.cd-a.cd);
+    if(!consumos.length)return '—';
+    const total=consumos.reduce((s,x)=>s+x.cd,0);
+    let acum=0;let clases={};
+    for(const x of consumos){
+      acum+=x.cd/total;
+      clases[x.id]=acum<=0.8?'A':acum<=0.95?'B':'C';
+    }
+    return clases[pid]||'C';
+  }
   function getConsumoLabel(pid){
     const cd=getConsumoDiario(pid);
     if(!cd)return null;
@@ -458,10 +469,10 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
     await logAction('Rechazó salida',`${prodNombre}: -${cant}`);await load();return null;
   }
   function dl(rows,name){const csv=rows.map(r=>r.map(c=>`"${c}"`).join(',')).join('\n');const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);a.download=`${name}-${new Date().toLocaleDateString('en-CA')}.csv`;a.click();}
-  function csvInventario(){const rows=[['Criticidad','Código','Nombre','Flujo','Unidad','Stock','Días','Estado']];products.forEach(p=>{const e=getEstado(p.id);const crit=e==='critico'?'A':e==='alerta'?'M':'B';rows.push([crit,p.codigo,p.nombre,p.flujo,p.unidad,getStock(p.id),getDias(p.id)===999?'Sin hist.':getDias(p.id),e==='critico'?'Crítico':e==='alerta'?'Alerta':'En stock'])});dl(rows,'inventario');}
+  function csvInventario(){const rows=[['Clase','Código','Nombre','Unidad','Stock','Consumo/día','Días','Estado']];products.forEach(p=>{const e=getEstado(p.id);const cl=getClasificacion(p.id);const cd=getConsumoDiario(p.id);rows.push([cl,p.codigo,p.nombre,p.unidad,getStock(p.id),cd?Math.round(cd*10)/10:0,getDias(p.id)===999?'Sin hist.':getDias(p.id),e==='critico'?'Crítico':e==='alerta'?'Alerta':'En stock'])});dl(rows,'inventario');}
   function csvLista(){const rows=[['Código','Nombre','Stock','Consumo/día','Pedir','Unidad','Días']];getLista().forEach(p=>{const cd=getConsumoDiario(p.id);const consumoDia=cd?Math.round(cd*10)/10:0;rows.push([p.codigo,p.nombre,p.stock,consumoDia,p.pedir,p.unidad,p.dias===999?'Sin hist.':p.dias])});dl(rows,'lista-compra');}
-  function csvConsolidado(){const qs=[...quincenasWithInv].sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));const headers=['Código','Nombre','Flujo','Unidad',...qs.map(q=>q.label)];const rows=[headers];products.forEach(p=>{rows.push([p.codigo,p.nombre,p.flujo,p.unidad,...qs.map(q=>q.inventario[p.id]??'')]);});dl(rows,'consolidado-conteos');}
-  return <Ctx.Provider value={{products,quincenas:quincenasWithInv,ingresos,salidas,actLog,usuariosList,loading,error,userEmail,isSupervisor,onLogout,getStock,getStockDisponible,getConsumo,getConsumoDiario,getConsumoLabel,getDias,getEstado,getLista,getAnomalias,addProd,updateProd,delProd,addQ,updateQ,validarQ,rechazarQ,addIng,aprobarIngreso,rechazarIngreso,updateIngreso,addSalida,aprobarSalida,rechazarSalida,updateSalida,csvInventario,csvLista,csvConsolidado}}>{children}</Ctx.Provider>;
+  function csvConsolidado(){const qs=[...quincenasWithInv].sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));const headers=['Código','Nombre','Unidad',...qs.map(q=>q.label)];const rows=[headers];products.forEach(p=>{rows.push([p.codigo,p.nombre,p.unidad,...qs.map(q=>q.inventario[p.id]??'')]);});dl(rows,'consolidado-conteos');}
+  return <Ctx.Provider value={{products,quincenas:quincenasWithInv,ingresos,salidas,actLog,usuariosList,loading,error,userEmail,isSupervisor,onLogout,getStock,getStockDisponible,getConsumo,getConsumoDiario,getConsumoLabel,getClasificacion,getDias,getEstado,getLista,getAnomalias,addProd,updateProd,delProd,addQ,updateQ,validarQ,rechazarQ,addIng,aprobarIngreso,rechazarIngreso,updateIngreso,addSalida,aprobarSalida,rechazarSalida,updateSalida,csvInventario,csvLista,csvConsolidado}}>{children}</Ctx.Provider>;
 }
 const useApp=()=>useContext(Ctx);
 
@@ -594,40 +605,35 @@ function Dashboard(){
 
     {cr.length>0&&<div className="section">
       <h2 className="stitle"><span className="sdot" style={{background:'var(--red)'}}/>Críticos</h2>
-      <div className="alert-list">{cr.map(p=><div key={p.id} className="card card-red"><div className="atop"><span className="aname">{p.nombre}</span><DBadge d={getDias(p.id)}/></div><span className="acode">{p.codigo} · {p.flujo}</span><div className="astats"><span>Stock: <strong>{getStock(p.id)} {p.unidad}s</strong></span><span>Consume: <strong>{(()=>{const l=getConsumoLabel(p.id);return l?`~${l.v}/${l.u}`:'Sin datos';})()}</strong></span></div><Barra d={getDias(p.id)}/></div>)}</div>
+      <div className="alert-list">{cr.map(p=><div key={p.id} className="card card-red"><div className="atop"><span className="aname">{p.nombre}</span><DBadge d={getDias(p.id)}/></div><span className="acode">{p.codigo}</span><div className="astats"><span>Stock: <strong>{getStock(p.id)} {p.unidad}s</strong></span><span>Consume: <strong>{(()=>{const l=getConsumoLabel(p.id);return l?`~${l.v}/${l.u}`:'Sin datos';})()}</strong></span></div><Barra d={getDias(p.id)}/></div>)}</div>
     </div>}
     {al.length>0&&<div className="section">
       <h2 className="stitle"><span className="sdot" style={{background:'var(--amber)'}}/>Alertas</h2>
-      <div className="alert-list">{al.map(p=><div key={p.id} className="card card-amber"><div className="atop"><span className="aname">{p.nombre}</span><DBadge d={getDias(p.id)}/></div><span className="acode">{p.codigo} · {p.flujo}</span><div className="astats"><span>Stock: <strong>{getStock(p.id)} {p.unidad}s</strong></span><span>Consume: <strong>{(()=>{const l=getConsumoLabel(p.id);return l?`~${l.v}/${l.u}`:'Sin datos';})()}</strong></span></div><Barra d={getDias(p.id)}/></div>)}</div>
+      <div className="alert-list">{al.map(p=><div key={p.id} className="card card-amber"><div className="atop"><span className="aname">{p.nombre}</span><DBadge d={getDias(p.id)}/></div><span className="acode">{p.codigo}</span><div className="astats"><span>Stock: <strong>{getStock(p.id)} {p.unidad}s</strong></span><span>Consume: <strong>{(()=>{const l=getConsumoLabel(p.id);return l?`~${l.v}/${l.u}`:'Sin datos';})()}</strong></span></div><Barra d={getDias(p.id)}/></div>)}</div>
     </div>}
     <div className="section">
       <h2 className="stitle">Todos los productos</h2>
       <div className="twrap t-dash">
         <div className="thead"><span>Producto</span><span>Stock</span><span>Días</span><span>Estado</span></div>
-        {[...products].sort((a,b)=>getDias(a.id)-getDias(b.id)).map(p=>{const e=getEstado(p.id),d=getDias(p.id);return <div key={p.id} className="trow"><span><span className="pname">{p.nombre}</span><span className="pdesc">{p.codigo} · {p.flujo}</span></span><span className="mono">{getStock(p.id)}<small> {p.unidad}</small></span><span className="mono">{d===999?'—':`${d}d`}</span><span><span className={`badge ${e}`}>{lbl(e)}</span></span></div>;})}
+        {[...products].sort((a,b)=>getDias(a.id)-getDias(b.id)).map(p=>{const e=getEstado(p.id),d=getDias(p.id);return <div key={p.id} className="trow"><span><span className="pname">{p.nombre}</span><span className="pdesc">{p.codigo}</span></span><span className="mono">{getStock(p.id)}<small> {p.unidad}</small></span><span className="mono">{d===999?'—':`${d}d`}</span><span><span className={`badge ${e}`}>{lbl(e)}</span></span></div>;})}
       </div>
     </div>
   </div>;
 }
 
 function Inventario(){
-  const {products,quincenas,salidas,getStock,getStockDisponible,getConsumoDiario,getConsumoLabel,getDias,getEstado,addProd,updateProd,delProd,addIng,addSalida,isSupervisor,userEmail}=useApp();
+  const {products,quincenas,salidas,getStock,getStockDisponible,getConsumoDiario,getConsumoLabel,getClasificacion,getDias,getEstado,addProd,updateProd,delProd,addIng,addSalida,isSupervisor,userEmail}=useApp();
   const [bus,setBus]=useState('');const [fil,setFil]=useState('Todos');const [orden,setOrden]=useState('');
   const [sf,setSf]=useState(false);const [si,setSi]=useState(false);const [ss,setSs]=useState(false);
   const [editId,setEditId]=useState(null);
-  const empty={codigo:'',nombre:'',descripcion:'',flujo:'',unidad:'',conversion:'',stockInicial:''};
+  const empty={codigo:'',nombre:'',descripcion:'',unidad:'',conversion:'',stockInicial:''};
   const [form,setForm]=useState(empty);
   const [ing,setIng]=useState({productoId:'',cantidad:'',fecha:new Date().toLocaleDateString('en-CA'),nota:''});
   const [sal,setSal]=useState({productoId:'',cantidad:'',fecha:new Date().toLocaleDateString('en-CA')});
   const [confirmSal,setConfirmSal]=useState(false);
   const [msg,setMsg]=useState({text:'',type:'ok'});
   const [saving,setSaving]=useState(false);
-  const flujos=['Todos',...new Set(products.map(p=>p.flujo).filter(Boolean))];
-  const filtered=products.filter(p=>{
-    const mf=fil==='Todos'||p.flujo.toLowerCase()===fil.toLowerCase();
-    const mb=!bus||p.nombre.toLowerCase().includes(bus.toLowerCase())||p.codigo.toLowerCase().includes(bus.toLowerCase());
-    return mf&&mb;
-  }).sort((a,b)=>{
+  const filtered=products.filter(p=>!bus||p.nombre.toLowerCase().includes(bus.toLowerCase())||p.codigo.toLowerCase().includes(bus.toLowerCase()));.sort((a,b)=>{
     if(orden==='dias_asc')return getDias(a.id)-getDias(b.id);
     if(orden==='dias_desc')return getDias(b.id)-getDias(a.id);
     if(orden==='consumo_desc')return getConsumoDiario(b.id)-getConsumoDiario(a.id);
@@ -635,12 +641,12 @@ function Inventario(){
     return 0;
   });
   function showMsg(t,type='ok'){setMsg({text:t,type});setTimeout(()=>setMsg({text:'',type:'ok'}),3000)}
-  function openEdit(p){setEditId(p.id);setForm({codigo:p.codigo,nombre:p.nombre,descripcion:p.descripcion||'',flujo:p.flujo||'',unidad:p.unidad||'',conversion:p.conversion||'',stockInicial:''});setSf(true);setSi(false);setSs(false);}
+  function openEdit(p){setEditId(p.id);setForm({codigo:p.codigo,nombre:p.nombre,descripcion:p.descripcion||'',unidad:p.unidad||'',conversion:p.conversion||'',stockInicial:''});setSf(true);setSi(false);setSs(false);}
   function openNew(){setEditId(null);setForm(empty);setSf(v=>!v);setSi(false);setSs(false);}
   async function saveProd(){
     if(!form.codigo||!form.nombre)return;setSaving(true);
-    if(editId){const err=await updateProd(editId,{codigo:form.codigo,nombre:form.nombre,descripcion:form.descripcion,flujo:form.flujo,unidad:form.unidad,conversion:form.conversion});err?showMsg(err,'err'):(setSf(false),setEditId(null),showMsg('Producto actualizado ✓'));}
-    else{const err=await addProd({codigo:form.codigo,nombre:form.nombre,descripcion:form.descripcion,flujo:form.flujo,unidad:form.unidad,conversion:form.conversion});err?showMsg(err,'err'):(setForm(empty),setSf(false),showMsg('Producto guardado ✓'));}
+    if(editId){const err=await updateProd(editId,{codigo:form.codigo,nombre:form.nombre,descripcion:form.descripcion,unidad:form.unidad,conversion:form.conversion});err?showMsg(err,'err'):(setSf(false),setEditId(null),showMsg('Producto actualizado ✓'));}
+    else{const err=await addProd({codigo:form.codigo,nombre:form.nombre,descripcion:form.descripcion,unidad:form.unidad,conversion:form.conversion});err?showMsg(err,'err'):(setForm(empty),setSf(false),showMsg('Producto guardado ✓'));}
     setSaving(false);
   }
   async function saveIng(){
@@ -676,7 +682,6 @@ function Inventario(){
         <div className="field"><label>Código *</label><input value={form.codigo} onChange={e=>setForm(f=>({...f,codigo:e.target.value}))} placeholder="P12345"/></div>
         <div className="field s2"><label>Nombre *</label><input value={form.nombre} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} placeholder="Nombre del producto"/></div>
         <div className="field s2"><label>Descripción</label><input value={form.descripcion} onChange={e=>setForm(f=>({...f,descripcion:e.target.value}))} placeholder="Descripción"/></div>
-        <div className="field"><label>Flujo</label><input value={form.flujo} onChange={e=>setForm(f=>({...f,flujo:e.target.value}))} placeholder="Vans, Masterbox..."/></div>
         <div className="field"><label>Unidad</label><input value={form.unidad} onChange={e=>setForm(f=>({...f,unidad:e.target.value}))} placeholder="Rollo, Unid..."/></div>
         <div className="field"><label>Conversión</label><input value={form.conversion} onChange={e=>setForm(f=>({...f,conversion:e.target.value}))} placeholder="Rollo x 100 Etiq"/></div>
         {!editId&&<div className="field"><label>Stock inicial</label><input type="number" min="0" value={form.stockInicial} onChange={e=>setForm(f=>({...f,stockInicial:e.target.value}))} placeholder="0"/></div>}
@@ -685,7 +690,6 @@ function Inventario(){
     </div>}
     <div className="filters">
       <input className="search" value={bus} onChange={e=>setBus(e.target.value)} placeholder="Buscar..."/>
-      <div className="tabs">{flujos.map(f=><button key={f} className={`tab${fil===f?' on':''}`} onClick={()=>setFil(f)}>{f}</button>)}</div>
       <select value={orden} onChange={e=>setOrden(e.target.value)} style={{minWidth:180,width:'auto'}}>
         <option value="">Ordenar por...</option>
         <option value="dias_asc">Días restantes ↑ (urgentes primero)</option>
@@ -695,13 +699,12 @@ function Inventario(){
       </select>
     </div>
     <div className="twrap t-inv">
-      <div className="thead"><span>Crit.</span><span>Código</span><span>Nombre</span><span>Flujo</span><span>Unidad</span><span>Stock</span><span>Consumo</span><span>Días</span><span>Estado</span><span>Acc.</span></div>
+      <div className="thead"><span>Crit.</span><span>Código</span><span>Nombre</span><span>Unidad</span><span>Stock</span><span>Consumo</span><span>Días</span><span>Estado</span><span>Acc.</span></div>
       {filtered.map(p=>{const s=getStock(p.id),d=getDias(p.id),e=getEstado(p.id);return(
         <div key={p.id} className="trow">
-          <span>{(()=>{const e=getEstado(p.id);const map={critico:'A',alerta:'M',stock:'B'};const l=map[e]||'—';return<span className={`cbadge c${l}`}>{l}</span>;})()}</span>
+          <span>{(()=>{const cl=getClasificacion(p.id);return<span className={`cbadge c${cl}`}>{cl}</span>;})()}</span>
           <span className="mono" style={{fontSize:11,color:'var(--text2)'}}>{p.codigo}</span>
           <span><span className="pname">{p.nombre}</span><span className="pdesc">{p.descripcion}</span></span>
-          <span><span className="chip">{p.flujo}</span></span>
           <span><span className="pname">{p.unidad}</span><span className="pdesc">{p.conversion}</span></span>
           <span className={`mono ${e}`}>{s}</span>
           <span style={{fontSize:12,color:'var(--text2)'}}>{(()=>{const l=getConsumoLabel(p.id);return l?`${l.v}/d`:'—';})()}</span>
@@ -719,7 +722,7 @@ function Inventario(){
       {filtered.map(p=>{const s=getStock(p.id),d=getDias(p.id),e=getEstado(p.id);return(
         <div key={p.id} className={`pcard c${e}`}>
           <div className="ctop">
-            <div><span className="pname">{p.nombre}</span><span className="pdesc">{p.codigo} · {p.flujo}</span></div>
+            <div><span className="pname">{p.nombre}</span><span className="pdesc">{p.codigo}</span></div>
             <div style={{display:'flex',alignItems:'center',gap:4}}>
               <span className={`badge ${e}`}>{lbl(e)}</span>
               {isSupervisor&&<button className="bedit" onClick={()=>openEdit(p)}>✏️</button>}
@@ -751,8 +754,7 @@ function Inventario(){
     {si&&<div className="modal">
       <div className="mtitle">Registrar ingreso</div>
       <div className="mform">
-        <div className="field"><label>Flujo</label><select value={ing.flujoFil||''} onChange={e=>setIng(f=>({...f,flujoFil:e.target.value,productoId:''}))}><option value="">Todos</option>{[...new Set(products.map(p=>p.flujo).filter(Boolean))].map(f=><option key={f} value={f}>{f}</option>)}</select></div>
-        <div className="field"><label>Producto *</label><select value={ing.productoId} onChange={e=>setIng(f=>({...f,productoId:e.target.value}))}><option value="">Seleccionar...</option>{products.filter(p=>!ing.flujoFil||p.flujo===ing.flujoFil).map(p=><option key={p.id} value={p.id}>{p.nombre}</option>)}</select></div>
+        <div className="field"><label>Producto *</label><select value={ing.productoId} onChange={e=>setIng(f=>({...f,productoId:e.target.value}))}><option value="">Seleccionar...</option>{products.map(p=><option key={p.id} value={p.id}>{p.nombre}</option>)}</select></div>
         <div className="mrow"><div className="field"><label>Cantidad *</label><input type="number" min="1" value={ing.cantidad} onChange={e=>setIng(f=>({...f,cantidad:e.target.value}))} placeholder="0"/></div><div className="field"><label>Fecha</label><input type="date" value={ing.fecha} onChange={e=>setIng(f=>({...f,fecha:e.target.value}))}/></div></div>
         {(()=>{const ul=[...quincenas].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha))[0];return ul&&ing.fecha&&ing.fecha<ul.fecha&&<div style={{background:'var(--amber-dim)',color:'var(--amber)',fontSize:11,padding:'6px 10px',borderRadius:6,marginBottom:4}}>⚠️ Fecha anterior al último conteo ({ul.fecha}). El ingreso podría no sumarse al stock.</div>;})()}
         <div className="field"><label>Nota</label><input value={ing.nota} onChange={e=>setIng(f=>({...f,nota:e.target.value}))} placeholder="Proveedor..."/></div>
@@ -762,8 +764,7 @@ function Inventario(){
     {ss&&<div className="modal" style={{borderColor:'rgba(255,80,80,0.3)'}}>
       <div className="mtitle" style={{color:'var(--red)'}}>↓ Solicitar salida</div>
       <div className="mform">
-        <div className="field"><label>Flujo</label><select value={sal.flujoFil||''} onChange={e=>setSal(f=>({...f,flujoFil:e.target.value,productoId:''}))}><option value="">Todos</option>{[...new Set(products.map(p=>p.flujo).filter(Boolean))].map(f=><option key={f} value={f}>{f}</option>)}</select></div>
-        <div className="field"><label>Producto *</label><select value={sal.productoId} onChange={e=>setSal(f=>({...f,productoId:e.target.value}))}><option value="">Seleccionar...</option>{products.filter(p=>!sal.flujoFil||p.flujo===sal.flujoFil).map(p=><option key={p.id} value={p.id}>{p.nombre} (Disp: {getStockDisponible(p.id)})</option>)}</select></div>
+        <div className="field"><label>Producto *</label><select value={sal.productoId} onChange={e=>setSal(f=>({...f,productoId:e.target.value}))}><option value="">Seleccionar...</option>{products.map(p=><option key={p.id} value={p.id}>{p.nombre} (Disp: {getStockDisponible(p.id)})</option>)}</select></div>
         <div className="mrow"><div className="field"><label>Cantidad *</label><input type="number" min="1" value={sal.cantidad} onChange={e=>setSal(f=>({...f,cantidad:e.target.value}))} placeholder="0"/></div><div className="field"><label>Fecha</label><input type="date" value={sal.fecha} onChange={e=>setSal(f=>({...f,fecha:e.target.value}))}/></div></div>
         {isSupervisor&&<div className="field"><label>Área *</label><select value={sal.area||''} onChange={e=>setSal(f=>({...f,area:e.target.value}))} style={{borderColor:!sal.area?'var(--amber)':undefined}}><option value="">Seleccionar área...</option><option value="XD">XD</option><option value="IL">IL</option></select></div>}
       </div>
@@ -779,9 +780,9 @@ function Inventario(){
 }
 
 function Control(){
-  const {products,quincenas,addQ,updateQ,getStock,getEstado,csvConsolidado,isSupervisor,validarQ,userEmail}=useApp();
+  const {products,quincenas,addQ,updateQ,getStock,getClasificacion,getEstado,csvConsolidado,isSupervisor,validarQ,userEmail}=useApp();
   const [filtroC,setFiltroC]=useState('Todos');
-  const productosFiltrados=products.filter(p=>filtroC==='Todos'||getEstado(p.id)===filtroC);
+  const productosFiltrados=products.filter(p=>filtroC==='Todos'||getClasificacion(p.id)===filtroC);
   const hoy=new Date().toLocaleDateString('en-CA');
   const _d=new Date();const _dia=_d.getDate();const _mes=_d.toLocaleString('es-PE',{month:'short'});const _mesC=_mes[0].toUpperCase()+_mes.slice(1);
   const defLabel=`Conteo ${_dia} ${_mesC}`;
@@ -831,7 +832,7 @@ function Control(){
       {ref&&<span className="hint">Último: <strong>{ref.label}</strong></span>}
     </div></div>
     <div className="tabs" style={{marginBottom:'1rem',width:'fit-content'}}>
-      {[['Todos','Todos'],['critico','🔴 Crítico'],['alerta','🟡 Alerta'],['stock','🟢 En stock']].map(([v,l])=><button key={v} className={`tab${filtroC===v?' on':''}`} onClick={()=>setFiltroC(v)}>{l}</button>)}
+      {[['Todos','Todos'],['A','🔴 A — Alto consumo'],['B','🟡 B — Medio'],['C','🟢 C — Bajo consumo']].map(([v,l])=><button key={v} className={`tab${filtroC===v?' on':''}`} onClick={()=>setFiltroC(v)}>{l}</button>)}
     </div>
     <Msg text={msg.text} type={msg.type}/>
     <div className="twrap t-ctrl">
@@ -841,7 +842,7 @@ function Control(){
         const con=counts[p.id];
         const diff=con!==undefined&&con!==''&&ant!=='—'?parseInt(con)-parseInt(ant):null;
         return <div key={p.id} className="trow">
-          <span><span className="pname">{p.nombre}</span><span className="pdesc">{p.unidad} · {p.flujo}</span></span>
+          <span><span className="pname">{p.nombre}</span><span className="pdesc">{p.unidad}</span></span>
           <span className="mono" style={{fontSize:15,fontWeight:500}}>{editQ?(editQ.inventario[p.id]??'—'):ant}</span>
           <span><input type="number" min="0" placeholder={editQ?(editQ.inventario[p.id]??'0'):ant!=='—'?String(ant):'0'} value={counts[p.id]??''} onChange={e=>setCounts(v=>({...v,[p.id]:e.target.value}))} className="cinput"/></span>
           <span>{diff!==null?<span className={diff<0?'dn':diff>0?'dp':'dz'}>{diff>0?'+':''}{diff}</span>:<span className="dz">—</span>}</span>
