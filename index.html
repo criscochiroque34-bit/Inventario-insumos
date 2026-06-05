@@ -520,18 +520,21 @@ function Dashboard(){
   const ok=products.filter(p=>getEstado(p.id)==='stock');
   const lista=getLista();
 
-  // Proyección de compra
-  const listaProy=lista.map(p=>{
+  // Proyección — todos los productos que no cubren los días seleccionados
+  const listaProy=products.map(p=>{
     const cd=getConsumoDiario(p.id);
+    if(!cd)return null; // sin historial, no se puede calcular
     const stock=getStock(p.id);
+    const diasCubre=Math.floor(stock/cd);
+    if(diasCubre>=diasProy)return null; // ya cubre el período
     const necesito=Math.ceil(cd*diasProy);
     const pedir=Math.max(0,necesito-stock);
-    return{...p,cd,necesito,pedir};
-  }).filter(p=>p.pedir>0);
+    return{...p,cd,necesito,pedir,diasCubre};
+  }).filter(Boolean).sort((a,b)=>a.diasCubre-b.diasCubre);
 
   function csvProy(){
-    const rows=[['Código','Nombre','Stock actual','Consumo/día','Necesito (total)','A pedir','Unidad']];
-    listaProy.forEach(p=>rows.push([p.codigo,p.nombre,getStock(p.id),Math.round(p.cd*10)/10,p.necesito,p.pedir,p.unidad]));
+    const rows=[['Código','Nombre','Stock actual','Días que cubre','Consumo/día','Necesito (total)','A pedir','Unidad']];
+    listaProy.forEach(p=>rows.push([p.codigo,p.nombre,getStock(p.id),p.diasCubre,Math.round(p.cd*10)/10,p.necesito,p.pedir,p.unidad]));
     const csv=rows.map(r=>r.map(c=>`"${c}"`).join(',')).join('\n');
     const a=document.createElement('a');
     a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);
@@ -585,11 +588,12 @@ function Dashboard(){
           {listaProy.length===0
             ?<div className="nodata">Con el stock actual todos los productos cubren {diasProy} días ✓</div>
             :<>
-              <div className="chead" style={{gridTemplateColumns:'2fr 70px 80px 80px 60px'}}><span>Producto</span><span>Stock</span><span>/día</span><span>Total</span><span>Pedir</span></div>
-              {listaProy.map(p=><div key={p.id} className="crow" style={{gridTemplateColumns:'2fr 70px 80px 80px 60px'}}>
+              <div className="chead" style={{gridTemplateColumns:'2fr 70px 80px 60px 80px 60px'}}><span>Producto</span><span>Stock</span><span>/día</span><span>Cubre</span><span>Total</span><span>Pedir</span></div>
+              {listaProy.map(p=><div key={p.id} className="crow" style={{gridTemplateColumns:'2fr 70px 80px 60px 80px 60px'}}>
                 <span><span className="pname">{p.nombre}</span><span className="pdesc">{p.codigo}</span></span>
                 <span className="mono">{getStock(p.id)}<small> {p.unidad}</small></span>
                 <span style={{fontSize:12,color:'var(--text2)'}}>{Math.round(p.cd*10)/10}</span>
+                <span className="mono" style={{color:p.diasCubre<=10?'var(--red)':p.diasCubre<=20?'var(--amber)':'var(--text2)'}}>{p.diasCubre}d</span>
                 <span className="mono" style={{color:'var(--text2)'}}>{p.necesito}</span>
                 <span className="mono" style={{color:'var(--blue)',fontWeight:600}}>+{p.pedir}</span>
               </div>)}
