@@ -633,7 +633,7 @@ function Inventario(){
   const [confirmSal,setConfirmSal]=useState(false);
   const [msg,setMsg]=useState({text:'',type:'ok'});
   const [saving,setSaving]=useState(false);
-  const filtered=products.filter(p=>!bus||p.nombre.toLowerCase().includes(bus.toLowerCase())||p.codigo.toLowerCase().includes(bus.toLowerCase()));.sort((a,b)=>{
+  const filtered=products.filter(p=>!bus||p.nombre.toLowerCase().includes(bus.toLowerCase())||p.codigo.toLowerCase().includes(bus.toLowerCase())).sort((a,b)=>{
     if(orden==='dias_asc')return getDias(a.id)-getDias(b.id);
     if(orden==='dias_desc')return getDias(b.id)-getDias(a.id);
     if(orden==='consumo_desc')return getConsumoDiario(b.id)-getConsumoDiario(a.id);
