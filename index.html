@@ -536,43 +536,59 @@ function Dashboard(){
       <div className="metric" style={{borderColor:'rgba(240,165,0,.2)'}}><span className="ml">Alertas</span><span className="mv ca">{al.length}</span></div>
       <div className="metric" style={{borderColor:'rgba(0,201,125,.2)'}}><span className="ml">En stock</span><span className="mv cg">{ok.length}</span></div>
     </div>
-    {lista.length>0&&<div style={{marginBottom:'1rem'}}>
+    {lista.length>0&&<div style={{marginBottom:'1.5rem'}}>
       <button className="cbtn" onClick={()=>setShow(v=>!v)}><span>🛒</span>Necesito comprar<span style={{background:'rgba(0,0,0,.2)',padding:'1px 8px',borderRadius:99,fontSize:12}}>{lista.length}</span><span style={{marginLeft:'auto',fontSize:10}}>{show?'▲':'▼'}</span></button>
       {show&&<div className="ccard">
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'.75rem'}}><span style={{fontSize:12,color:'var(--text2)'}}>Orden sugerida — cubre ~2 períodos</span><button className="bs" style={{fontSize:11,padding:'4px 10px'}} onClick={csvLista}>↓ CSV</button></div>
-        <div className="chead"><span>Producto</span><span>Stock</span><span>Consumo</span><span>Pedir</span></div>
-        {lista.map(p=><div key={p.id} className="crow"><span><span className="pname">{p.nombre}</span><span className="pdesc">{p.codigo}</span></span><span className="mono">{p.stock}<small> {p.unidad}</small></span><span className="mono">{(()=>{const l=getConsumoLabel(p.id);return l?`~${l.v}/${l.u}`:'—';})()}</span><span className="mono cg">+{p.pedir}<small> {p.unidad}</small></span></div>)}
-      </div>}
-    </div>}
-    {lista.length>0&&<div style={{marginBottom:'1.5rem'}}>
-      <button className="cbtn" style={{background:'rgba(77,158,255,.08)',border:'1px solid rgba(77,158,255,.2)',color:'var(--blue)'}} onClick={()=>setShowProy(v=>!v)}>
-        <span>📆</span>Proyectar compra<span style={{marginLeft:'auto',fontSize:10}}>{showProy?'▲':'▼'}</span>
-      </button>
-      {showProy&&<div className="ccard" style={{borderColor:'rgba(77,158,255,.2)'}}>
-        <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:'1rem',flexWrap:'wrap'}}>
-          <span style={{fontSize:12,color:'var(--text2)'}}>Quiero que esta compra me dure</span>
-          <div style={{display:'flex',alignItems:'center',gap:6}}>
-            <input type="number" min="1" max="365" value={diasProy} onChange={e=>setDiasProy(parseInt(e.target.value)||1)} style={{width:70,background:'var(--bg3)',border:'1px solid var(--border2)',borderRadius:'var(--rsm)',padding:'5px 8px',color:'var(--text)',fontSize:14,fontFamily:'DM Mono,monospace',textAlign:'center'}}/>
-            <span style={{fontSize:12,color:'var(--text2)'}}>días</span>
-          </div>
-          <button className="bs" style={{fontSize:11,padding:'4px 10px',marginLeft:'auto'}} onClick={csvProy}>↓ CSV</button>
-        </div>
-        {listaProy.length===0
-          ?<div className="nodata">Con el stock actual todos los productos cubren {diasProy} días ✓</div>
-          :<>
-            <div className="chead" style={{gridTemplateColumns:'2fr 70px 80px 80px 60px'}}><span>Producto</span><span>Stock</span><span>Consumo</span><span>Necesito</span><span>A pedir</span></div>
-            {listaProy.map(p=><div key={p.id} className="crow" style={{gridTemplateColumns:'2fr 70px 80px 80px 60px'}}>
-              <span><span className="pname">{p.nombre}</span><span className="pdesc">{p.codigo}</span></span>
-              <span className="mono">{getStock(p.id)}<small> {p.unidad}</small></span>
-              <span style={{fontSize:12,color:'var(--text2)'}}>{Math.round(p.cd*10)/10}/día</span>
-              <span className="mono" style={{color:'var(--text2)'}}>{p.necesito}<small> {p.unidad}</small></span>
-              <span className="mono" style={{color:'var(--blue)',fontWeight:600}}>+{p.pedir}<small> {p.unidad}</small></span>
-            </div>)}
-            <div style={{marginTop:'0.75rem',padding:'8px 10px',background:'var(--bg3)',borderRadius:6,fontSize:12,color:'var(--text2)'}}>
-              Para cubrir <strong style={{color:'var(--blue)'}}>{diasProy} días</strong> necesitas pedir {listaProy.length} producto{listaProy.length>1?'s':''}.
+        {/* VISTA ESTÁNDAR */}
+        {!showProy&&<>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'.75rem'}}>
+            <span style={{fontSize:12,color:'var(--text2)'}}>Orden sugerida — cubre ~2 períodos</span>
+            <div style={{display:'flex',gap:6}}>
+              <button className="bs" style={{fontSize:11,padding:'4px 10px',color:'var(--blue)',borderColor:'rgba(77,158,255,.3)'}} onClick={()=>setShowProy(true)}>📆 Proyectar</button>
+              <button className="bs" style={{fontSize:11,padding:'4px 10px'}} onClick={csvLista}>↓ CSV</button>
             </div>
-          </>
-        }
+          </div>
+          <div className="chead"><span>Producto</span><span>Stock</span><span>Consumo</span><span>Pedir</span></div>
+          {lista.map(p=><div key={p.id} className="crow"><span><span className="pname">{p.nombre}</span><span className="pdesc">{p.codigo}</span></span><span className="mono">{p.stock}<small> {p.unidad}</small></span><span className="mono">{(()=>{const l=getConsumoLabel(p.id);return l?`~${l.v}/${l.u}`:'—';})()}</span><span className="mono cg">+{p.pedir}<small> {p.unidad}</small></span></div>)}
+        </>}
+        {/* VISTA PROYECCIÓN */}
+        {showProy&&<>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'1rem'}}>
+            <span style={{fontSize:13,fontWeight:500}}>📆 Proyección de compra</span>
+            <button className="bs" style={{fontSize:11,padding:'4px 10px'}} onClick={()=>setShowProy(false)}>← Volver</button>
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:'1rem'}}>
+            <div>
+              <div style={{fontSize:10,textTransform:'uppercase',letterSpacing:'.05em',color:'var(--text2)',marginBottom:5}}>Hasta la fecha</div>
+              <input type="date" value={(()=>{const d=new Date();d.setDate(d.getDate()+diasProy);return d.toLocaleDateString('en-CA');})()}
+                onChange={e=>{const hoy=new Date();const sel=new Date(e.target.value);const diff=Math.max(1,Math.round((sel-hoy)/(1000*60*60*24)));setDiasProy(diff);}}
+                style={{width:'100%',background:'var(--bg3)',border:'1px solid var(--border2)',borderRadius:'var(--rsm)',padding:'7px 10px',color:'var(--text)',fontSize:13}}/>
+            </div>
+            <div>
+              <div style={{fontSize:10,textTransform:'uppercase',letterSpacing:'.05em',color:'var(--text2)',marginBottom:5}}>Número de días</div>
+              <input type="number" min="1" max="365" value={diasProy}
+                onChange={e=>setDiasProy(Math.max(1,parseInt(e.target.value)||1))}
+                style={{width:'100%',background:'var(--bg3)',border:'1px solid var(--border2)',borderRadius:'var(--rsm)',padding:'7px 10px',color:'var(--blue)',fontSize:18,fontWeight:600,fontFamily:'DM Mono,monospace',textAlign:'center'}}/>
+            </div>
+          </div>
+          {listaProy.length===0
+            ?<div className="nodata">Con el stock actual todos los productos cubren {diasProy} días ✓</div>
+            :<>
+              <div className="chead" style={{gridTemplateColumns:'2fr 70px 80px 80px 60px'}}><span>Producto</span><span>Stock</span><span>/día</span><span>Total</span><span>Pedir</span></div>
+              {listaProy.map(p=><div key={p.id} className="crow" style={{gridTemplateColumns:'2fr 70px 80px 80px 60px'}}>
+                <span><span className="pname">{p.nombre}</span><span className="pdesc">{p.codigo}</span></span>
+                <span className="mono">{getStock(p.id)}<small> {p.unidad}</small></span>
+                <span style={{fontSize:12,color:'var(--text2)'}}>{Math.round(p.cd*10)/10}</span>
+                <span className="mono" style={{color:'var(--text2)'}}>{p.necesito}</span>
+                <span className="mono" style={{color:'var(--blue)',fontWeight:600}}>+{p.pedir}</span>
+              </div>)}
+              <div style={{marginTop:'.75rem',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                <span style={{fontSize:12,color:'var(--text2)'}}>{listaProy.length} producto{listaProy.length>1?'s':''} para cubrir <strong style={{color:'var(--blue)'}}>{diasProy} días</strong></span>
+                <button className="bs" style={{fontSize:11,padding:'4px 10px'}} onClick={csvProy}>↓ CSV</button>
+              </div>
+            </>
+          }
+        </>}
       </div>}
     </div>}
 
