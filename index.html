@@ -118,6 +118,16 @@ button{font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border:non
 .trow:hover{background:var(--bg3)}
 .t-dash .thead,.t-dash .trow{grid-template-columns:2.5fr 1fr 80px 90px}
 .t-inv .thead,.t-inv .trow{grid-template-columns:36px 95px 2fr 80px 55px 70px 50px 75px 60px}
+.t-adj .thead,.t-adj .trow{grid-template-columns:40px 90px 2fr 105px 110px 100px}
+.ainput{width:56px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;padding:6px 8px;color:var(--text);font-size:13px;font-family:'DM Mono',monospace;text-align:center}
+.ainput:focus{outline:none;border-color:var(--blue)}
+.ainput.cost{width:68px;text-align:right}
+.aunit{font-size:10.5px;color:var(--text3);font-weight:500}
+.afield{display:flex;align-items:center;gap:5px}
+.gval{font-family:'DM Mono',monospace;font-size:13px;font-weight:500;color:var(--blue)}
+.acard{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin-bottom:8px}
+.alist{display:none}
+.savedot{width:6px;height:6px;border-radius:50%;background:var(--green);display:inline-block}
 .t-ctrl .thead,.t-ctrl .trow{grid-template-columns:2fr 100px 130px 100px 110px}
 .t-ing .thead,.t-ing .trow{grid-template-columns:110px 2fr 110px 1fr}
 .t-sup .thead,.t-sup .trow{grid-template-columns:80px 2fr 120px 80px 100px}
@@ -162,6 +172,18 @@ button{font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border:non
 .fab{position:fixed;bottom:80px;right:20px;width:52px;height:52px;border-radius:50%;background:var(--green);color:#000;font-size:22px;font-weight:700;display:flex;align-items:center;justify-content:center;z-index:90;box-shadow:0 4px 16px rgba(0,201,125,.3)}
 .fab:hover{transform:scale(1.05)}
 .modal{position:fixed;bottom:90px;right:16px;width:320px;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);padding:1.25rem;z-index:95;box-shadow:0 8px 32px rgba(0,0,0,.5)}
+.ovl{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:200;display:flex;align-items:center;justify-content:center;padding:1.5rem;backdrop-filter:blur(2px)}
+.rmodal{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);width:100%;max-width:560px;max-height:82vh;display:flex;flex-direction:column;box-shadow:0 16px 48px rgba(0,0,0,.6);overflow:hidden}
+.rhead{padding:1.1rem 1.25rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.rbody{overflow-y:auto;padding:0}
+.rfoot{padding:.9rem 1.25rem;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.rrow{display:grid;grid-template-columns:2fr 90px 90px;gap:10px;padding:9px 1.25rem;border-bottom:1px solid var(--border);align-items:center}
+.rrow:last-child{border-bottom:none}
+.rhrow{display:grid;grid-template-columns:2fr 90px 90px;gap:10px;padding:8px 1.25rem;background:var(--bg3);font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);font-weight:600;position:sticky;top:0}
+.xbtn{background:transparent;border:1px solid var(--border2);color:var(--text2);width:28px;height:28px;border-radius:6px;font-size:14px;line-height:1;flex-shrink:0;cursor:pointer}
+.xbtn:hover{color:var(--text);border-color:var(--text3)}
+.qclick{cursor:pointer}
+.qclick:hover{background:var(--bg3)}
 .mtitle{font-size:14px;font-weight:500;margin-bottom:1rem}
 .mform{display:flex;flex-direction:column;gap:10px;margin-bottom:1rem}
 .mrow{display:grid;grid-template-columns:1fr 1fr;gap:8px}
@@ -232,6 +254,7 @@ button{font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border:non
   .bpsave{width:100%;text-align:center;padding:12px;font-size:15px}
   .ptabs{width:100%}.ptab{flex:1;text-align:center;font-size:12px}
   .t-inv .thead span:nth-child(7),.t-inv .trow span:nth-child(7){display:none}
+  .t-adj{display:none}.alist{display:block}
   .t-ing .thead,.t-ing .trow{grid-template-columns:90px 1fr 90px}
   .t-ing .thead span:last-child,.t-ing .trow span:last-child{display:none}
   .chead{grid-template-columns:2fr 60px 50px 60px}.crow{grid-template-columns:2fr 60px 50px 60px}
@@ -242,7 +265,7 @@ button{font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border:non
 <body>
 <div id="root"></div>
 <script type="text/babel" data-presets="react">
-const {useState,useEffect,createContext,useContext,useCallback}=React;
+const {useState,useEffect,useMemo,createContext,useContext,useCallback}=React;
 const SB_URL='https://vjsgyatreowdclpsssem.supabase.co';
 const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZqc2d5YXRyZW93ZGNscHNzc2VtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1ODY1OTMsImV4cCI6MjA4OTE2MjU5M30.Yoy_zj55dBFltOSvAIS9WFDb0aKtwMMwiwaRsanb6p4';
 const sb=supabase.createClient(SB_URL,SB_KEY);
@@ -305,10 +328,11 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
     await sb.from('activity_log').insert([{user_email:userEmail,accion,detalle}]);
   }
 
-  const quincenasWithInv=quincenas.map(q=>{
-    const inv={};qItems.filter(i=>i.quincena_id===q.id).forEach(i=>{inv[i.product_id]=i.cantidad;});
-    return{...q,inventario:inv};
-  });
+  const quincenasWithInv=useMemo(()=>{
+    const porQ={};
+    qItems.forEach(i=>{(porQ[i.quincena_id]||(porQ[i.quincena_id]={}))[i.product_id]=i.cantidad;});
+    return quincenas.map(q=>({...q,inventario:porQ[q.id]||{}}));
+  },[quincenas,qItems]);
 
   function getStock(pid){
     if(!quincenasWithInv.length)return 0;
@@ -323,7 +347,12 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
     const salPend=(salidas||[]).filter(s=>s.product_id===pid&&s.status==='pending').reduce((t,s)=>t+s.cantidad,0);
     return stockReal-salPend;
   }
+  const cdCache=useMemo(()=>({}),[products,quincenasWithInv,ingresos]);
   function getConsumoDiario(pid){
+    if(cdCache[pid]!==undefined)return cdCache[pid];
+    const r=_calcConsumoDiario(pid);cdCache[pid]=r;return r;
+  }
+  function _calcConsumoDiario(pid){
     const validated=quincenasWithInv.filter(q=>q.status==='validated'||q.status===null||q.status===undefined);
     if(validated.length<2)return 0;
     const s=[...validated].sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
@@ -338,16 +367,26 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
     return totalDias>0?totalConsumo/totalDias:0;
   }
   function getConsumo(pid){const cd=getConsumoDiario(pid);return cd?Math.round(cd*15):0;}
-  function getClasificacion(pid){
+  const clasifMap=useMemo(()=>{
     const consumos=products.map(p=>({id:p.id,cd:getConsumoDiario(p.id)})).filter(x=>x.cd>0).sort((a,b)=>b.cd-a.cd);
-    if(!consumos.length)return '—';
     const total=consumos.reduce((s,x)=>s+x.cd,0);
-    let acum=0;let clases={};
-    for(const x of consumos){
-      acum+=x.cd/total;
-      clases[x.id]=acum<=0.8?'A':acum<=0.95?'B':'C';
-    }
-    return clases[pid]||'C';
+    const clases={};
+    if(total>0){let acum=0;for(const x of consumos){acum+=x.cd/total;clases[x.id]=acum<=0.8?'A':acum<=0.95?'B':'C';}}
+    return clases;
+  },[products,quincenasWithInv,ingresos]);
+  function getClasificacion(pid){
+    if(!Object.keys(clasifMap).length)return '—';
+    return clasifMap[pid]||'C';
+  }
+  function getCosto(pid){const p=products.find(x=>x.id===pid);const v=parseFloat(p?.costo_unitario);return isNaN(v)?0:v;}
+  function getDiasEntrega(pid){const p=products.find(x=>x.id===pid);const v=parseInt(p?.dias_entrega);return isNaN(v)?0:v;}
+  function getGastoMensual(pid){const cd=getConsumoDiario(pid);const co=getCosto(pid);return cd&&co?cd*30*co:0;}
+  function getValorInventario(){return products.reduce((s,p)=>s+getStock(p.id)*getCosto(p.id),0);}
+  function getGastoMensualTotal(){return products.reduce((s,p)=>s+getGastoMensual(p.id),0);}
+  async function updateConfig(id,campos){
+    const {error}=await sb.from('products').update(campos).eq('id',id);
+    if(error)return error.message;
+    await load();return null;
   }
   function getConsumoLabel(pid){
     const cd=getConsumoDiario(pid);
@@ -394,6 +433,19 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
     await sb.from('products').delete().eq('id',id);
     await logAction('Eliminó producto',p?.nombre||id);await load();
   }
+  async function delQuincena(qid,label){
+    const q=quincenasWithInv.find(x=>x.id===qid);
+    const eraValidado=q&&(q.status==='validated'||!q.status);
+    const msg=eraValidado
+      ? `¿Eliminar el conteo "${label}"?\n\nEste conteo está VALIDADO. Al borrarlo, el stock y las proyecciones se recalcularán automáticamente usando el conteo validado anterior.\n\nEsta acción no se puede deshacer.`
+      : `¿Eliminar el conteo "${label}"?\n\nEsta acción no se puede deshacer.`;
+    if(!confirm(msg))return null;
+    const r1=await sb.from('quincena_items').delete().eq('quincena_id',qid);
+    if(r1.error)return r1.error.message;
+    const r2=await sb.from('quincenas').delete().eq('id',qid);
+    if(r2.error)return r2.error.message;
+    await logAction('Eliminó conteo',label);await load();return null;
+  }
   async function addQ(label,fecha,inv){
     const {data,error}=await sb.from('quincenas').insert([{label,fecha,status:'pending',created_by:userEmail}]).select().single();
     if(error)return error.message;
@@ -416,7 +468,7 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
   }
   async function addIng(pid,cant,fecha,nota){
     if(!cant||parseInt(cant)<=0)return 'La cantidad debe ser mayor a 0';
-    const uData=usuariosList.find(u=>u.nombre===userEmail);
+    const uData=usuariosList.find(u=>u.dni===userEmail||u.nombre===userEmail);
     const {error}=await sb.from('ingresos').insert([{product_id:parseInt(pid),cantidad:parseInt(cant),fecha,nota,created_by:userEmail,status:'pending',area:uData?.area||null}]);
     if(error)return error.message;
     const p=products.find(x=>x.id===parseInt(pid));
@@ -441,7 +493,7 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
     if(!cant||parseInt(cant)<=0)return 'La cantidad debe ser mayor a 0';
     const stockDisp=getStockDisponible(parseInt(pid));
     if(parseInt(cant)>stockDisp)return `Stock insuficiente. Disponible: ${stockDisp} und (incluye salidas pendientes)`;
-    const uData=usuariosList.find(u=>u.nombre===userEmail);
+    const uData=usuariosList.find(u=>u.dni===userEmail||u.nombre===userEmail);
     const areaFinal=areaSel||uData?.area||null;
     const {error}=await sb.from('salidas').insert([{product_id:parseInt(pid),cantidad:parseInt(cant),fecha,status:'pending',created_by:userEmail,area:areaFinal}]);
     if(error)return error.message;
@@ -472,7 +524,7 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
   function csvInventario(){const rows=[['Clase','Código','Nombre','Unidad','Stock','Consumo/día','Días','Estado']];products.forEach(p=>{const e=getEstado(p.id);const cl=getClasificacion(p.id);const cd=getConsumoDiario(p.id);rows.push([cl,p.codigo,p.nombre,p.unidad,getStock(p.id),cd?Math.round(cd*10)/10:0,getDias(p.id)===999?'Sin hist.':getDias(p.id),e==='critico'?'Crítico':e==='alerta'?'Alerta':'En stock'])});dl(rows,'inventario');}
   function csvLista(){const rows=[['Código','Nombre','Stock','Consumo/día','Pedir','Unidad','Días']];getLista().forEach(p=>{const cd=getConsumoDiario(p.id);const consumoDia=cd?Math.round(cd*10)/10:0;rows.push([p.codigo,p.nombre,p.stock,consumoDia,p.pedir,p.unidad,p.dias===999?'Sin hist.':p.dias])});dl(rows,'lista-compra');}
   function csvConsolidado(){const qs=[...quincenasWithInv].sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));const headers=['Código','Nombre','Unidad',...qs.map(q=>q.label)];const rows=[headers];products.forEach(p=>{rows.push([p.codigo,p.nombre,p.unidad,...qs.map(q=>q.inventario[p.id]??'')]);});dl(rows,'consolidado-conteos');}
-  return <Ctx.Provider value={{products,quincenas:quincenasWithInv,ingresos,salidas,actLog,usuariosList,loading,error,userEmail,isSupervisor,onLogout,getStock,getStockDisponible,getConsumo,getConsumoDiario,getConsumoLabel,getClasificacion,getDias,getEstado,getLista,getAnomalias,addProd,updateProd,delProd,addQ,updateQ,validarQ,rechazarQ,addIng,aprobarIngreso,rechazarIngreso,updateIngreso,addSalida,aprobarSalida,rechazarSalida,updateSalida,csvInventario,csvLista,csvConsolidado}}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{products,quincenas:quincenasWithInv,ingresos,salidas,actLog,usuariosList,loading,error,userEmail,isSupervisor,onLogout,getStock,getStockDisponible,getConsumo,getConsumoDiario,getConsumoLabel,getClasificacion,getCosto,getDiasEntrega,getGastoMensual,getValorInventario,getGastoMensualTotal,updateConfig,getDias,getEstado,getLista,getAnomalias,addProd,updateProd,delProd,addQ,updateQ,validarQ,rechazarQ,delQuincena,addIng,aprobarIngreso,rechazarIngreso,updateIngreso,addSalida,aprobarSalida,rechazarSalida,updateSalida,csvInventario,csvLista,csvConsolidado}}>{children}</Ctx.Provider>;
 }
 const useApp=()=>useContext(Ctx);
 
@@ -511,7 +563,7 @@ function LineChartSVG({data,height=180}){
 }
 
 function Dashboard(){
-  const {products,getStock,getConsumo,getConsumoLabel,getConsumoDiario,getDias,getEstado,getLista,csvLista,isSupervisor}=useApp();
+  const {products,getStock,getConsumo,getConsumoLabel,getConsumoDiario,getCosto,getDiasEntrega,getGastoMensualTotal,getDias,getEstado,getLista,csvLista,isSupervisor}=useApp();
   const [show,setShow]=useState(false);
   const [showProy,setShowProy]=useState(false);
   const [diasProy,setDiasProy]=useState(90);
@@ -529,12 +581,20 @@ function Dashboard(){
     if(diasCubre>=diasProy)return null; // ya cubre el período
     const necesito=Math.ceil(cd*diasProy);
     const pedir=Math.max(0,necesito-stock);
-    return{...p,cd,necesito,pedir,diasCubre};
+    const costo=getCosto(p.id);
+    const gasto=pedir*costo;
+    const dEnt=getDiasEntrega(p.id);
+    const margen=diasCubre-dEnt; // días que quedan para hacer el pedido
+    const fLimite=(()=>{const d=new Date();d.setDate(d.getDate()+Math.max(0,margen));return d;})();
+    return{...p,cd,necesito,pedir,diasCubre,costo,gasto,dEnt,margen,fLimite};
   }).filter(Boolean).sort((a,b)=>a.diasCubre-b.diasCubre);
+  const totalProy=listaProy.reduce((s,p)=>s+p.gasto,0);
+  const fmtS=n=>'S/ '+(Number(n)||0).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});
 
   function csvProy(){
-    const rows=[['Código','Nombre','Stock actual','Días que cubre','Consumo/día','Necesito (total)','A pedir','Unidad']];
-    listaProy.forEach(p=>rows.push([p.codigo,p.nombre,getStock(p.id),p.diasCubre,Math.round(p.cd*10)/10,p.necesito,p.pedir,p.unidad]));
+    const rows=[['Código','Nombre','Stock actual','Días que cubre','Consumo/día','Necesito (total)','A pedir','Unidad','Días entrega','Pedir antes de','Costo unit. (S/)','Subtotal (S/)']];
+    listaProy.forEach(p=>rows.push([p.codigo,p.nombre,getStock(p.id),p.diasCubre,Math.round(p.cd*10)/10,p.necesito,p.pedir,p.unidad,p.dEnt||'',p.dEnt?p.fLimite.toLocaleDateString('en-CA'):'',p.costo?p.costo.toFixed(2):'',p.gasto?p.gasto.toFixed(2):'']));
+    if(totalProy>0)rows.push(['','','','','','','','','','','TOTAL',totalProy.toFixed(2)]);
     const csv=rows.map(r=>r.map(c=>`"${c}"`).join(',')).join('\n');
     const a=document.createElement('a');
     a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);
@@ -550,6 +610,13 @@ function Dashboard(){
       <div className="metric" style={{borderColor:'rgba(240,165,0,.2)'}}><span className="ml">Alertas</span><span className="mv ca">{al.length}</span></div>
       <div className="metric" style={{borderColor:'rgba(0,201,125,.2)'}}><span className="ml">En stock</span><span className="mv cg">{ok.length}</span></div>
     </div>
+    {isSupervisor&&getGastoMensualTotal()>0&&<div className="metrics3" style={{gridTemplateColumns:'1fr',marginBottom:'1.5rem'}}>
+      <div className="metric" style={{borderColor:'rgba(77,158,255,.2)'}}>
+        <span className="ml">Gasto mensual estimado</span>
+        <span className="mv" style={{color:'var(--blue)',fontSize:26}}>{fmtS(getGastoMensualTotal())}</span>
+        <span style={{fontSize:11,color:'var(--text3)',marginTop:4}}>Basado en el consumo diario y costos configurados</span>
+      </div>
+    </div>}
     {lista.length>0&&<div style={{marginBottom:'1.5rem'}}>
       <button className="cbtn" onClick={()=>setShow(v=>!v)}><span>🛒</span>Necesito comprar<span style={{background:'rgba(0,0,0,.2)',padding:'1px 8px',borderRadius:99,fontSize:12}}>{lista.length}</span><span style={{marginLeft:'auto',fontSize:10}}>{show?'▲':'▼'}</span></button>
       {show&&<div className="ccard">
@@ -588,19 +655,26 @@ function Dashboard(){
           {listaProy.length===0
             ?<div className="nodata">Con el stock actual todos los productos cubren {diasProy} días ✓</div>
             :<>
-              <div className="chead" style={{gridTemplateColumns:'2fr 70px 80px 60px 80px 60px'}}><span>Producto</span><span>Stock</span><span>/día</span><span>Cubre</span><span>Total</span><span>Pedir</span></div>
-              {listaProy.map(p=><div key={p.id} className="crow" style={{gridTemplateColumns:'2fr 70px 80px 60px 80px 60px'}}>
-                <span><span className="pname">{p.nombre}</span><span className="pdesc">{p.codigo}</span></span>
+              <div className="chead" style={{gridTemplateColumns:'2fr 65px 55px 60px 60px 90px'}}><span>Producto</span><span>Stock</span><span>/día</span><span>Cubre</span><span>Pedir</span><span>Subtotal</span></div>
+              {listaProy.map(p=><div key={p.id} className="crow" style={{gridTemplateColumns:'2fr 65px 55px 60px 60px 90px'}}>
+                <span>
+                  <span className="pname">{p.nombre}{p.dEnt>0&&p.margen<=7&&<span style={{background:'var(--red-dim)',color:'var(--red)',fontSize:10,padding:'2px 8px',borderRadius:99,marginLeft:6,fontWeight:600}}>Pedir antes del {p.fLimite.toLocaleDateString('es',{day:'2-digit',month:'short'})}</span>}</span>
+                  <span className="pdesc">{p.codigo}{p.dEnt>0?` · entrega ${p.dEnt}d`:''}</span>
+                </span>
                 <span className="mono">{getStock(p.id)}<small> {p.unidad}</small></span>
                 <span style={{fontSize:12,color:'var(--text2)'}}>{Math.round(p.cd*10)/10}</span>
                 <span className="mono" style={{color:p.diasCubre<=10?'var(--red)':p.diasCubre<=20?'var(--amber)':'var(--text2)'}}>{p.diasCubre}d</span>
-                <span className="mono" style={{color:'var(--text2)'}}>{p.necesito}</span>
                 <span className="mono" style={{color:'var(--blue)',fontWeight:600}}>+{p.pedir}</span>
+                <span className="mono" style={{color:p.gasto>0?'var(--green)':'var(--text3)',fontSize:12}}>{p.gasto>0?fmtS(p.gasto):'—'}</span>
               </div>)}
-              <div style={{marginTop:'.75rem',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+              <div style={{marginTop:'.75rem',display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:8}}>
                 <span style={{fontSize:12,color:'var(--text2)'}}>{listaProy.length} producto{listaProy.length>1?'s':''} para cubrir <strong style={{color:'var(--blue)'}}>{diasProy} días</strong></span>
-                <button className="bs" style={{fontSize:11,padding:'4px 10px'}} onClick={csvProy}>↓ CSV</button>
+                <div style={{display:'flex',alignItems:'center',gap:12}}>
+                  {totalProy>0&&<span style={{fontSize:12,color:'var(--text2)'}}>Total: <strong className="mono" style={{color:'var(--green)',fontSize:15}}>{fmtS(totalProy)}</strong></span>}
+                  <button className="bs" style={{fontSize:11,padding:'4px 10px'}} onClick={csvProy}>↓ CSV</button>
+                </div>
               </div>
+              {totalProy===0&&<div style={{marginTop:8,fontSize:11,color:'var(--text3)'}}>Configura los costos unitarios en <strong>Ajustes</strong> para ver el gasto estimado.</div>}
             </>
           }
         </>}
@@ -784,7 +858,7 @@ function Inventario(){
 }
 
 function Control(){
-  const {products,quincenas,addQ,updateQ,getStock,getClasificacion,getEstado,csvConsolidado,isSupervisor,validarQ,userEmail}=useApp();
+  const {products,quincenas,addQ,updateQ,getStock,getClasificacion,getEstado,csvConsolidado,isSupervisor,validarQ,delQuincena,userEmail}=useApp();
   const [filtroC,setFiltroC]=useState('Todos');
   const productosFiltrados=products.filter(p=>filtroC==='Todos'||getClasificacion(p.id)===filtroC);
   const hoy=new Date().toLocaleDateString('en-CA');
@@ -873,7 +947,8 @@ function Control(){
           <span style={{marginLeft:'auto',display:'flex',gap:4}}>
             {isSupervisor&&isPending&&<button className="bval" onClick={()=>validarQ(q.id,q.label)}>✓ Validar</button>}
             {isSupervisor&&q.status!=='validated'&&<button className="bedit" title="Editar" onClick={()=>openEditQ(q)}>✏️</button>}
-          {isSupervisor&&q.status==='validated'&&<button className="bedit" title="Solo supervisor puede editar validados" style={{opacity:.3,cursor:'not-allowed'}} disabled>✏️</button>}
+            {isSupervisor&&q.status==='validated'&&<button className="bedit" title="Solo supervisor puede editar validados" style={{opacity:.3,cursor:'not-allowed'}} disabled>✏️</button>}
+            {isSupervisor&&<button className="bdel" title="Eliminar conteo" onClick={async()=>{const e=await delQuincena(q.id,q.label);if(e)setMsg({text:e,type:'err'});else if(editQ&&editQ.id===q.id)cancelEdit();}}>🗑️</button>}
           </span>
         </div>;
       })}
@@ -1183,7 +1258,8 @@ function AreaTab({salidas,products,areaColors}){
 }
 
 function Supervision(){
-  const {quincenas,ingresos,salidas,actLog,usuariosList,validarQ,rechazarQ,getAnomalias,aprobarIngreso,rechazarIngreso,updateIngreso,aprobarSalida,rechazarSalida,updateSalida,products,isSupervisor}=useApp();
+  const {quincenas,ingresos,salidas,actLog,usuariosList,validarQ,rechazarQ,delQuincena,getAnomalias,aprobarIngreso,rechazarIngreso,updateIngreso,aprobarSalida,rechazarSalida,updateSalida,products,isSupervisor}=useApp();
+  const [verQ,setVerQ]=useState(null);
   const [editIng,setEditIng]=useState(null);
   const [editSal,setEditSal]=useState(null);
   const [editVals,setEditVals]=useState({cantidad:'',fecha:''});
@@ -1221,17 +1297,74 @@ function Supervision(){
       <button className={`ptab${tab==='anomalias'?' on':''}`} onClick={()=>setTab('anomalias')}>Anomalías {anomalias.length>0&&<span style={{background:'var(--red-dim)',color:'var(--red)',fontSize:10,padding:'1px 6px',borderRadius:99,marginLeft:4}}>{anomalias.length}</span>}</button>
       <button className={`ptab${tab==='log'?' on':''}`} onClick={()=>setTab('log')}>Log</button>
     </div>
+    {verQ&&(()=>{
+      const anterior=[...quincenas]
+        .filter(x=>x.id!==verQ.id&&new Date(x.fecha)<=new Date(verQ.fecha)&&(x.status==='validated'||!x.status))
+        .sort((a,b)=>new Date(b.fecha)-new Date(a.fecha))[0];
+      const filas=Object.entries(verQ.inventario).map(([pid,cant])=>{
+        const p=products.find(x=>x.id===parseInt(pid));
+        const ant=anterior?(anterior.inventario[pid]??null):null;
+        const dif=ant===null?null:cant-ant;
+        return{pid,nombre:p?.nombre||'(producto eliminado)',unidad:p?.unidad||'',cant,ant,dif};
+      }).sort((a,b)=>(a.dif??0)-(b.dif??0));
+      const bajaron=filas.filter(f=>f.dif!==null&&f.dif<0).length;
+      const subieron=filas.filter(f=>f.dif!==null&&f.dif>0).length;
+      return <div className="ovl" onClick={()=>setVerQ(null)}>
+        <div className="rmodal" onClick={e=>e.stopPropagation()}>
+          <div className="rhead">
+            <div>
+              <div style={{fontSize:15,fontWeight:600}}>{verQ.label}</div>
+              <div style={{fontSize:12,color:'var(--text2)',marginTop:3}}>
+                {new Date(verQ.fecha).toLocaleDateString('es',{day:'2-digit',month:'long',year:'numeric'})} · {getNombre(verQ.created_by)}
+              </div>
+              <div style={{fontSize:11,color:'var(--text3)',marginTop:4}}>
+                {anterior?`Comparado con "${anterior.label}"`:'Sin conteo anterior para comparar'}
+                {' · '}{filas.length} producto{filas.length!==1?'s':''}
+                {anterior&&<> · <span style={{color:'var(--red)'}}>{bajaron} bajaron</span> · <span style={{color:'var(--green)'}}>{subieron} subieron</span></>}
+              </div>
+            </div>
+            <button className="xbtn" onClick={()=>setVerQ(null)}>✕</button>
+          </div>
+          <div className="rbody">
+            <div className="rhrow"><span>Producto</span><span style={{textAlign:'right'}}>Contado</span><span style={{textAlign:'right'}}>Diferencia</span></div>
+            {filas.length===0
+              ?<div className="nodata">Este conteo no tiene productos registrados</div>
+              :filas.map(f=><div key={f.pid} className="rrow">
+                <span><span className="pname">{f.nombre}</span>{f.ant!==null&&<span className="pdesc">Anterior: {f.ant} {f.unidad}</span>}</span>
+                <span className="mono" style={{textAlign:'right'}}>{f.cant}<small style={{color:'var(--text3)'}}> {f.unidad}</small></span>
+                <span className="mono" style={{textAlign:'right',color:f.dif===null?'var(--text3)':f.dif<0?'var(--red)':f.dif>0?'var(--green)':'var(--text3)',fontWeight:f.dif?600:400}}>
+                  {f.dif===null?'—':f.dif>0?`+${f.dif}`:f.dif}
+                </span>
+              </div>)}
+          </div>
+          <div className="rfoot">
+            <span style={{fontSize:11,color:'var(--text3)'}}>Revisa las diferencias antes de validar</span>
+            <div style={{display:'flex',gap:6}}>
+              {(!verQ.status||verQ.status==='pending')&&<>
+                <button className="bval" onClick={async()=>{await validarQ(verQ.id,verQ.label);setVerQ(null);}}>✓ Validar</button>
+                <button className="bdel" style={{padding:'4px 12px',border:'1px solid var(--border2)',borderRadius:4,fontSize:12}} onClick={async()=>{await rechazarQ(verQ.id,verQ.label);setVerQ(null);}}>✕ Rechazar</button>
+              </>}
+              <button className="bs" style={{fontSize:12,padding:'6px 12px'}} onClick={()=>setVerQ(null)}>Cerrar</button>
+            </div>
+          </div>
+        </div>
+      </div>;
+    })()}
     {tab==='conteos'&&<div className="sup-section">
       {pendientes.length===0?<div className="nodata">No hay conteos pendientes de validación ✓</div>
       :<div className="twrap t-sup">
         <div className="thead"><span>Conteo</span><span>Fecha</span><span>Registrado por</span><span>Productos</span><span>Acción</span></div>
         {pendientes.sort((a,b)=>new Date(b.fecha)-new Date(a.fecha)).map(q=>(
-          <div key={q.id} className="trow">
-            <span><span className="pname">{q.label}</span></span>
+          <div key={q.id} className="trow qclick" onClick={()=>setVerQ(q)} title="Ver resumen del conteo">
+            <span><span className="pname">{q.label}</span><span className="pdesc">Clic para ver detalle</span></span>
             <span style={{fontSize:12,color:'var(--text2)'}}>{new Date(q.fecha).toLocaleDateString('es',{day:'2-digit',month:'short',year:'numeric'})}</span>
             <span style={{fontSize:12,color:'var(--blue)'}}>{getNombre(q.created_by)}</span>
             <span className="mono">{Object.keys(q.inventario).length}</span>
-            <span style={{display:'flex',gap:4}}><button className="bval" onClick={()=>validarQ(q.id,q.label)}>✓ Validar</button><button className="bdel" style={{padding:'4px 10px',border:'1px solid var(--border2)',borderRadius:4,fontSize:12}} onClick={()=>rechazarQ(q.id,q.label)}>✕ Rechazar</button></span>
+            <span style={{display:'flex',gap:4}} onClick={e=>e.stopPropagation()}>
+              <button className="bval" onClick={()=>validarQ(q.id,q.label)}>✓ Validar</button>
+              <button className="bdel" style={{padding:'4px 10px',border:'1px solid var(--border2)',borderRadius:4,fontSize:12}} onClick={()=>rechazarQ(q.id,q.label)}>✕ Rechazar</button>
+              <button className="bdel" style={{padding:'4px 8px',border:'1px solid var(--border2)',borderRadius:4,fontSize:12}} title="Eliminar conteo" onClick={()=>delQuincena(q.id,q.label)}>🗑️</button>
+            </span>
           </div>
         ))}
       </div>}
@@ -1402,9 +1535,109 @@ function MisMovimientos(){
   </div>;
 }
 
+function Ajustes(){
+  const {products,getStock,getConsumoDiario,getConsumoLabel,getClasificacion,getCosto,getDiasEntrega,getGastoMensual,getValorInventario,getGastoMensualTotal,updateConfig}=useApp();
+  const [bus,setBus]=useState('');
+  const [draft,setDraft]=useState({});
+  const [saved,setSaved]=useState(null);
+  const [err,setErr]=useState('');
+
+  const fmt=n=>'S/ '+(Number(n)||0).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const val=(p,campo)=>{
+    const k=`${p.id}-${campo}`;
+    if(draft[k]!==undefined)return draft[k];
+    const v=campo==='dias_entrega'?p.dias_entrega:p.costo_unitario;
+    return v===null||v===undefined?'':String(v);
+  };
+  function onChange(pid,campo,v){setDraft(d=>({...d,[`${pid}-${campo}`]:v}));}
+  async function onBlur(pid,campo){
+    const k=`${pid}-${campo}`;
+    if(draft[k]===undefined)return;
+    const raw=draft[k];
+    const num=raw===''?null:(campo==='dias_entrega'?parseInt(raw):parseFloat(raw));
+    if(raw!==''&&(isNaN(num)||num<0)){setErr('Valor inválido');setTimeout(()=>setErr(''),2500);return;}
+    const e=await updateConfig(pid,{[campo]:num});
+    setDraft(d=>{const n={...d};delete n[k];return n;});
+    if(e){setErr(e);setTimeout(()=>setErr(''),4000);}
+    else{setSaved(k);setTimeout(()=>setSaved(null),1500);}
+  }
+
+  const filtered=products.filter(p=>!bus||p.nombre.toLowerCase().includes(bus.toLowerCase())||(p.codigo||'').toLowerCase().includes(bus.toLowerCase()));
+  const configurados=products.filter(p=>getCosto(p.id)>0&&getDiasEntrega(p.id)>0).length;
+
+  return <div className="page">
+    <div className="ph">
+      <div><h1 className="pt">Ajustes</h1><p className="ps">Días de entrega y costo unitario por producto</p></div>
+      <span className="chip">Solo supervisores</span>
+    </div>
+    {err&&<Msg text={err} type="err"/>}
+    <div className="metrics3">
+      <div className="metric" style={{borderColor:'rgba(0,201,125,.2)'}}>
+        <span className="ml">Valor del inventario</span>
+        <span className="mv cg" style={{fontSize:24}}>{fmt(getValorInventario())}</span>
+      </div>
+      <div className="metric" style={{borderColor:'rgba(77,158,255,.2)'}}>
+        <span className="ml">Gasto mensual estimado</span>
+        <span className="mv" style={{color:'var(--blue)',fontSize:24}}>{fmt(getGastoMensualTotal())}</span>
+      </div>
+      <div className="metric">
+        <span className="ml">Productos configurados</span>
+        <span className="mv">{configurados}<small style={{fontSize:15,color:'var(--text3)'}}>/{products.length}</small></span>
+      </div>
+    </div>
+    <div className="filters"><input className="search" value={bus} onChange={e=>setBus(e.target.value)} placeholder="Buscar producto..."/></div>
+    <div className="twrap t-adj">
+      <div className="thead"><span>Clase</span><span>Código</span><span>Producto</span><span>Entrega</span><span>Costo unit.</span><span>Gasto/mes</span></div>
+      {filtered.map(p=>{
+        const cl=getClasificacion(p.id),lb=getConsumoLabel(p.id);
+        return <div key={p.id} className="trow">
+          <span><span className={`cbadge c${cl}`}>{cl}</span></span>
+          <span className="mono" style={{fontSize:11,color:'var(--text2)'}}>{p.codigo}</span>
+          <span><span className="pname">{p.nombre}</span><span className="pdesc">{lb?`${lb.v} ${p.unidad}/día`:'Sin historial'}</span></span>
+          <span className="afield">
+            <input className="ainput" type="number" min="0" value={val(p,'dias_entrega')} onChange={e=>onChange(p.id,'dias_entrega',e.target.value)} onBlur={()=>onBlur(p.id,'dias_entrega')} placeholder="—"/>
+            <span className="aunit">{saved===`${p.id}-dias_entrega`?<span className="savedot"/>:'días'}</span>
+          </span>
+          <span className="afield">
+            <span className="aunit">S/</span>
+            <input className="ainput cost" type="number" min="0" step="0.01" value={val(p,'costo_unitario')} onChange={e=>onChange(p.id,'costo_unitario',e.target.value)} onBlur={()=>onBlur(p.id,'costo_unitario')} placeholder="—"/>
+            {saved===`${p.id}-costo_unitario`&&<span className="savedot"/>}
+          </span>
+          <span className="gval">{getGastoMensual(p.id)>0?fmt(getGastoMensual(p.id)):'—'}</span>
+        </div>;
+      })}
+    </div>
+    <div className="alist">
+      {filtered.map(p=>{
+        const cl=getClasificacion(p.id),lb=getConsumoLabel(p.id);
+        return <div key={p.id} className="acard">
+          <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:10}}>
+            <span className={`cbadge c${cl}`}>{cl}</span>
+            <span style={{flex:1}}><span className="pname">{p.nombre}</span><span className="pdesc">{p.codigo} · {lb?`${lb.v} ${p.unidad}/día`:'Sin historial'}</span></span>
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+            <div>
+              <div style={{fontSize:10,textTransform:'uppercase',letterSpacing:'.05em',color:'var(--text2)',marginBottom:4}}>Días entrega</div>
+              <input className="ainput" style={{width:'100%'}} type="number" min="0" value={val(p,'dias_entrega')} onChange={e=>onChange(p.id,'dias_entrega',e.target.value)} onBlur={()=>onBlur(p.id,'dias_entrega')} placeholder="—"/>
+            </div>
+            <div>
+              <div style={{fontSize:10,textTransform:'uppercase',letterSpacing:'.05em',color:'var(--text2)',marginBottom:4}}>Costo unit. (S/)</div>
+              <input className="ainput cost" style={{width:'100%'}} type="number" min="0" step="0.01" value={val(p,'costo_unitario')} onChange={e=>onChange(p.id,'costo_unitario',e.target.value)} onBlur={()=>onBlur(p.id,'costo_unitario')} placeholder="—"/>
+            </div>
+          </div>
+          {getGastoMensual(p.id)>0&&<div style={{marginTop:8,fontSize:12,color:'var(--text2)'}}>Gasto/mes: <span className="gval">{fmt(getGastoMensual(p.id))}</span></div>}
+        </div>;
+      })}
+    </div>
+    <div style={{display:'flex',alignItems:'center',gap:6,marginTop:10,fontSize:11,color:'var(--text3)'}}>
+      <span className="savedot"/>Los cambios se guardan automáticamente al salir del campo
+    </div>
+  </div>;
+}
+
 const PAGES_BASE=[{id:'dashboard',label:'Dashboard',icon:'▦'},{id:'inventario',label:'Inventario',icon:'≡'},{id:'control',label:'Control',icon:'⊞'},{id:'ingresos',label:'Ingresos',icon:'↑'},{id:'graficos',label:'Gráficos',icon:'∿'}];
 const PAGES_OP=[...PAGES_BASE,{id:'movimientos',label:'Mis movimientos',icon:'◎'}];
-const PAGES_SUP=[...PAGES_BASE,{id:'supervision',label:'Supervisión',icon:'◈'}];
+const PAGES_SUP=[...PAGES_BASE,{id:'supervision',label:'Supervisión',icon:'◈'},{id:'ajustes',label:'Ajustes',icon:'⚙'}];
 
 function AppMain({user,profile,isSupervisor,onLogout}){
   const [page,setPage]=useState('dashboard');
@@ -1453,6 +1686,7 @@ function AppInner({page,setPage,onLogout,userName,isSupervisor}){
       {page==='graficos'&&<Graficos/>}
       {page==='movimientos'&&!isSupervisor&&<MisMovimientos/>}
       {page==='supervision'&&isSupervisor&&<Supervision/>}
+      {page==='ajustes'&&isSupervisor&&<Ajustes/>}
     </main>
     <nav className="bottom-nav">
       {PAGES.map(p=><button key={p.id} className={`bnbtn${page===p.id?' on':''}`} onClick={()=>setPage(p.id)}>
