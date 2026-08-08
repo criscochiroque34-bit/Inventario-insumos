@@ -305,16 +305,31 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState(null);
 
+  // Trae TODAS las filas de una tabla, sin importar cuántas sean (Supabase limita 1000 por consulta)
+  async function fetchAll(table,{select='*',order,ascending=true}={}){
+    const PAGE=1000;let all=[];let from=0;
+    while(true){
+      let q=sb.from(table).select(select);
+      if(order)q=q.order(order,{ascending});
+      const {data,error}=await q.range(from,from+PAGE-1);
+      if(error)throw error;
+      all=all.concat(data||[]);
+      if(!data||data.length<PAGE)break;
+      from+=PAGE;
+    }
+    return{data:all};
+  }
+
   const load=useCallback(async()=>{
     try{
       const [p,q,qi,i,sal,al,u]=await Promise.all([
-        sb.from('products').select('*').order('id'),
-        sb.from('quincenas').select('*').order('fecha'),
-        sb.from('quincena_items').select('*'),
-        sb.from('ingresos').select('*').order('fecha',{ascending:false}),
-        sb.from('salidas').select('*').order('created_at',{ascending:false}),
+        fetchAll('products',{order:'id'}),
+        fetchAll('quincenas',{order:'fecha'}),
+        fetchAll('quincena_items'),
+        fetchAll('ingresos',{order:'fecha',ascending:false}),
+        fetchAll('salidas',{order:'created_at',ascending:false}),
         sb.from('activity_log').select('*').order('created_at',{ascending:false}).limit(100),
-        sb.from('usuarios').select('dni,nombre,area'),
+        fetchAll('usuarios',{select:'dni,nombre,area'}),
       ]);
       if(p.error)throw p.error;
       setProducts(p.data||[]);setQuincenas(q.data||[]);setQItems(qi.data||[]);setIngresos(i.data||[]);setSalidas(sal.data||[]);setActLog(al.data||[]);setUsuariosList(u.data||[]);
@@ -1344,8 +1359,9 @@ function Supervision(){
       <button className={`ptab${tab==='log'?' on':''}`} onClick={()=>setTab('log')}>Log</button>
     </div>
     {verQ&&(()=>{
+      // Mismo criterio que usa Control al llenar el formulario: el conteo mas reciente antes de este, sin importar su estado
       const anterior=[...quincenas]
-        .filter(x=>x.id!==verQ.id&&new Date(x.fecha)<=new Date(verQ.fecha)&&(x.status==='validated'||!x.status))
+        .filter(x=>x.id!==verQ.id&&new Date(x.fecha)<=new Date(verQ.fecha))
         .sort((a,b)=>new Date(b.fecha)-new Date(a.fecha))[0];
       const filas=Object.entries(verQ.inventario).map(([pid,cant])=>{
         const p=products.find(x=>x.id===parseInt(pid));
