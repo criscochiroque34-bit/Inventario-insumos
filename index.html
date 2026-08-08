@@ -454,6 +454,7 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
     await logAction('Registró conteo',label);await load();return null;
   }
   async function updateQ(qid,label,fecha,inv){
+    if(!Object.keys(inv).length)return 'No hay productos para guardar — el conteo quedaría vacío.';
     const {error:e1}=await sb.from('quincenas').update({label,fecha}).eq('id',qid);
     if(e1)return e1.message;
     await sb.from('quincena_items').delete().eq('quincena_id',qid);
@@ -718,7 +719,7 @@ function Inventario(){
     if(orden==='consumo_asc')return getConsumoDiario(a.id)-getConsumoDiario(b.id);
     return 0;
   });
-  function showMsg(t,type='ok'){setMsg({text:t,type});setTimeout(()=>setMsg({text:'',type:'ok'}),3000)}
+  function showMsg(t,type='ok'){setMsg({text:t,type});if(type!=='err')setTimeout(()=>setMsg({text:'',type:'ok'}),3000)}
   function openEdit(p){setEditId(p.id);setForm({codigo:p.codigo,nombre:p.nombre,descripcion:p.descripcion||'',unidad:p.unidad||'',conversion:p.conversion||'',stockInicial:''});setSf(true);setSi(false);setSs(false);}
   function openNew(){setEditId(null);setForm(empty);setSf(v=>!v);setSi(false);setSs(false);}
   async function saveProd(){
@@ -888,14 +889,31 @@ function Control(){
     if(negativo){const p=products.find(x=>x.id===parseInt(negativo[0]));setMsg({text:`La cantidad de "${p?.nombre||'un producto'}" no puede ser negativa.`,type:'err'});return;}
     const dupFecha=!editQ&&quincenas.find(q=>q.fecha===fechaConteo&&q.created_by!==userEmail);
     if(dupFecha){setMsg({text:`Ya existe un conteo del ${fechaConteo} registrado por ${dupFecha.created_by}.`,type:'err'});return;}
+    // Fallback de campos vacíos: mantiene el valor de referencia (anterior/original), NO el stock calculado
+    const inv={};let tocados=0;const invalidos=[];
+    products.forEach(p=>{
+      const v=counts[p.id];
+      if(v!==undefined&&v!==''){
+        const n=parseInt(v);
+        if(isNaN(n)){invalidos.push(p.nombre);return;}
+        inv[p.id]=n;tocados++;
+      }
+      else{
+        const prevRef=editQ?(editQ.inventario[p.id]??null):(ref?(ref.inventario[p.id]??null):null);
+        if(prevRef!==null)inv[p.id]=prevRef;
+      }
+    });
+    if(invalidos.length){setMsg({text:`Valor inválido en: ${invalidos.join(', ')}. Corrige antes de guardar.`,type:'err'});return;}
+    if(tocados===0){
+      if(!confirm('No ingresaste ningún valor nuevo — se guardará repitiendo el conteo anterior tal cual. ¿Continuar?'))return;
+    }
     setSaving(true);
-    const inv={};products.forEach(p=>{const v=counts[p.id];inv[p.id]=v!==undefined&&v!==''?parseInt(v):getStock(p.id);});
     let err;
     if(editQ){err=await updateQ(editQ.id,editLabel||editQ.label,editFecha||editQ.fecha,inv);}
     else{err=await addQ(label,fecha,inv);}
     if(err){setMsg({text:err,type:'err'});}
     else{setMsg({text:editQ?'Conteo actualizado ✓':'Conteo guardado — pendiente de validación ✓',type:'ok'});setCounts({});setEditQ(null);setEditLabel('');setEditFecha('');if(!editQ){setLabel(defLabel);setFecha(hoy);}}
-    setTimeout(()=>setMsg({text:'',type:'ok'}),3000);setSaving(false);
+    if(!err)setTimeout(()=>setMsg({text:'',type:'ok'}),3000);setSaving(false);
   }
 
   const ref=uq&&!editQ?uq:null;
@@ -1274,7 +1292,12 @@ function Supervision(){
   }
   async function guardarEdicionQ(){
     if(!editLabel2.trim()){setErrQ('La etiqueta no puede estar vacía');return;}
-    const inv={};Object.entries(editCounts).forEach(([k,v])=>{if(v!==''&&v!==null&&v!==undefined)inv[k]=parseInt(v);});
+    // Campo vacío = mantiene el valor original del conteo (NO se elimina el producto)
+    const inv={};
+    Object.keys(verQ.inventario).forEach(pid=>{
+      const v=editCounts[pid];
+      inv[pid]=(v!==''&&v!==null&&v!==undefined)?parseInt(v):verQ.inventario[pid];
+    });
     const negativo=Object.values(inv).some(v=>v<0);
     if(negativo){setErrQ('Ningún producto puede tener cantidad negativa');return;}
     setSavingQ(true);
