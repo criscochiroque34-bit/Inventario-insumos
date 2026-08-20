@@ -403,6 +403,56 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
     if(error)return error.message;
     await load();return null;
   }
+  const consumoMensualData=useMemo(()=>{
+    const qs=[...quincenasWithInv].filter(q=>q.status==='validated'||q.status===null||q.status===undefined).sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
+    const meses={};
+    for(let i=1;i<qs.length;i++){
+      const A=qs[i-1],B=qs[i];
+      const d0=new Date(A.fecha+'T12:00:00'),d1=new Date(B.fecha+'T12:00:00');
+      const dias=Math.round((d1-d0)/(1000*60*60*24));
+      if(dias<=0)continue;
+      products.forEach(p=>{
+        const a=A.inventario[p.id],b=B.inventario[p.id];
+        if(a===undefined||b===undefined)return;
+        const ing=ingresos.filter(x=>x.product_id===p.id&&(x.status==='approved'||x.status===null||x.status===undefined)&&new Date(x.fecha)>=new Date(A.fecha)&&new Date(x.fecha)<new Date(B.fecha)).reduce((t,x)=>t+x.cantidad,0);
+        const cons=a+ing-b;
+        if(cons<=0)return;
+        const porDia=cons/dias;
+        for(let t=1;t<=dias;t++){
+          const f=new Date(d0);f.setDate(f.getDate()+t);
+          const key=f.getFullYear()+'-'+String(f.getMonth()+1).padStart(2,'0');
+          if(!meses[key])meses[key]={unidades:{},totalU:0};
+          meses[key].unidades[p.id]=(meses[key].unidades[p.id]||0)+porDia;
+          meses[key].totalU+=porDia;
+        }
+      });
+    }
+    return meses;
+  },[products,quincenasWithInv,ingresos]);
+  function getResumenMensual(){
+    const keys=Object.keys(consumoMensualData).sort();
+    return keys.map((k,idx)=>{
+      const m=consumoMensualData[k];
+      const gasto=Object.entries(m.unidades).reduce((s,[pid,u])=>s+u*getCosto(parseInt(pid)),0);
+      const [y,mo]=k.split('-');
+      const label=new Date(parseInt(y),parseInt(mo)-1,1).toLocaleDateString('es-PE',{month:'short',year:'numeric'});
+      let variacion=null;
+      if(idx>0){
+        const prev=consumoMensualData[keys[idx-1]];
+        const gPrev=Object.entries(prev.unidades).reduce((s,[pid,u])=>s+u*getCosto(parseInt(pid)),0);
+        if(gPrev>0)variacion=Math.round(((gasto-gPrev)/gPrev)*100);
+      }
+      return{key:k,label:label[0].toUpperCase()+label.slice(1),unidades:Math.round(m.totalU),gasto,variacion,porProducto:m.unidades};
+    });
+  }
+  function getConsumoMensualProducto(pid){
+    const keys=Object.keys(consumoMensualData).sort();
+    return keys.map(k=>{
+      const [y,mo]=k.split('-');
+      const label=new Date(parseInt(y),parseInt(mo)-1,1).toLocaleDateString('es-PE',{month:'short'});
+      return{q:label[0].toUpperCase()+label.slice(1),v:Math.round((consumoMensualData[k].unidades[pid]||0)*10)/10};
+    }).filter(x=>x.v>0);
+  }
   function getConsumoLabel(pid){
     const cd=getConsumoDiario(pid);
     if(!cd)return null;
@@ -540,7 +590,7 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
   function csvInventario(){const rows=[['Clase','Código','Nombre','Unidad','Stock','Consumo/día','Días','Estado']];products.forEach(p=>{const e=getEstado(p.id);const cl=getClasificacion(p.id);const cd=getConsumoDiario(p.id);rows.push([cl,p.codigo,p.nombre,p.unidad,getStock(p.id),cd?Math.round(cd*10)/10:0,getDias(p.id)===999?'Sin hist.':getDias(p.id),e==='critico'?'Crítico':e==='alerta'?'Alerta':'En stock'])});dl(rows,'inventario');}
   function csvLista(){const rows=[['Código','Nombre','Stock','Consumo/día','Pedir','Unidad','Días']];getLista().forEach(p=>{const cd=getConsumoDiario(p.id);const consumoDia=cd?Math.round(cd*10)/10:0;rows.push([p.codigo,p.nombre,p.stock,consumoDia,p.pedir,p.unidad,p.dias===999?'Sin hist.':p.dias])});dl(rows,'lista-compra');}
   function csvConsolidado(){const qs=[...quincenasWithInv].sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));const headers=['Código','Nombre','Unidad',...qs.map(q=>q.label)];const rows=[headers];products.forEach(p=>{rows.push([p.codigo,p.nombre,p.unidad,...qs.map(q=>q.inventario[p.id]??'')]);});dl(rows,'consolidado-conteos');}
-  return <Ctx.Provider value={{products,quincenas:quincenasWithInv,ingresos,salidas,actLog,usuariosList,loading,error,userEmail,isSupervisor,onLogout,getStock,getStockDisponible,getConsumo,getConsumoDiario,getConsumoLabel,getClasificacion,getCosto,getDiasEntrega,getGastoMensual,getValorInventario,getGastoMensualTotal,updateConfig,getDias,getEstado,getLista,getAnomalias,addProd,updateProd,delProd,addQ,updateQ,validarQ,rechazarQ,delQuincena,addIng,aprobarIngreso,rechazarIngreso,updateIngreso,addSalida,aprobarSalida,rechazarSalida,updateSalida,csvInventario,csvLista,csvConsolidado}}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{products,quincenas:quincenasWithInv,ingresos,salidas,actLog,usuariosList,loading,error,userEmail,isSupervisor,onLogout,getStock,getStockDisponible,getConsumo,getConsumoDiario,getConsumoLabel,getClasificacion,getCosto,getDiasEntrega,getGastoMensual,getValorInventario,getGastoMensualTotal,getResumenMensual,getConsumoMensualProducto,updateConfig,getDias,getEstado,getLista,getAnomalias,addProd,updateProd,delProd,addQ,updateQ,validarQ,rechazarQ,delQuincena,addIng,aprobarIngreso,rechazarIngreso,updateIngreso,addSalida,aprobarSalida,rechazarSalida,updateSalida,csvInventario,csvLista,csvConsolidado}}>{children}</Ctx.Provider>;
 }
 const useApp=()=>useContext(Ctx);
 
@@ -579,7 +629,7 @@ function LineChartSVG({data,height=180}){
 }
 
 function Dashboard(){
-  const {products,getStock,getConsumo,getConsumoLabel,getConsumoDiario,getCosto,getDiasEntrega,getGastoMensualTotal,getDias,getEstado,getLista,csvLista,isSupervisor}=useApp();
+  const {products,getStock,getConsumo,getConsumoLabel,getConsumoDiario,getCosto,getGastoMensualTotal,getDias,getEstado,getLista,csvLista,isSupervisor}=useApp();
   const [show,setShow]=useState(false);
   const [showProy,setShowProy]=useState(false);
   const [diasProy,setDiasProy]=useState(90);
@@ -599,18 +649,15 @@ function Dashboard(){
     const pedir=Math.max(0,necesito-stock);
     const costo=getCosto(p.id);
     const gasto=pedir*costo;
-    const dEnt=getDiasEntrega(p.id);
-    const margen=diasCubre-dEnt; // días que quedan para hacer el pedido
-    const fLimite=(()=>{const d=new Date();d.setDate(d.getDate()+Math.max(0,margen));return d;})();
-    return{...p,cd,necesito,pedir,diasCubre,costo,gasto,dEnt,margen,fLimite};
+    return{...p,cd,necesito,pedir,diasCubre,costo,gasto};
   }).filter(Boolean).sort((a,b)=>a.diasCubre-b.diasCubre);
   const totalProy=listaProy.reduce((s,p)=>s+p.gasto,0);
   const fmtS=n=>'S/ '+(Number(n)||0).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});
 
   function csvProy(){
-    const rows=[['Código','Nombre','Stock actual','Días que cubre','Consumo/día','Necesito (total)','A pedir','Unidad','Días entrega','Pedir antes de','Costo unit. (S/)','Subtotal (S/)']];
-    listaProy.forEach(p=>rows.push([p.codigo,p.nombre,getStock(p.id),p.diasCubre,Math.round(p.cd*10)/10,p.necesito,p.pedir,p.unidad,p.dEnt||'',p.dEnt?p.fLimite.toLocaleDateString('en-CA'):'',p.costo?p.costo.toFixed(2):'',p.gasto?p.gasto.toFixed(2):'']));
-    if(totalProy>0)rows.push(['','','','','','','','','','','TOTAL',totalProy.toFixed(2)]);
+    const rows=[['Código','Nombre','Stock actual','Días que cubre','Consumo/día','Necesito (total)','A pedir','Unidad','Costo unit. (S/)','Subtotal (S/)']];
+    listaProy.forEach(p=>rows.push([p.codigo,p.nombre,getStock(p.id),p.diasCubre,Math.round(p.cd*10)/10,p.necesito,p.pedir,p.unidad,p.costo?p.costo.toFixed(2):'',p.gasto?p.gasto.toFixed(2):'']));
+    if(totalProy>0)rows.push(['','','','','','','','','TOTAL',totalProy.toFixed(2)]);
     const csv=rows.map(r=>r.map(c=>`"${c}"`).join(',')).join('\n');
     const a=document.createElement('a');
     a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);
@@ -624,13 +671,13 @@ function Dashboard(){
       <div className="metric"><span className="ml">Total</span><span className="mv">{products.length}</span></div>
       <div className="metric" style={{borderColor:'rgba(255,80,80,.2)'}}><span className="ml">Críticos</span><span className="mv cr">{cr.length}</span></div>
       <div className="metric" style={{borderColor:'rgba(240,165,0,.2)'}}><span className="ml">Alertas</span><span className="mv ca">{al.length}</span></div>
-      <div className="metric" style={{borderColor:'rgba(0,201,125,.2)'}}><span className="ml">En stock</span><span className="mv cg">{ok.length}</span></div>
+      <div className="metric" style={{borderColor:'rgba(0,201,125,.25)'}}><span className="ml">Costo diario</span><span className="mv cg" style={{fontFamily:'DM Mono,monospace',fontSize:22}}>{getGastoMensualTotal()>0?fmtS(getGastoMensualTotal()/30):'—'}</span></div>
     </div>
     {isSupervisor&&getGastoMensualTotal()>0&&<div className="metrics3" style={{gridTemplateColumns:'1fr',marginBottom:'1.5rem'}}>
       <div className="metric" style={{borderColor:'rgba(77,158,255,.2)'}}>
-        <span className="ml">Gasto mensual estimado</span>
-        <span className="mv" style={{color:'var(--blue)',fontSize:26}}>{fmtS(getGastoMensualTotal())}</span>
-        <span style={{fontSize:11,color:'var(--text3)',marginTop:4}}>Basado en el consumo diario y costos configurados</span>
+        <span className="ml">Gasto estimado del mes ({new Date().toLocaleDateString('es-PE',{month:'long'})})</span>
+        <span className="mv" style={{color:'var(--blue)',fontSize:26,fontFamily:'DM Mono,monospace'}}>{fmtS(getGastoMensualTotal()/30*new Date().getDate())}</span>
+        <span style={{fontSize:11,color:'var(--text3)',marginTop:4}}>Consumo diario × {new Date().getDate()} días transcurridos × costo unitario</span>
       </div>
     </div>}
     {lista.length>0&&<div style={{marginBottom:'1.5rem'}}>
@@ -674,8 +721,8 @@ function Dashboard(){
               <div className="chead" style={{gridTemplateColumns:'2fr 65px 55px 60px 60px 90px'}}><span>Producto</span><span>Stock</span><span>/día</span><span>Cubre</span><span>Pedir</span><span>Subtotal</span></div>
               {listaProy.map(p=><div key={p.id} className="crow" style={{gridTemplateColumns:'2fr 65px 55px 60px 60px 90px'}}>
                 <span>
-                  <span className="pname">{p.nombre}{p.dEnt>0&&p.margen<=7&&<span style={{background:'var(--red-dim)',color:'var(--red)',fontSize:10,padding:'2px 8px',borderRadius:99,marginLeft:6,fontWeight:600}}>Pedir antes del {p.fLimite.toLocaleDateString('es',{day:'2-digit',month:'short'})}</span>}</span>
-                  <span className="pdesc">{p.codigo}{p.dEnt>0?` · entrega ${p.dEnt}d`:''}</span>
+                  <span className="pname">{p.nombre}</span>
+                  <span className="pdesc">{p.codigo}</span>
                 </span>
                 <span className="mono">{getStock(p.id)}<small> {p.unidad}</small></span>
                 <span style={{fontSize:12,color:'var(--text2)'}}>{Math.round(p.cd*10)/10}</span>
@@ -699,11 +746,11 @@ function Dashboard(){
 
     {cr.length>0&&<div className="section">
       <h2 className="stitle"><span className="sdot" style={{background:'var(--red)'}}/>Críticos</h2>
-      <div className="alert-list">{cr.map(p=><div key={p.id} className="card card-red"><div className="atop"><span className="aname">{p.nombre}</span><DBadge d={getDias(p.id)}/></div><span className="acode">{p.codigo}</span><div className="astats"><span>Stock: <strong>{getStock(p.id)} {p.unidad}s</strong></span><span>Consume: <strong>{(()=>{const l=getConsumoLabel(p.id);return l?`~${l.v}/${l.u}`:'Sin datos';})()}</strong></span></div><Barra d={getDias(p.id)}/></div>)}</div>
+      <div className="alert-list">{cr.map(p=><div key={p.id} className="card card-red"><div className="atop"><span className="aname">{p.nombre}</span><DBadge d={getDias(p.id)}/></div><span className="acode">{p.codigo}</span><div className="astats"><span>Stock: <strong>{getStock(p.id)} {p.unidad}s</strong></span><span>Consume: <strong>{(()=>{const l=getConsumoLabel(p.id);return l?`~${l.v}/${l.u}`:'Sin datos';})()}</strong></span><span>Costo diario: <strong style={{color:'var(--green)'}}>{(()=>{const cd=getConsumoDiario(p.id);const co=getCosto(p.id);return cd&&co?fmtS(cd*co):'Sin costo';})()}</strong></span></div><Barra d={getDias(p.id)}/></div>)}</div>
     </div>}
     {al.length>0&&<div className="section">
       <h2 className="stitle"><span className="sdot" style={{background:'var(--amber)'}}/>Alertas</h2>
-      <div className="alert-list">{al.map(p=><div key={p.id} className="card card-amber"><div className="atop"><span className="aname">{p.nombre}</span><DBadge d={getDias(p.id)}/></div><span className="acode">{p.codigo}</span><div className="astats"><span>Stock: <strong>{getStock(p.id)} {p.unidad}s</strong></span><span>Consume: <strong>{(()=>{const l=getConsumoLabel(p.id);return l?`~${l.v}/${l.u}`:'Sin datos';})()}</strong></span></div><Barra d={getDias(p.id)}/></div>)}</div>
+      <div className="alert-list">{al.map(p=><div key={p.id} className="card card-amber"><div className="atop"><span className="aname">{p.nombre}</span><DBadge d={getDias(p.id)}/></div><span className="acode">{p.codigo}</span><div className="astats"><span>Stock: <strong>{getStock(p.id)} {p.unidad}s</strong></span><span>Consume: <strong>{(()=>{const l=getConsumoLabel(p.id);return l?`~${l.v}/${l.u}`:'Sin datos';})()}</strong></span><span>Costo diario: <strong style={{color:'var(--green)'}}>{(()=>{const cd=getConsumoDiario(p.id);const co=getCosto(p.id);return cd&&co?fmtS(cd*co):'Sin costo';})()}</strong></span></div><Barra d={getDias(p.id)}/></div>)}</div>
     </div>}
     <div className="section">
       <h2 className="stitle">Todos los productos</h2>
@@ -1009,7 +1056,8 @@ function Ingresos(){
 }
 
 function Graficos(){
-  const {products,quincenas,salidas,ingresos,usuariosList,getStock,getConsumo,getConsumoLabel,getDias,getEstado}=useApp();
+  const {products,quincenas,salidas,ingresos,usuariosList,getStock,getConsumo,getConsumoLabel,getDias,getEstado,getResumenMensual,getConsumoMensualProducto,getCosto}=useApp();
+  const [vistaConsumo,setVistaConsumo]=useState('conteo');
   const areaColors=['#00c97d','#4d9eff','#f0a500','#ff5050'];
   const salAprobadas=(salidas||[]).filter(sv=>sv.status==='approved'&&sv.area);
   const areas=[...new Set(salAprobadas.map(sv=>sv.area).filter(Boolean))];
@@ -1023,12 +1071,21 @@ function Graficos(){
   const cd=[];for(let i=1;i<qs.length;i++){const p=qs[i-1].inventario[sid]??0,c=qs[i].inventario[sid]??0;cd.push({q:qs[i].label,v:Math.max(0,p-c)});}
   return <div className="page">
     <div className="ph"><div><h1 className="pt">Gráficos</h1><p className="ps">Análisis de consumo y proyección</p></div></div>
-    <div className="ptabs"><button className={`ptab${tab==='c'?' on':''}`} onClick={()=>setTab('c')}>Consumo y proyección</button><button className={`ptab${tab==='a'?' on':''}`} onClick={()=>setTab('a')}>Por área</button></div>
+    <div className="ptabs"><button className={`ptab${tab==='c'?' on':''}`} onClick={()=>setTab('c')}>Consumo y proyección</button><button className={`ptab${tab==='m'?' on':''}`} onClick={()=>setTab('m')}>Resumen mensual</button><button className={`ptab${tab==='a'?' on':''}`} onClick={()=>setTab('a')}>Por área</button></div>
     {tab==='c'&&<>
       <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:'1rem'}}><label style={{fontSize:12,color:'var(--text2)'}}>Producto</label><select value={sid??''} onChange={e=>setSid(parseInt(e.target.value))} style={{minWidth:220,width:'auto'}}>{products.map(p=><option key={p.id} value={p.id}>{p.nombre}</option>)}</select></div>
       {prod&&<>
         <div className="metrics3"><div className="metric"><span className="ml">Stock actual</span><span className={`mv ${est}`}>{stock}<small style={{fontSize:12,fontWeight:400,color:'var(--text2)'}}> {prod.unidad}s</small></span></div><div className="metric"><span className="ml">Consume prom</span><span className="mv">{consumoLabel?consumoLabel.v:avg}<small style={{fontSize:12,fontWeight:400,color:'var(--text2)'}}> {prod.unidad}/{consumoLabel?consumoLabel.u:'período'}</small></span></div><div className="metric"><span className="ml">Días restantes</span><span className={`mv ${est}`}>{dias===999?'—':`${dias}d`}</span></div></div>
-        <div className="chcard"><div className="chtitle">Consumo por conteo</div><BarChartSVG data={cd} color="#00c97d" height={160}/></div>
+        <div className="chcard">
+          <div className="chrow">
+            <div className="chtitle">{vistaConsumo==='conteo'?'Consumo por conteo':'Consumo por mes'}</div>
+            <div className="tabs" style={{margin:0}}>
+              <button className={`tab${vistaConsumo==='conteo'?' on':''}`} onClick={()=>setVistaConsumo('conteo')}>Por conteo</button>
+              <button className={`tab${vistaConsumo==='mes'?' on':''}`} onClick={()=>setVistaConsumo('mes')}>Por mes</button>
+            </div>
+          </div>
+          <BarChartSVG data={vistaConsumo==='conteo'?cd:getConsumoMensualProducto(sid)} color="#00c97d" height={160}/>
+        </div>
         {(()=>{
           const cons=[];
           for(let i=1;i<qs.length;i++){
@@ -1062,6 +1119,62 @@ function Graficos(){
         })()}
       </>}
     </>}
+    {tab==='m'&&(()=>{
+      const resumen=getResumenMensual();
+      if(!resumen.length)return <div className="nodata">Aún no hay suficientes conteos validados para armar el resumen mensual. Se necesitan al menos 2.</div>;
+      const fmtS=n=>'S/ '+(Number(n)||0).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});
+      const hayCostos=resumen.some(m=>m.gasto>0);
+      const maxG=Math.max(...resumen.map(m=>hayCostos?m.gasto:m.unidades),1);
+      const mesActual=resumen[resumen.length-1];
+      return <>
+        <div className="metrics3">
+          <div className="metric" style={{borderColor:'rgba(77,158,255,.2)'}}>
+            <span className="ml">Mes actual ({mesActual.label})</span>
+            <span className="mv" style={{color:'var(--blue)',fontSize:22,fontFamily:'DM Mono,monospace'}}>{hayCostos?fmtS(mesActual.gasto):`${mesActual.unidades} und`}</span>
+            {mesActual.variacion!==null&&<span style={{fontSize:12,fontWeight:500,color:mesActual.variacion>0?'var(--red)':mesActual.variacion<0?'var(--green)':'var(--text2)'}}>{mesActual.variacion>0?'↑':mesActual.variacion<0?'↓':'='} {Math.abs(mesActual.variacion)}% vs mes anterior</span>}
+          </div>
+          <div className="metric">
+            <span className="ml">Meses con historial</span>
+            <span className="mv">{resumen.length}</span>
+          </div>
+          <div className="metric">
+            <span className="ml">Promedio mensual</span>
+            <span className="mv" style={{fontSize:22,fontFamily:'DM Mono,monospace'}}>{hayCostos?fmtS(resumen.reduce((s,m)=>s+m.gasto,0)/resumen.length):`${Math.round(resumen.reduce((s,m)=>s+m.unidades,0)/resumen.length)} und`}</span>
+          </div>
+        </div>
+        {!hayCostos&&<div style={{fontSize:12,color:'var(--amber)',marginBottom:'1rem'}}>⚠ Configura los costos unitarios en <strong>Ajustes</strong> para ver el gasto en soles. Por ahora se muestran unidades.</div>}
+        <div className="chcard">
+          <div className="chtitle">Histórico mensual — {hayCostos?'gasto estimado (S/)':'consumo (unidades)'}</div>
+          <div style={{display:'flex',flexDirection:'column',gap:8}}>
+            {resumen.map(m=>{
+              const v=hayCostos?m.gasto:m.unidades;
+              const pct=Math.round(v/maxG*100);
+              return <div key={m.key} style={{display:'grid',gridTemplateColumns:'80px 1fr 110px 80px',gap:10,alignItems:'center'}}>
+                <span style={{fontSize:12,fontWeight:500}}>{m.label}</span>
+                <div style={{height:18,background:'var(--bg4)',borderRadius:5,overflow:'hidden'}}>
+                  <div style={{height:'100%',width:`${pct}%`,background:'linear-gradient(90deg,#4d9eff,#00c97d)',borderRadius:5,transition:'.3s'}}/>
+                </div>
+                <span className="mono" style={{fontSize:12,textAlign:'right'}}>{hayCostos?fmtS(m.gasto):`${m.unidades} und`}</span>
+                <span className="mono" style={{fontSize:12,textAlign:'right',color:m.variacion===null?'var(--text3)':m.variacion>0?'var(--red)':m.variacion<0?'var(--green)':'var(--text2)'}}>
+                  {m.variacion===null?'—':`${m.variacion>0?'↑':m.variacion<0?'↓':'='} ${Math.abs(m.variacion)}%`}
+                </span>
+              </div>;
+            })}
+          </div>
+        </div>
+        {hayCostos&&<div className="chcard">
+          <div className="chtitle">Detalle del mes actual — {mesActual.label}</div>
+          <div style={{display:'flex',flexDirection:'column',gap:6}}>
+            {Object.entries(mesActual.porProducto).map(([pid,u])=>({pid,u,p:products.find(x=>x.id===parseInt(pid)),g:u*getCosto(parseInt(pid))})).filter(x=>x.p&&x.g>0).sort((a,b)=>b.g-a.g).slice(0,10).map(x=>
+              <div key={x.pid} style={{display:'flex',justifyContent:'space-between',fontSize:12,padding:'5px 0',borderBottom:'1px solid var(--border)'}}>
+                <span>{x.p.nombre.length>32?x.p.nombre.slice(0,32)+'…':x.p.nombre}<span style={{color:'var(--text3)',marginLeft:8}}>{Math.round(x.u*10)/10} und</span></span>
+                <span className="mono" style={{color:'var(--green)'}}>{fmtS(x.g)}</span>
+              </div>
+            )}
+          </div>
+        </div>}
+      </>;
+    })()}
     {tab==='a'&&<AreaTab salidas={salidas||[]} products={products} areaColors={areaColors}/>}
   </div>;
 }
@@ -1636,102 +1749,107 @@ function MisMovimientos(){
 }
 
 function Ajustes(){
-  const {products,getStock,getConsumoDiario,getConsumoLabel,getClasificacion,getCosto,getDiasEntrega,getGastoMensual,getValorInventario,getGastoMensualTotal,updateConfig}=useApp();
+  const {products,getStock,getConsumoLabel,getClasificacion,getCosto,getGastoMensual,getValorInventario,getGastoMensualTotal,updateConfig}=useApp();
   const [bus,setBus]=useState('');
   const [draft,setDraft]=useState({});
-  const [saved,setSaved]=useState(null);
-  const [err,setErr]=useState('');
+  const [saving,setSaving]=useState(false);
+  const [msg,setMsg]=useState({text:'',type:'ok'});
 
   const fmt=n=>'S/ '+(Number(n)||0).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});
-  const val=(p,campo)=>{
-    const k=`${p.id}-${campo}`;
-    if(draft[k]!==undefined)return draft[k];
-    const v=campo==='dias_entrega'?p.dias_entrega:p.costo_unitario;
+  const val=p=>{
+    if(draft[p.id]!==undefined)return draft[p.id];
+    const v=p.costo_unitario;
     return v===null||v===undefined?'':String(v);
   };
-  function onChange(pid,campo,v){setDraft(d=>({...d,[`${pid}-${campo}`]:v}));}
-  async function onBlur(pid,campo){
-    const k=`${pid}-${campo}`;
-    if(draft[k]===undefined)return;
-    const raw=draft[k];
-    const num=raw===''?null:(campo==='dias_entrega'?parseInt(raw):parseFloat(raw));
-    if(raw!==''&&(isNaN(num)||num<0)){setErr('Valor inválido');setTimeout(()=>setErr(''),2500);return;}
-    const e=await updateConfig(pid,{[campo]:num});
-    setDraft(d=>{const n={...d};delete n[k];return n;});
-    if(e){setErr(e);setTimeout(()=>setErr(''),4000);}
-    else{setSaved(k);setTimeout(()=>setSaved(null),1500);}
+  const hayCambios=Object.keys(draft).length>0;
+
+  async function guardarTodo(){
+    const cambios=Object.entries(draft);
+    if(!cambios.length)return;
+    for(const [pid,raw] of cambios){
+      const num=raw===''?null:parseFloat(raw);
+      if(raw!==''&&(isNaN(num)||num<0)){
+        const p=products.find(x=>x.id===parseInt(pid));
+        setMsg({text:`Costo inválido en "${p?.nombre||'producto'}". Corrige antes de guardar.`,type:'err'});
+        return;
+      }
+    }
+    setSaving(true);
+    for(const [pid,raw] of cambios){
+      const num=raw===''?null:parseFloat(raw);
+      const e=await updateConfig(parseInt(pid),{costo_unitario:num});
+      if(e){setMsg({text:e,type:'err'});setSaving(false);return;}
+    }
+    setDraft({});
+    setMsg({text:`${cambios.length} costo${cambios.length>1?'s':''} guardado${cambios.length>1?'s':''} ✓`,type:'ok'});
+    setTimeout(()=>setMsg({text:'',type:'ok'}),3000);
+    setSaving(false);
   }
 
   const filtered=products.filter(p=>!bus||p.nombre.toLowerCase().includes(bus.toLowerCase())||(p.codigo||'').toLowerCase().includes(bus.toLowerCase()));
-  const configurados=products.filter(p=>getCosto(p.id)>0&&getDiasEntrega(p.id)>0).length;
+  const configurados=products.filter(p=>getCosto(p.id)>0).length;
 
   return <div className="page">
     <div className="ph">
-      <div><h1 className="pt">Ajustes</h1><p className="ps">Días de entrega y costo unitario por producto</p></div>
+      <div><h1 className="pt">Ajustes</h1><p className="ps">Costo unitario por producto</p></div>
       <span className="chip">Solo supervisores</span>
     </div>
-    {err&&<Msg text={err} type="err"/>}
+    {msg.text&&<Msg text={msg.text} type={msg.type}/>}
     <div className="metrics3">
       <div className="metric" style={{borderColor:'rgba(0,201,125,.2)'}}>
         <span className="ml">Valor del inventario</span>
         <span className="mv cg" style={{fontSize:24}}>{fmt(getValorInventario())}</span>
       </div>
       <div className="metric" style={{borderColor:'rgba(77,158,255,.2)'}}>
-        <span className="ml">Gasto mensual estimado</span>
-        <span className="mv" style={{color:'var(--blue)',fontSize:24}}>{fmt(getGastoMensualTotal())}</span>
+        <span className="ml">Costo diario</span>
+        <span className="mv" style={{color:'var(--blue)',fontSize:24}}>{fmt(getGastoMensualTotal()/30)}</span>
       </div>
       <div className="metric">
-        <span className="ml">Productos configurados</span>
+        <span className="ml">Productos con costo</span>
         <span className="mv">{configurados}<small style={{fontSize:15,color:'var(--text3)'}}>/{products.length}</small></span>
       </div>
     </div>
-    <div className="filters"><input className="search" value={bus} onChange={e=>setBus(e.target.value)} placeholder="Buscar producto..."/></div>
+    <div className="filters" style={{alignItems:'center'}}>
+      <input className="search" value={bus} onChange={e=>setBus(e.target.value)} placeholder="Buscar producto..."/>
+      <button className="bp" style={{marginLeft:'auto',opacity:hayCambios?1:.4}} disabled={!hayCambios||saving} onClick={guardarTodo}>{saving?'Guardando...':`Guardar${hayCambios?` (${Object.keys(draft).length})`:''}`}</button>
+    </div>
     <div className="twrap t-adj">
-      <div className="thead"><span>Clase</span><span>Código</span><span>Producto</span><span>Entrega</span><span>Costo unit.</span><span>Gasto/mes</span></div>
+      <div className="thead"><span>Clase</span><span>Código</span><span>Producto</span><span>Costo unit.</span><span>Costo/día</span></div>
       {filtered.map(p=>{
         const cl=getClasificacion(p.id),lb=getConsumoLabel(p.id);
+        const editado=draft[p.id]!==undefined;
         return <div key={p.id} className="trow">
           <span><span className={`cbadge c${cl}`}>{cl}</span></span>
           <span className="mono" style={{fontSize:11,color:'var(--text2)'}}>{p.codigo}</span>
           <span><span className="pname">{p.nombre}</span><span className="pdesc">{lb?`${lb.v} ${p.unidad}/día`:'Sin historial'}</span></span>
           <span className="afield">
-            <input className="ainput" type="number" min="0" value={val(p,'dias_entrega')} onChange={e=>onChange(p.id,'dias_entrega',e.target.value)} onBlur={()=>onBlur(p.id,'dias_entrega')} placeholder="—"/>
-            <span className="aunit">{saved===`${p.id}-dias_entrega`?<span className="savedot"/>:'días'}</span>
-          </span>
-          <span className="afield">
             <span className="aunit">S/</span>
-            <input className="ainput cost" type="number" min="0" step="0.01" value={val(p,'costo_unitario')} onChange={e=>onChange(p.id,'costo_unitario',e.target.value)} onBlur={()=>onBlur(p.id,'costo_unitario')} placeholder="—"/>
-            {saved===`${p.id}-costo_unitario`&&<span className="savedot"/>}
+            <input className="ainput cost" type="number" min="0" step="0.01" value={val(p)} onChange={e=>setDraft(d=>({...d,[p.id]:e.target.value}))} placeholder="—" style={editado?{borderColor:'var(--amber)'}:{}}/>
           </span>
-          <span className="gval">{getGastoMensual(p.id)>0?fmt(getGastoMensual(p.id)):'—'}</span>
+          <span className="gval">{getGastoMensual(p.id)>0?fmt(getGastoMensual(p.id)/30):'—'}</span>
         </div>;
       })}
     </div>
     <div className="alist">
       {filtered.map(p=>{
         const cl=getClasificacion(p.id),lb=getConsumoLabel(p.id);
+        const editado=draft[p.id]!==undefined;
         return <div key={p.id} className="acard">
           <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:10}}>
             <span className={`cbadge c${cl}`}>{cl}</span>
             <span style={{flex:1}}><span className="pname">{p.nombre}</span><span className="pdesc">{p.codigo} · {lb?`${lb.v} ${p.unidad}/día`:'Sin historial'}</span></span>
           </div>
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
-            <div>
-              <div style={{fontSize:10,textTransform:'uppercase',letterSpacing:'.05em',color:'var(--text2)',marginBottom:4}}>Días entrega</div>
-              <input className="ainput" style={{width:'100%'}} type="number" min="0" value={val(p,'dias_entrega')} onChange={e=>onChange(p.id,'dias_entrega',e.target.value)} onBlur={()=>onBlur(p.id,'dias_entrega')} placeholder="—"/>
-            </div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,alignItems:'end'}}>
             <div>
               <div style={{fontSize:10,textTransform:'uppercase',letterSpacing:'.05em',color:'var(--text2)',marginBottom:4}}>Costo unit. (S/)</div>
-              <input className="ainput cost" style={{width:'100%'}} type="number" min="0" step="0.01" value={val(p,'costo_unitario')} onChange={e=>onChange(p.id,'costo_unitario',e.target.value)} onBlur={()=>onBlur(p.id,'costo_unitario')} placeholder="—"/>
+              <input className="ainput cost" style={{width:'100%',borderColor:editado?'var(--amber)':undefined}} type="number" min="0" step="0.01" value={val(p)} onChange={e=>setDraft(d=>({...d,[p.id]:e.target.value}))} placeholder="—"/>
             </div>
+            <div style={{fontSize:12,color:'var(--text2)'}}>Costo/día: <span className="gval">{getGastoMensual(p.id)>0?fmt(getGastoMensual(p.id)/30):'—'}</span></div>
           </div>
-          {getGastoMensual(p.id)>0&&<div style={{marginTop:8,fontSize:12,color:'var(--text2)'}}>Gasto/mes: <span className="gval">{fmt(getGastoMensual(p.id))}</span></div>}
         </div>;
       })}
     </div>
-    <div style={{display:'flex',alignItems:'center',gap:6,marginTop:10,fontSize:11,color:'var(--text3)'}}>
-      <span className="savedot"/>Los cambios se guardan automáticamente al salir del campo
-    </div>
+    <div style={{marginTop:12,fontSize:11,color:'var(--text3)'}}>Modifica los costos y presiona <strong>Guardar</strong> para aplicar los cambios.</div>
   </div>;
 }
 
