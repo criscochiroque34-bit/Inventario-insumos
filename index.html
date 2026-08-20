@@ -1058,6 +1058,7 @@ function Ingresos(){
 function Graficos(){
   const {products,quincenas,salidas,ingresos,usuariosList,getStock,getConsumo,getConsumoLabel,getDias,getEstado,getResumenMensual,getConsumoMensualProducto,getCosto}=useApp();
   const [vistaConsumo,setVistaConsumo]=useState('conteo');
+  const [mesSel,setMesSel]=useState(null);
   const areaColors=['#00c97d','#4d9eff','#f0a500','#ff5050'];
   const salAprobadas=(salidas||[]).filter(sv=>sv.status==='approved'&&sv.area);
   const areas=[...new Set(salAprobadas.map(sv=>sv.area).filter(Boolean))];
@@ -1126,6 +1127,8 @@ function Graficos(){
       const hayCostos=resumen.some(m=>m.gasto>0);
       const maxG=Math.max(...resumen.map(m=>hayCostos?m.gasto:m.unidades),1);
       const mesActual=resumen[resumen.length-1];
+      const mesVisto=resumen.find(m=>m.key===mesSel)||mesActual;
+      const esActual=mesVisto.key===mesActual.key;
       return <>
         <div className="metrics3">
           <div className="metric" style={{borderColor:'rgba(77,158,255,.2)'}}>
@@ -1144,13 +1147,14 @@ function Graficos(){
         </div>
         {!hayCostos&&<div style={{fontSize:12,color:'var(--amber)',marginBottom:'1rem'}}>⚠ Configura los costos unitarios en <strong>Ajustes</strong> para ver el gasto en soles. Por ahora se muestran unidades.</div>}
         <div className="chcard">
-          <div className="chtitle">Histórico mensual — {hayCostos?'gasto estimado (S/)':'consumo (unidades)'}</div>
+          <div className="chtitle">Histórico mensual — {hayCostos?'gasto estimado (S/)':'consumo (unidades)'} · clic en un mes para ver su detalle</div>
           <div style={{display:'flex',flexDirection:'column',gap:8}}>
             {resumen.map(m=>{
               const v=hayCostos?m.gasto:m.unidades;
               const pct=Math.round(v/maxG*100);
-              return <div key={m.key} style={{display:'grid',gridTemplateColumns:'80px 1fr 110px 80px',gap:10,alignItems:'center'}}>
-                <span style={{fontSize:12,fontWeight:500}}>{m.label}</span>
+              const sel=m.key===mesVisto.key;
+              return <div key={m.key} onClick={()=>setMesSel(m.key)} style={{display:'grid',gridTemplateColumns:'80px 1fr 110px 80px',gap:10,alignItems:'center',cursor:'pointer',padding:'4px 8px',margin:'-4px -8px',borderRadius:6,background:sel?'var(--bg3)':'transparent'}}>
+                <span style={{fontSize:12,fontWeight:sel?700:500,color:sel?'var(--blue)':'var(--text)'}}>{m.label}</span>
                 <div style={{height:18,background:'var(--bg4)',borderRadius:5,overflow:'hidden'}}>
                   <div style={{height:'100%',width:`${pct}%`,background:'linear-gradient(90deg,#4d9eff,#00c97d)',borderRadius:5,transition:'.3s'}}/>
                 </div>
@@ -1163,14 +1167,24 @@ function Graficos(){
           </div>
         </div>
         {hayCostos&&<div className="chcard">
-          <div className="chtitle">Detalle del mes actual — {mesActual.label}</div>
+          <div className="chrow">
+            <div className="chtitle" style={{margin:0}}>Detalle de {mesVisto.label}{esActual?' (mes actual)':''} — consumido y gastado</div>
+            <select value={mesVisto.key} onChange={e=>setMesSel(e.target.value)} style={{minWidth:150,width:'auto',fontSize:12}}>
+              {[...resumen].reverse().map(m=><option key={m.key} value={m.key}>{m.label}{m.key===mesActual.key?' (actual)':''}</option>)}
+            </select>
+          </div>
+          <div style={{display:'flex',justifyContent:'space-between',padding:'8px 0 12px',borderBottom:'1px solid var(--border)',marginBottom:8}}>
+            <span style={{fontSize:12,color:'var(--text2)'}}>Total gastado en {mesVisto.label}</span>
+            <span className="mono" style={{fontSize:15,fontWeight:600,color:'var(--green)'}}>{fmtS(mesVisto.gasto)}</span>
+          </div>
           <div style={{display:'flex',flexDirection:'column',gap:6}}>
-            {Object.entries(mesActual.porProducto).map(([pid,u])=>({pid,u,p:products.find(x=>x.id===parseInt(pid)),g:u*getCosto(parseInt(pid))})).filter(x=>x.p&&x.g>0).sort((a,b)=>b.g-a.g).slice(0,10).map(x=>
+            {Object.entries(mesVisto.porProducto).map(([pid,u])=>({pid,u,p:products.find(x=>x.id===parseInt(pid)),g:u*getCosto(parseInt(pid))})).filter(x=>x.p&&x.g>0).sort((a,b)=>b.g-a.g).slice(0,10).map(x=>
               <div key={x.pid} style={{display:'flex',justifyContent:'space-between',fontSize:12,padding:'5px 0',borderBottom:'1px solid var(--border)'}}>
                 <span>{x.p.nombre.length>32?x.p.nombre.slice(0,32)+'…':x.p.nombre}<span style={{color:'var(--text3)',marginLeft:8}}>{Math.round(x.u*10)/10} und</span></span>
                 <span className="mono" style={{color:'var(--green)'}}>{fmtS(x.g)}</span>
               </div>
             )}
+            {Object.entries(mesVisto.porProducto).filter(([pid,u])=>{const g=u*getCosto(parseInt(pid));return g>0;}).length===0&&<div className="nodata">Sin productos con costo configurado en este mes</div>}
           </div>
         </div>}
       </>;
