@@ -906,7 +906,7 @@ function Inventario(){
       <div className="mtitle" style={{color:'var(--red)'}}>↓ Solicitar salida</div>
       <div className="mform">
         <div className="field"><label>Producto *</label><select value={sal.productoId} onChange={e=>setSal(f=>({...f,productoId:e.target.value}))}><option value="">Seleccionar...</option>{products.map(p=><option key={p.id} value={p.id}>{p.nombre} (Disp: {getStockDisponible(p.id)})</option>)}</select></div>
-        <div className="mrow"><div className="field"><label>Cantidad *</label><input type="number" min="1" value={sal.cantidad} onChange={e=>setSal(f=>({...f,cantidad:e.target.value}))} placeholder="0"/></div><div className="field"><label>Fecha</label><input type="date" value={sal.fecha} onChange={e=>setSal(f=>({...f,fecha:e.target.value}))}/></div></div>
+        <div className="mrow"><div className="field"><label>Cantidad *</label><input type="number" min="1" value={sal.cantidad} onChange={e=>setSal(f=>({...f,cantidad:e.target.value}))} placeholder="0"/></div><div className="field"><label>Fecha{!isSupervisor&&<small style={{color:'var(--text3)',fontWeight:400}}> (hoy)</small>}</label><input type="date" value={sal.fecha} disabled={!isSupervisor} onChange={e=>setSal(f=>({...f,fecha:e.target.value}))} style={!isSupervisor?{opacity:.55,cursor:'not-allowed'}:{}}/></div></div>
         {isSupervisor&&<div className="field"><label>Área *</label><select value={sal.area||''} onChange={e=>setSal(f=>({...f,area:e.target.value}))} style={{borderColor:!sal.area?'var(--amber)':undefined}}><option value="">Seleccionar área...</option><option value="XD">XD</option><option value="IL">IL</option></select></div>}
       </div>
       {!confirmSal
@@ -1420,6 +1420,8 @@ function Supervision(){
   const {quincenas,ingresos,salidas,actLog,usuariosList,validarQ,rechazarQ,delQuincena,updateQ,getAnomalias,aprobarIngreso,rechazarIngreso,updateIngreso,aprobarSalida,rechazarSalida,updateSalida,products,isSupervisor}=useApp();
   const [verQ,setVerQ]=useState(null);
   const [filtroQ,setFiltroQ]=useState('pending');
+  const [filtroIngHist,setFiltroIngHist]=useState('todos');
+  const [filtroSalHist,setFiltroSalHist]=useState('todos');
   const [editandoQ,setEditandoQ]=useState(false);
   const [editCounts,setEditCounts]=useState({});
   const [editLabel2,setEditLabel2]=useState('');
@@ -1597,9 +1599,9 @@ function Supervision(){
       })()}
     </div>}
     {tab==='ingresos'&&<div className="sup-section">
-      {ingresosPend.length===0?<div className="nodata">No hay ingresos pendientes ✓</div>
-      :<div>
-        {ingresosPend.map(ig=>{const p=products.find(x=>x.id===ig.product_id);return(
+      {ingresosPend.length===0
+        ?<div className="nodata">No hay ingresos pendientes ✓</div>
+        :ingresosPend.map(ig=>{const p=products.find(x=>x.id===ig.product_id);return(
           <div key={ig.id} className="anomaly-card" style={{borderColor:'rgba(0,201,125,.25)',borderLeftColor:'var(--green)'}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:4}}>
               <span style={{fontWeight:500,fontSize:13}}>{p?.nombre||'—'}</span>
@@ -1622,10 +1624,16 @@ function Supervision(){
             </div>}
           </div>
         );})}
-        <div className="stitle" style={{marginTop:'1.5rem',marginBottom:'.75rem'}}>Historial</div>
-        <div className="twrap">
+      <div className="stitle" style={{marginTop:'1.5rem',marginBottom:'.75rem'}}>Historial</div>
+      <div className="tabs" style={{marginBottom:'.75rem'}}>
+        {[['todos','Todos'],['approved','Aprobados'],['rejected','Rechazados']].map(([v,l])=><button key={v} className={`tab${filtroIngHist===v?' on':''}`} onClick={()=>setFiltroIngHist(v)}>{l}</button>)}
+      </div>
+      {(()=>{
+        const hist=ingresos.filter(ig=>ig.status&&ig.status!=='pending'&&(filtroIngHist==='todos'||ig.status===filtroIngHist)).sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
+        if(!hist.length)return <div className="nodata">Sin registros en el historial</div>;
+        return <div className="twrap">
           <div className="thead" style={{gridTemplateColumns:'100px 2fr 80px 90px 120px'}}><span>Fecha</span><span>Producto</span><span>Cant.</span><span>Estado</span><span>Revisado por</span></div>
-          {ingresos.filter(ig=>ig.status&&ig.status!=='pending').map(ig=>{const p=products.find(x=>x.id===ig.product_id);return(
+          {hist.map(ig=>{const p=products.find(x=>x.id===ig.product_id);return(
             <div key={ig.id} className="trow" style={{gridTemplateColumns:'100px 2fr 80px 90px 120px'}}>
               <span style={{fontSize:12,color:'var(--text2)'}}>{new Date(ig.fecha).toLocaleDateString('es',{day:'2-digit',month:'short',year:'numeric'})}</span>
               <span><span className="pname">{p?.nombre||'—'}</span><span className="pdesc">{getNombre(ig.created_by)}</span></span>
@@ -1634,13 +1642,13 @@ function Supervision(){
               <span style={{fontSize:11,color:'var(--text3)'}}>{ig.reviewed_by||'—'}</span>
             </div>
           );})}
-        </div>
-      </div>}
+        </div>;
+      })()}
     </div>}
     {tab==='salidas'&&<div className="sup-section">
-      {salidasPend.length===0?<div className="nodata">No hay salidas pendientes ✓</div>
-      :<div>
-        {salidasPend.map(sv=>{const p=products.find(x=>x.id===sv.product_id);return(
+      {salidasPend.length===0
+        ?<div className="nodata">No hay salidas pendientes ✓</div>
+        :salidasPend.map(sv=>{const p=products.find(x=>x.id===sv.product_id);return(
           <div key={sv.id} className="anomaly-card" style={{borderColor:'rgba(255,80,80,.25)',borderLeftColor:'var(--red)'}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:4}}>
               <span style={{fontWeight:500,fontSize:13}}>{p?.nombre||'—'}</span>
@@ -1663,20 +1671,26 @@ function Supervision(){
             </div>}
           </div>
         );})}
-        <div className="stitle" style={{marginTop:'1.5rem',marginBottom:'.75rem'}}>Historial</div>
-        <div className="twrap">
+      <div className="stitle" style={{marginTop:'1.5rem',marginBottom:'.75rem'}}>Historial</div>
+      <div className="tabs" style={{marginBottom:'.75rem'}}>
+        {[['todos','Todos'],['approved','Aprobados'],['rejected','Rechazados']].map(([v,l])=><button key={v} className={`tab${filtroSalHist===v?' on':''}`} onClick={()=>setFiltroSalHist(v)}>{l}</button>)}
+      </div>
+      {(()=>{
+        const hist=salidas.filter(sv=>sv.status&&sv.status!=='pending'&&(filtroSalHist==='todos'||sv.status===filtroSalHist)).sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
+        if(!hist.length)return <div className="nodata">Sin registros en el historial</div>;
+        return <div className="twrap">
           <div className="thead" style={{gridTemplateColumns:'100px 2fr 80px 90px 120px'}}><span>Fecha</span><span>Producto</span><span>Cant.</span><span>Estado</span><span>Revisado por</span></div>
-          {salidas.filter(sv=>sv.status!=='pending').map(sv=>{const p=products.find(x=>x.id===sv.product_id);return(
+          {hist.map(sv=>{const p=products.find(x=>x.id===sv.product_id);return(
             <div key={sv.id} className="trow" style={{gridTemplateColumns:'100px 2fr 80px 90px 120px'}}>
               <span style={{fontSize:12,color:'var(--text2)'}}>{new Date(sv.fecha).toLocaleDateString('es',{day:'2-digit',month:'short',year:'numeric'})}</span>
-              <span><span className="pname">{p?.nombre||'—'}</span><span className="pdesc">{sv.created_by}</span></span>
+              <span><span className="pname">{p?.nombre||'—'}</span><span className="pdesc">{getNombre(sv.created_by)}{sv.area?' · '+sv.area:''}</span></span>
               <span className="mono" style={{color:'var(--red)'}}>-{sv.cantidad}</span>
-              <span><span className="badge" style={{background:`${statusColor[sv.status]}22`,color:statusColor[sv.status]}}>{statusLabel[sv.status]}</span></span>
+              <span><span className="badge" style={{background:sv.status==='approved'?'var(--green-dim)':'var(--red-dim)',color:sv.status==='approved'?'var(--green)':'var(--red)'}}>{sv.status==='approved'?'Aprobado':'Rechazado'}</span></span>
               <span style={{fontSize:11,color:'var(--text3)'}}>{sv.reviewed_by||'—'}</span>
             </div>
           );})}
-        </div>
-      </div>}
+        </div>;
+      })()}
     </div>}
     {tab==='anomalias'&&<div className="sup-section">
       {anomalias.length===0?<div className="nodata">No se detectaron anomalías ✓</div>
