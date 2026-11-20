@@ -822,6 +822,31 @@ function Inventario(){
       </div>
     </div>
     <Msg text={msg.text} type={msg.type}/>
+    {si&&<div className="fcard" style={{maxWidth:560,borderColor:'rgba(0,201,125,0.3)'}}>
+      <div className="mtitle">Registrar ingreso</div>
+      <div className="mform">
+        <div className="field"><label>Producto *</label><select value={ing.productoId} onChange={e=>setIng(f=>({...f,productoId:e.target.value}))}><option value="">Seleccionar...</option>{products.map(p=><option key={p.id} value={p.id}>{p.nombre}</option>)}</select></div>
+        <div className="mrow"><div className="field"><label>Cantidad *</label><input type="number" min="1" value={ing.cantidad} onChange={e=>setIng(f=>({...f,cantidad:e.target.value}))} placeholder="0"/></div><div className="field"><label>Fecha</label><input type="date" value={ing.fecha} onChange={e=>setIng(f=>({...f,fecha:e.target.value}))}/></div></div>
+        {(()=>{const ul=[...quincenas].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha))[0];return ul&&ing.fecha&&ing.fecha<ul.fecha&&<div style={{background:'var(--amber-dim)',color:'var(--amber)',fontSize:11,padding:'6px 10px',borderRadius:6,marginBottom:4}}>⚠️ Fecha anterior al último conteo ({ul.fecha}). El ingreso podría no sumarse al stock.</div>;})()}
+        <div className="field"><label>Nota</label><input value={ing.nota} onChange={e=>setIng(f=>({...f,nota:e.target.value}))} placeholder="Proveedor..."/></div>
+      </div>
+      <div className="mactions"><button className="bp" onClick={saveIng} disabled={saving}>{saving?'Guardando...':'Registrar'}</button><button className="bs" onClick={()=>setSi(false)}>Cancelar</button></div>
+    </div>}
+    {ss&&<div className="fcard" style={{maxWidth:560,borderColor:'rgba(255,80,80,0.3)'}}>
+      <div className="mtitle" style={{color:'var(--red)'}}>↓ Solicitar salida</div>
+      <div className="mform">
+        <div className="field"><label>Producto *</label><select value={sal.productoId} onChange={e=>setSal(f=>({...f,productoId:e.target.value}))}><option value="">Seleccionar...</option>{products.map(p=><option key={p.id} value={p.id}>{p.nombre} (Disp: {getStockDisponible(p.id)})</option>)}</select></div>
+        <div className="mrow"><div className="field"><label>Cantidad *</label><input type="number" min="1" value={sal.cantidad} onChange={e=>setSal(f=>({...f,cantidad:e.target.value}))} placeholder="0"/></div><div className="field"><label>Fecha{!isSupervisor&&<small style={{color:'var(--text3)',fontWeight:400}}> (hoy)</small>}</label><input type="date" value={sal.fecha} disabled={!isSupervisor} onChange={e=>setSal(f=>({...f,fecha:e.target.value}))} style={!isSupervisor?{opacity:.55,cursor:'not-allowed'}:{}}/></div></div>
+        {isSupervisor&&<div className="field"><label>Área *</label><select value={sal.area||''} onChange={e=>setSal(f=>({...f,area:e.target.value}))} style={{borderColor:!sal.area?'var(--amber)':undefined}}><option value="">Seleccionar área...</option><option value="XD">XD</option><option value="IL">IL</option></select></div>}
+      </div>
+      {!confirmSal
+        ?<div className="mactions"><button className="bp" style={{background:'var(--red)'}} onClick={pedirConfirmSal}>Solicitar salida</button><button className="bs" onClick={()=>setSs(false)}>Cancelar</button></div>
+        :<div style={{background:'var(--red-dim)',border:'1px solid rgba(255,80,80,.2)',borderRadius:'var(--radius-sm)',padding:'10px 12px'}}>
+          <div style={{fontSize:12,color:'var(--red)',fontWeight:500,marginBottom:8}}>¿Confirmar salida de {sal.cantidad} {products.find(p=>p.id===parseInt(sal.productoId))?.unidad} de {products.find(p=>p.id===parseInt(sal.productoId))?.nombre}?</div>
+          <div className="mactions"><button className="bp" style={{background:'var(--red)'}} onClick={saveSal} disabled={saving}>{saving?'Enviando...':'Sí, confirmar'}</button><button className="bs" onClick={()=>setConfirmSal(false)}>No, volver</button></div>
+        </div>
+      }
+    </div>}
     {sf&&<div className="fcard" style={{borderColor:editId?'rgba(77,158,255,0.3)':'var(--border2)'}}>
       <div className="ftitle">{editId?'✏️ Editar producto':'Nuevo producto'}</div>
       <div className="fgrid">
@@ -894,37 +919,6 @@ function Inventario(){
         );})}
       </div>
     </div>}
-    {ReactDOM.createPortal(<>
-    <div style={{position:'fixed',bottom:80,right:20,display:'flex',flexDirection:'column',gap:8,alignItems:'flex-end',zIndex:90}}>
-      <div style={{display:'flex',alignItems:'center',gap:6}}><span style={{fontSize:10,color:'var(--text3)'}}>Ingreso</span><button className="fab" onClick={abrirIng} style={{background:'var(--green)',color:'#000',position:'static',boxShadow:'0 4px 16px rgba(0,201,125,.3)'}}>{si?'✕':'↑'}</button></div>
-      <div style={{display:'flex',alignItems:'center',gap:6}}><span style={{fontSize:10,color:'var(--text3)'}}>Salida</span><button className="fab" onClick={abrirSal} style={{background:'var(--red)',color:'#fff',position:'static',boxShadow:'0 4px 16px rgba(255,80,80,.3)'}}>{ss?'✕':'↓'}</button></div>
-    </div>
-    {si&&<div className="modal">
-      <div className="mtitle">Registrar ingreso</div>
-      <div className="mform">
-        <div className="field"><label>Producto *</label><select value={ing.productoId} onChange={e=>setIng(f=>({...f,productoId:e.target.value}))}><option value="">Seleccionar...</option>{products.map(p=><option key={p.id} value={p.id}>{p.nombre}</option>)}</select></div>
-        <div className="mrow"><div className="field"><label>Cantidad *</label><input type="number" min="1" value={ing.cantidad} onChange={e=>setIng(f=>({...f,cantidad:e.target.value}))} placeholder="0"/></div><div className="field"><label>Fecha</label><input type="date" value={ing.fecha} onChange={e=>setIng(f=>({...f,fecha:e.target.value}))}/></div></div>
-        {(()=>{const ul=[...quincenas].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha))[0];return ul&&ing.fecha&&ing.fecha<ul.fecha&&<div style={{background:'var(--amber-dim)',color:'var(--amber)',fontSize:11,padding:'6px 10px',borderRadius:6,marginBottom:4}}>⚠️ Fecha anterior al último conteo ({ul.fecha}). El ingreso podría no sumarse al stock.</div>;})()}
-        <div className="field"><label>Nota</label><input value={ing.nota} onChange={e=>setIng(f=>({...f,nota:e.target.value}))} placeholder="Proveedor..."/></div>
-      </div>
-      <div className="mactions"><button className="bp" onClick={saveIng} disabled={saving}>{saving?'Guardando...':'Registrar'}</button><button className="bs" onClick={()=>setSi(false)}>Cancelar</button></div>
-    </div>}
-    {ss&&<div className="modal" style={{borderColor:'rgba(255,80,80,0.3)'}}>
-      <div className="mtitle" style={{color:'var(--red)'}}>↓ Solicitar salida</div>
-      <div className="mform">
-        <div className="field"><label>Producto *</label><select value={sal.productoId} onChange={e=>setSal(f=>({...f,productoId:e.target.value}))}><option value="">Seleccionar...</option>{products.map(p=><option key={p.id} value={p.id}>{p.nombre} (Disp: {getStockDisponible(p.id)})</option>)}</select></div>
-        <div className="mrow"><div className="field"><label>Cantidad *</label><input type="number" min="1" value={sal.cantidad} onChange={e=>setSal(f=>({...f,cantidad:e.target.value}))} placeholder="0"/></div><div className="field"><label>Fecha{!isSupervisor&&<small style={{color:'var(--text3)',fontWeight:400}}> (hoy)</small>}</label><input type="date" value={sal.fecha} disabled={!isSupervisor} onChange={e=>setSal(f=>({...f,fecha:e.target.value}))} style={!isSupervisor?{opacity:.55,cursor:'not-allowed'}:{}}/></div></div>
-        {isSupervisor&&<div className="field"><label>Área *</label><select value={sal.area||''} onChange={e=>setSal(f=>({...f,area:e.target.value}))} style={{borderColor:!sal.area?'var(--amber)':undefined}}><option value="">Seleccionar área...</option><option value="XD">XD</option><option value="IL">IL</option></select></div>}
-      </div>
-      {!confirmSal
-        ?<div className="mactions"><button className="bp" style={{background:'var(--red)'}} onClick={pedirConfirmSal}>Solicitar salida</button><button className="bs" onClick={()=>setSs(false)}>Cancelar</button></div>
-        :<div style={{background:'var(--red-dim)',border:'1px solid rgba(255,80,80,.2)',borderRadius:'var(--radius-sm)',padding:'10px 12px'}}>
-          <div style={{fontSize:12,color:'var(--red)',fontWeight:500,marginBottom:8}}>¿Confirmar salida de {sal.cantidad} {products.find(p=>p.id===parseInt(sal.productoId))?.unidad} de {products.find(p=>p.id===parseInt(sal.productoId))?.nombre}?</div>
-          <div className="mactions"><button className="bp" style={{background:'var(--red)'}} onClick={saveSal} disabled={saving}>{saving?'Enviando...':'Sí, confirmar'}</button><button className="bs" onClick={()=>setConfirmSal(false)}>No, volver</button></div>
-        </div>
-      }
-    </div>}
-    </>,document.body)}
   </div>;
 }
 
