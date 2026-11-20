@@ -783,6 +783,8 @@ function Inventario(){
   });
   function showMsg(t,type='ok'){setMsg({text:t,type});if(type!=='err')setTimeout(()=>setMsg({text:'',type:'ok'}),3000)}
   function openEdit(p){setEditId(p.id);setForm({codigo:p.codigo,nombre:p.nombre,descripcion:p.descripcion||'',unidad:p.unidad||'',conversion:p.conversion||'',stockInicial:''});setSf(true);setSi(false);setSs(false);}
+  function abrirIng(){setSi(v=>!v);setSf(false);setEditId(null);setSs(false);}
+  function abrirSal(){setSs(v=>!v);setSf(false);setEditId(null);setSi(false);}
   function openNew(){setEditId(null);setForm(empty);setSf(v=>!v);setSi(false);setSs(false);}
   async function saveProd(){
     if(!form.codigo||!form.nombre)return;setSaving(true);
@@ -813,7 +815,11 @@ function Inventario(){
   return <div className="page" style={{position:'relative'}}>
     <div className="ph">
       <div><h1 className="pt">Inventario</h1><p className="ps">{products.length} productos</p></div>
-      <button className="bp" onClick={openNew}>{sf&&!editId?'Cancelar':'+ Nuevo producto'}</button>
+      <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+        <button className="bp" onClick={abrirIng} style={{background:si?'var(--bg4)':'var(--green)',color:si?'var(--text)':'#000'}}>{si?'✕ Cerrar ingreso':'↑ Ingreso'}</button>
+        <button className="bp" onClick={abrirSal} style={{background:ss?'var(--bg4)':'var(--red)',color:'#fff'}}>{ss?'✕ Cerrar salida':'↓ Salida'}</button>
+        <button className="bs" onClick={openNew}>{sf&&!editId?'Cancelar':'+ Nuevo producto'}</button>
+      </div>
     </div>
     <Msg text={msg.text} type={msg.type}/>
     {sf&&<div className="fcard" style={{borderColor:editId?'rgba(77,158,255,0.3)':'var(--border2)'}}>
@@ -888,9 +894,10 @@ function Inventario(){
         );})}
       </div>
     </div>}
+    {ReactDOM.createPortal(<>
     <div style={{position:'fixed',bottom:80,right:20,display:'flex',flexDirection:'column',gap:8,alignItems:'flex-end',zIndex:90}}>
-      <div style={{display:'flex',alignItems:'center',gap:6}}><span style={{fontSize:10,color:'var(--text3)'}}>Ingreso</span><button className="fab" onClick={()=>{setSi(v=>!v);setSf(false);setEditId(null);setSs(false);}} style={{background:'var(--green)',color:'#000',position:'static',boxShadow:'0 4px 16px rgba(0,201,125,.3)'}}>{si?'✕':'↑'}</button></div>
-      <div style={{display:'flex',alignItems:'center',gap:6}}><span style={{fontSize:10,color:'var(--text3)'}}>Salida</span><button className="fab" onClick={()=>{setSs(v=>!v);setSf(false);setEditId(null);setSi(false);}} style={{background:'var(--red)',color:'#fff',position:'static',boxShadow:'0 4px 16px rgba(255,80,80,.3)'}}>{ss?'✕':'↓'}</button></div>
+      <div style={{display:'flex',alignItems:'center',gap:6}}><span style={{fontSize:10,color:'var(--text3)'}}>Ingreso</span><button className="fab" onClick={abrirIng} style={{background:'var(--green)',color:'#000',position:'static',boxShadow:'0 4px 16px rgba(0,201,125,.3)'}}>{si?'✕':'↑'}</button></div>
+      <div style={{display:'flex',alignItems:'center',gap:6}}><span style={{fontSize:10,color:'var(--text3)'}}>Salida</span><button className="fab" onClick={abrirSal} style={{background:'var(--red)',color:'#fff',position:'static',boxShadow:'0 4px 16px rgba(255,80,80,.3)'}}>{ss?'✕':'↓'}</button></div>
     </div>
     {si&&<div className="modal">
       <div className="mtitle">Registrar ingreso</div>
@@ -917,6 +924,7 @@ function Inventario(){
         </div>
       }
     </div>}
+    </>,document.body)}
   </div>;
 }
 
