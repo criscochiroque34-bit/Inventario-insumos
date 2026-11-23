@@ -626,12 +626,17 @@ function Msg({text,type}){return text?<div className={`smsg ${type||'ok'}`}>{tex
 function BarChartSVG({data,color='#00c97d',height=160}){
   if(!data||!data.length)return <div className="nodata">Sin datos suficientes</div>;
   const max=Math.max(...data.map(d=>d.v),1);
-  const W=500,H=height,pad={l:36,r:10,t:10,b:28};
+  const W=500,H=height;
+  const padL=36,padR=10,padT=10;
+  const cW0=W-padL-padR;
+  const gap0=cW0/data.length;
+  const apretado=gap0<34||data.some(d=>String(d.q).length>6);
+  const pad={l:padL,r:padR,t:padT,b:apretado?38:28};
   const cW=W-pad.l-pad.r,cH=H-pad.t-pad.b;
   const bW=Math.min(36,cW/data.length*0.6),gap=cW/data.length;
   return(<div className="chart-wrap"><svg viewBox={`0 0 ${W} ${H}`} className="svg-chart" style={{height}}>
     {[0,.25,.5,.75,1].map(t=>{const y=pad.t+cH*(1-t);return <g key={t}><line x1={pad.l} y1={y} x2={W-pad.r} y2={y} stroke="rgba(255,255,255,0.05)" strokeWidth="1"/><text x={pad.l-4} y={y+4} textAnchor="end" fontSize="9" fill="#555">{Math.round(max*t)}</text></g>;})}
-    {data.map((d,i)=>{const x=pad.l+gap*i+gap/2,bH=Math.max(2,(d.v/max)*cH),y=pad.t+cH-bH;return <g key={i}><rect x={x-bW/2} y={y} width={bW} height={bH} fill={color} opacity="0.85" rx="3"/><text x={x} y={H-pad.b+14} textAnchor="middle" fontSize="9" fill="#555">{d.q}</text><text x={x} y={y-4} textAnchor="middle" fontSize="9" fill="#888">{d.v}</text></g>;})}
+    {data.map((d,i)=>{const x=pad.l+gap*i+gap/2,bH=Math.max(2,(d.v/max)*cH),y=pad.t+cH-bH;const q=String(d.q).length>10?String(d.q).slice(0,9)+'…':d.q;return <g key={i}><rect x={x-bW/2} y={y} width={bW} height={bH} fill={color} opacity="0.85" rx="3"/><text x={x} y={H-pad.b+14} textAnchor={apretado?'end':'middle'} fontSize="9" fill="#555" transform={apretado?`rotate(-40 ${x} ${H-pad.b+14})`:undefined}>{q}</text><text x={x} y={y-4} textAnchor="middle" fontSize="9" fill="#888">{d.v}</text></g>;})}
   </svg></div>);
 }
 
@@ -1094,11 +1099,16 @@ function Graficos(){
   const [tab,setTab]=useState('c');
   const prod=products.find(p=>p.id===sid);
   const avg=getConsumo(sid),stock=getStock(sid),dias=getDias(sid),est=getEstado(sid),consumoLabel=getConsumoLabel(sid);
-  const qs=[...quincenas].sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
-  const cd=[];for(let i=1;i<qs.length;i++){const p=qs[i-1].inventario[sid]??0,c=qs[i].inventario[sid]??0;cd.push({q:qs[i].label,v:Math.max(0,p-c)});}
+  const qsValidados=quincenas.filter(q=>q.status==='validated'||q.status===null||q.status===undefined);
+  const qs=[...qsValidados].sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
+  const cd=[];for(let i=1;i<qs.length;i++){
+    const p=qs[i-1].inventario[sid]??0,c=qs[i].inventario[sid]??0;
+    const ing=(ingresos||[]).filter(x=>x.product_id===sid&&(x.status==='approved'||x.status===null||x.status===undefined)&&new Date(x.fecha)>=new Date(qs[i-1].fecha)&&new Date(x.fecha)<new Date(qs[i].fecha)).reduce((t,x)=>t+x.cantidad,0);
+    cd.push({q:qs[i].label,v:Math.max(0,p+ing-c)});
+  }
   return <div className="page">
     <div className="ph"><div><h1 className="pt">Gráficos</h1><p className="ps">Análisis de consumo y proyección</p></div></div>
-    <div className="ptabs"><button className={`ptab${tab==='c'?' on':''}`} onClick={()=>setTab('c')}>Consumo y proyección</button><button className={`ptab${tab==='m'?' on':''}`} onClick={()=>setTab('m')}>Resumen mensual</button><button className={`ptab${tab==='a'?' on':''}`} onClick={()=>setTab('a')}>Por área</button></div>
+    <div className="ptabs"><button className={`ptab${tab==='c'?' on':''}`} onClick={()=>setTab('c')}>Consumo y proyección</button><button className={`ptab${tab==='m'?' on':''}`} onClick={()=>setTab('m')}>Resumen mensual</button><button className={`ptab${tab==='a'?' on':''}`} onClick={()=>setTab('a')}>Por área</button><button className={`ptab${tab==='s'?' on':''}`} onClick={()=>setTab('s')}>Seguimiento de conteos</button></div>
     {tab==='c'&&<>
       <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:'1rem'}}><label style={{fontSize:12,color:'var(--text2)'}}>Producto</label><select value={sid??''} onChange={e=>setSid(parseInt(e.target.value))} style={{minWidth:220,width:'auto'}}>{products.map(p=><option key={p.id} value={p.id}>{p.nombre}</option>)}</select></div>
       {prod&&<>
@@ -1216,7 +1226,69 @@ function Graficos(){
       </>;
     })()}
     {tab==='a'&&<AreaTab salidas={salidas||[]} products={products} areaColors={areaColors}/>}
+    {tab==='s'&&<SeguimientoConteos quincenas={quincenas}/>}
   </div>;
+}
+
+function SeguimientoConteos({quincenas}){
+  const NSEM=10;
+  function mondayOf(d){const x=new Date(d);const day=(x.getDay()+6)%7;x.setDate(x.getDate()-day);x.setHours(0,0,0,0);return x;}
+  const hoy=new Date();hoy.setHours(0,0,0,0);
+  const lunesActual=mondayOf(hoy);
+  const diaCorta=['L','M','X','J','V','S','D'];
+  const fmtDia=d=>d.toLocaleDateString('es-PE',{day:'2-digit',month:'short'});
+  const semanas=[];
+  for(let i=NSEM-1;i>=0;i--){
+    const start=new Date(lunesActual);start.setDate(start.getDate()-i*7);
+    const fin=new Date(start);fin.setDate(fin.getDate()+6);
+    const dias=[];
+    for(let d=0;d<7;d++){
+      const dia=new Date(start);dia.setDate(dia.getDate()+d);
+      const dstr=dia.toLocaleDateString('en-CA');
+      dias.push({dstr,dia,qs:(quincenas||[]).filter(q=>q.fecha===dstr)});
+    }
+    const diasConConteo=dias.filter(d=>d.qs.length>0).length;
+    const esActual=start.getTime()===lunesActual.getTime();
+    const esFutura=start>hoy;
+    let status=esFutura?'futura':diasConConteo>=2?'ok':diasConConteo===1?'warning':'missing';
+    if(esActual&&status!=='ok')status='curso';
+    semanas.push({start,fin,dias,diasConConteo,status,esActual});
+  }
+  const evaluables=semanas.filter(s=>!s.esActual&&s.status!=='futura');
+  const cumplidas=evaluables.filter(s=>s.status==='ok').length;
+  const pct=evaluables.length?Math.round(cumplidas/evaluables.length*100):0;
+  const statusColor={ok:'var(--green)',warning:'var(--amber)',missing:'var(--red)',curso:'var(--blue)',futura:'var(--text3)'};
+  const statusLabel={ok:'✓ Cumplida',warning:'⚠ Incompleta (1/2)',missing:'✕ Sin conteos',curso:'● En curso',futura:'—'};
+  return <>
+    <div className="metrics3">
+      <div className="metric"><span className="ml">Cumplimiento ({evaluables.length} sem.)</span><span className="mv" style={{color:pct>=80?'var(--green)':pct>=50?'var(--amber)':'var(--red)'}}>{pct}%</span></div>
+      <div className="metric"><span className="ml">Semanas cumplidas</span><span className="mv cg">{cumplidas}</span></div>
+      <div className="metric"><span className="ml">Semanas incumplidas</span><span className="mv cr">{evaluables.length-cumplidas}</span></div>
+    </div>
+    <div className="chcard">
+      <div className="chtitle">Seguimiento semanal — se requieren mínimo 2 conteos por semana</div>
+      <div style={{display:'flex',flexDirection:'column',gap:6}}>
+        {semanas.map((s,i)=><div key={i} style={{display:'grid',gridTemplateColumns:'100px repeat(7,24px) 1fr auto',gap:8,alignItems:'center',padding:'6px 8px',borderRadius:6,borderLeft:`3px solid ${statusColor[s.status]}`,background:s.esActual?'var(--bg3)':'transparent'}}>
+          <span style={{fontSize:11,color:'var(--text2)'}}>{fmtDia(s.start)}–{fmtDia(s.fin)}</span>
+          {s.dias.map((d,j)=>{
+            let col='var(--bg4)';
+            if(d.qs.some(q=>q.status==='validated'))col='var(--green)';
+            else if(d.qs.some(q=>!q.status||q.status==='pending'))col='var(--amber)';
+            else if(d.qs.some(q=>q.status==='rejected'))col='var(--red)';
+            return <span key={j} title={`${diaCorta[j]} ${d.dstr}${d.qs.length?` · ${d.qs.length} conteo(s)`:' · sin conteo'}`} style={{width:16,height:16,borderRadius:4,background:col,justifySelf:'center',opacity:d.qs.length?1:.35}}/>;
+          })}
+          <span style={{fontSize:11,color:'var(--text3)'}}>{s.diasConConteo}/7 días con conteo</span>
+          <span style={{fontSize:11,fontWeight:500,color:statusColor[s.status],whiteSpace:'nowrap'}}>{statusLabel[s.status]}</span>
+        </div>)}
+      </div>
+      <div style={{display:'flex',gap:14,marginTop:12,fontSize:11,color:'var(--text2)',flexWrap:'wrap'}}>
+        <span><span style={{display:'inline-block',width:10,height:10,borderRadius:3,background:'var(--green)',marginRight:4}}/>Validado</span>
+        <span><span style={{display:'inline-block',width:10,height:10,borderRadius:3,background:'var(--amber)',marginRight:4}}/>Pendiente</span>
+        <span><span style={{display:'inline-block',width:10,height:10,borderRadius:3,background:'var(--red)',marginRight:4}}/>Rechazado</span>
+        <span><span style={{display:'inline-block',width:10,height:10,borderRadius:3,background:'var(--bg4)',marginRight:4,opacity:.5}}/>Sin conteo</span>
+      </div>
+    </div>
+  </>;
 }
 
 function AreaTab({salidas,products,areaColors}){
