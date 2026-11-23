@@ -302,6 +302,7 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
   const [salidas,setSalidas]=useState([]);
   const [actLog,setActLog]=useState([]);
   const [usuariosList,setUsuariosList]=useState([]);
+  const [costHistory,setCostHistory]=useState([]);
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState(null);
 
@@ -322,7 +323,7 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
 
   const load=useCallback(async()=>{
     try{
-      const [p,q,qi,i,sal,al,u]=await Promise.all([
+      const [p,q,qi,i,sal,al,u,ch]=await Promise.all([
         fetchAll('products',{order:'id'}),
         fetchAll('quincenas',{order:'fecha'}),
         fetchAll('quincena_items'),
@@ -330,9 +331,10 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
         fetchAll('salidas',{order:'created_at',ascending:false}),
         sb.from('activity_log').select('*').order('created_at',{ascending:false}).limit(100),
         fetchAll('usuarios',{select:'dni,nombre,area'}),
+        fetchAll('cost_history',{order:'fecha_desde'}).catch(()=>({data:[]})),
       ]);
       if(p.error)throw p.error;
-      setProducts(p.data||[]);setQuincenas(q.data||[]);setQItems(qi.data||[]);setIngresos(i.data||[]);setSalidas(sal.data||[]);setActLog(al.data||[]);setUsuariosList(u.data||[]);
+      setProducts(p.data||[]);setQuincenas(q.data||[]);setQItems(qi.data||[]);setIngresos(i.data||[]);setSalidas(sal.data||[]);setActLog(al.data||[]);setUsuariosList(u.data||[]);setCostHistory(ch.data||[]);
     }catch(e){setError(String(e.message||e||'Error de conexión'));}
     setLoading(false);
   },[]);
@@ -394,11 +396,33 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
     return clasifMap[pid]||'C';
   }
   function getCosto(pid){const p=products.find(x=>x.id===pid);const v=parseFloat(p?.costo_unitario);return isNaN(v)?0:v;}
+  const costHistoryByProd=useMemo(()=>{
+    const m={};
+    costHistory.forEach(c=>{(m[c.product_id]||(m[c.product_id]=[])).push(c);});
+    Object.values(m).forEach(arr=>arr.sort((a,b)=>new Date(a.fecha_desde)-new Date(b.fecha_desde)));
+    return m;
+  },[costHistory]);
+  function getCostoEn(pid,fecha){
+    const hist=costHistoryByProd[pid];
+    if(!hist||!hist.length)return getCosto(pid);
+    let vigente=null;
+    for(const c of hist){if(new Date(c.fecha_desde)<=new Date(fecha))vigente=c.costo;else break;}
+    return vigente===null?getCosto(pid):parseFloat(vigente);
+  }
   function getDiasEntrega(pid){const p=products.find(x=>x.id===pid);const v=parseInt(p?.dias_entrega);return isNaN(v)?0:v;}
   function getGastoMensual(pid){const cd=getConsumoDiario(pid);const co=getCosto(pid);return cd&&co?cd*30*co:0;}
   function getValorInventario(){return products.reduce((s,p)=>s+getStock(p.id)*getCosto(p.id),0);}
   function getGastoMensualTotal(){return products.reduce((s,p)=>s+getGastoMensual(p.id),0);}
   async function updateConfig(id,campos){
+    if('costo_unitario' in campos){
+      const nuevo=campos.costo_unitario;
+      const actual=getCosto(id);
+      const cambia=nuevo!==null&&nuevo!==undefined&&parseFloat(nuevo)!==actual;
+      if(cambia){
+        const {error:eh}=await sb.from('cost_history').insert([{product_id:id,costo:parseFloat(nuevo),fecha_desde:new Date().toISOString().slice(0,10)}]);
+        if(eh)return eh.message;
+      }
+    }
     const {error}=await sb.from('products').update(campos).eq('id',id);
     if(error)return error.message;
     await load();return null;
@@ -421,25 +445,25 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
         for(let t=1;t<=dias;t++){
           const f=new Date(d0);f.setDate(f.getDate()+t);
           const key=f.getFullYear()+'-'+String(f.getMonth()+1).padStart(2,'0');
-          if(!meses[key])meses[key]={unidades:{},totalU:0};
+          if(!meses[key])meses[key]={unidades:{},totalU:0,gasto:0};
           meses[key].unidades[p.id]=(meses[key].unidades[p.id]||0)+porDia;
           meses[key].totalU+=porDia;
+          meses[key].gasto+=porDia*getCostoEn(p.id,f.toISOString().slice(0,10));
         }
       });
     }
     return meses;
-  },[products,quincenasWithInv,ingresos]);
+  },[products,quincenasWithInv,ingresos,costHistoryByProd]);
   function getResumenMensual(){
     const keys=Object.keys(consumoMensualData).sort();
     return keys.map((k,idx)=>{
       const m=consumoMensualData[k];
-      const gasto=Object.entries(m.unidades).reduce((s,[pid,u])=>s+u*getCosto(parseInt(pid)),0);
+      const gasto=m.gasto;
       const [y,mo]=k.split('-');
       const label=new Date(parseInt(y),parseInt(mo)-1,1).toLocaleDateString('es-PE',{month:'short',year:'numeric'});
       let variacion=null;
       if(idx>0){
-        const prev=consumoMensualData[keys[idx-1]];
-        const gPrev=Object.entries(prev.unidades).reduce((s,[pid,u])=>s+u*getCosto(parseInt(pid)),0);
+        const gPrev=consumoMensualData[keys[idx-1]].gasto;
         if(gPrev>0)variacion=Math.round(((gasto-gPrev)/gPrev)*100);
       }
       return{key:k,label:label[0].toUpperCase()+label.slice(1),unidades:Math.round(m.totalU),gasto,variacion,porProducto:m.unidades};
@@ -590,7 +614,7 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
   function csvInventario(){const rows=[['Clase','Código','Nombre','Unidad','Stock','Consumo/día','Días','Estado']];products.forEach(p=>{const e=getEstado(p.id);const cl=getClasificacion(p.id);const cd=getConsumoDiario(p.id);rows.push([cl,p.codigo,p.nombre,p.unidad,getStock(p.id),cd?Math.round(cd*10)/10:0,getDias(p.id)===999?'Sin hist.':getDias(p.id),e==='critico'?'Crítico':e==='alerta'?'Alerta':'En stock'])});dl(rows,'inventario');}
   function csvLista(){const rows=[['Código','Nombre','Stock','Consumo/día','Pedir','Unidad','Días']];getLista().forEach(p=>{const cd=getConsumoDiario(p.id);const consumoDia=cd?Math.round(cd*10)/10:0;rows.push([p.codigo,p.nombre,p.stock,consumoDia,p.pedir,p.unidad,p.dias===999?'Sin hist.':p.dias])});dl(rows,'lista-compra');}
   function csvConsolidado(){const qs=[...quincenasWithInv].sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));const headers=['Código','Nombre','Unidad',...qs.map(q=>q.label)];const rows=[headers];products.forEach(p=>{rows.push([p.codigo,p.nombre,p.unidad,...qs.map(q=>q.inventario[p.id]??'')]);});dl(rows,'consolidado-conteos');}
-  return <Ctx.Provider value={{products,quincenas:quincenasWithInv,ingresos,salidas,actLog,usuariosList,loading,error,userEmail,isSupervisor,onLogout,getStock,getStockDisponible,getConsumo,getConsumoDiario,getConsumoLabel,getClasificacion,getCosto,getDiasEntrega,getGastoMensual,getValorInventario,getGastoMensualTotal,getResumenMensual,getConsumoMensualProducto,updateConfig,getDias,getEstado,getLista,getAnomalias,addProd,updateProd,delProd,addQ,updateQ,validarQ,rechazarQ,delQuincena,addIng,aprobarIngreso,rechazarIngreso,updateIngreso,addSalida,aprobarSalida,rechazarSalida,updateSalida,csvInventario,csvLista,csvConsolidado}}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{products,quincenas:quincenasWithInv,ingresos,salidas,actLog,usuariosList,loading,error,userEmail,isSupervisor,onLogout,getStock,getStockDisponible,getConsumo,getConsumoDiario,getConsumoLabel,getClasificacion,getCosto,getCostoEn,getDiasEntrega,getGastoMensual,getValorInventario,getGastoMensualTotal,getResumenMensual,getConsumoMensualProducto,updateConfig,getDias,getEstado,getLista,getAnomalias,addProd,updateProd,delProd,addQ,updateQ,validarQ,rechazarQ,delQuincena,addIng,aprobarIngreso,rechazarIngreso,updateIngreso,addSalida,aprobarSalida,rechazarSalida,updateSalida,csvInventario,csvLista,csvConsolidado}}>{children}</Ctx.Provider>;
 }
 const useApp=()=>useContext(Ctx);
 
@@ -1058,7 +1082,7 @@ function Ingresos(){
 }
 
 function Graficos(){
-  const {products,quincenas,salidas,ingresos,usuariosList,getStock,getConsumo,getConsumoLabel,getDias,getEstado,getResumenMensual,getConsumoMensualProducto,getCosto}=useApp();
+  const {products,quincenas,salidas,ingresos,usuariosList,getStock,getConsumo,getConsumoLabel,getDias,getEstado,getResumenMensual,getConsumoMensualProducto,getCosto,getCostoEn}=useApp();
   const [vistaConsumo,setVistaConsumo]=useState('conteo');
   const [mesSel,setMesSel]=useState(null);
   const areaColors=['#00c97d','#4d9eff','#f0a500','#ff5050'];
@@ -1180,13 +1204,13 @@ function Graficos(){
             <span className="mono" style={{fontSize:15,fontWeight:600,color:'var(--green)'}}>{fmtS(mesVisto.gasto)}</span>
           </div>
           <div style={{display:'flex',flexDirection:'column',gap:6}}>
-            {Object.entries(mesVisto.porProducto).map(([pid,u])=>({pid,u,p:products.find(x=>x.id===parseInt(pid)),g:u*getCosto(parseInt(pid))})).filter(x=>x.p&&x.g>0).sort((a,b)=>b.g-a.g).slice(0,10).map(x=>
+            {Object.entries(mesVisto.porProducto).map(([pid,u])=>({pid,u,p:products.find(x=>x.id===parseInt(pid)),g:u*getCostoEn(parseInt(pid),mesVisto.key+'-15')})).filter(x=>x.p&&x.g>0).sort((a,b)=>b.g-a.g).slice(0,10).map(x=>
               <div key={x.pid} style={{display:'flex',justifyContent:'space-between',fontSize:12,padding:'5px 0',borderBottom:'1px solid var(--border)'}}>
                 <span>{x.p.nombre.length>32?x.p.nombre.slice(0,32)+'…':x.p.nombre}<span style={{color:'var(--text3)',marginLeft:8}}>{Math.round(x.u*10)/10} und</span></span>
                 <span className="mono" style={{color:'var(--green)'}}>{fmtS(x.g)}</span>
               </div>
             )}
-            {Object.entries(mesVisto.porProducto).filter(([pid,u])=>{const g=u*getCosto(parseInt(pid));return g>0;}).length===0&&<div className="nodata">Sin productos con costo configurado en este mes</div>}
+            {Object.entries(mesVisto.porProducto).filter(([pid,u])=>{const g=u*getCostoEn(parseInt(pid),mesVisto.key+'-15');return g>0;}).length===0&&<div className="nodata">Sin productos con costo configurado en este mes</div>}
           </div>
         </div>}
       </>;
