@@ -85,7 +85,7 @@ button{font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border:non
 .metrics3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:1.25rem}
 .metric{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.25rem;display:flex;flex-direction:column;gap:6px}
 .ml{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--text2)}
-.mv{font-size:28px;font-weight:500}
+.mv{font-size:28px;font-weight:500;font-variant-numeric:tabular-nums}
 .cr{color:var(--red)!important}.ca{color:var(--amber)!important}.cg{color:var(--green)!important}
 .card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:1rem}
 .card-red{border-left:3px solid var(--red);background:linear-gradient(90deg,rgba(255,80,80,.04),var(--bg2) 40%)}
@@ -134,7 +134,7 @@ button{font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border:non
 .t-log .thead,.t-log .trow{grid-template-columns:140px 1fr 2fr}
 .pname{display:block;font-size:13px;font-weight:500}
 .pdesc{display:block;font-size:11px;color:var(--text3);margin-top:2px}
-.mono{font-family:'DM Mono',monospace;font-size:13px}
+.mono{font-family:'DM Mono',monospace;font-size:13px;font-variant-numeric:tabular-nums}
 .mono small{font-size:10px;color:var(--text2)}
 .chip{font-size:11px;background:var(--bg4);padding:3px 8px;border-radius:99px;color:var(--text2);display:inline-block}
 .cbadge{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;font-size:11px;font-weight:600}
@@ -1366,11 +1366,11 @@ function SeguimientoConteos({quincenas}){
         {semanas.map((s,i)=><div key={i} style={{display:'grid',gridTemplateColumns:'100px repeat(7,24px) 1fr auto',gap:8,alignItems:'center',padding:'6px 8px',borderRadius:6,borderLeft:`3px solid ${statusColor[s.status]}`,background:s.esActual?'var(--bg3)':'transparent'}}>
           <span style={{fontSize:11,color:'var(--text2)'}}>{fmtDia(s.start)}–{fmtDia(s.fin)}</span>
           {s.dias.map((d,j)=>{
-            let col='var(--bg4)';
-            if(d.qs.some(q=>q.status==='validated'))col='var(--green)';
-            else if(d.qs.some(q=>!q.status||q.status==='pending'))col='var(--amber)';
-            else if(d.qs.some(q=>q.status==='rejected'))col='var(--red)';
-            return <span key={j} title={`${diaCorta[j]} ${d.dstr}${d.qs.length?` · ${d.qs.length} conteo(s)`:' · sin conteo'}`} style={{width:16,height:16,borderRadius:4,background:col,justifySelf:'center',opacity:d.qs.length?1:.35}}/>;
+            let col='var(--bg4)',icon='';
+            if(d.qs.some(q=>q.status==='validated')){col='var(--green)';icon='✓';}
+            else if(d.qs.some(q=>!q.status||q.status==='pending')){col='var(--amber)';icon='●';}
+            else if(d.qs.some(q=>q.status==='rejected')){col='var(--red)';icon='✕';}
+            return <span key={j} title={`${diaCorta[j]} ${d.dstr}${d.qs.length?` · ${d.qs.length} conteo(s)`:' · sin conteo'}`} style={{width:16,height:16,borderRadius:4,background:col,justifySelf:'center',opacity:d.qs.length?1:.35,display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,color:'#000',fontWeight:700,lineHeight:1}}>{icon}</span>;
           })}
           <span style={{fontSize:11,color:'var(--text3)'}}>{s.diasConConteo}/7 días con conteo</span>
           <span style={{fontSize:11,fontWeight:500,color:statusColor[s.status],whiteSpace:'nowrap'}}>{statusLabel[s.status]}</span>
