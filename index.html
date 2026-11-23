@@ -1326,7 +1326,8 @@ function ComparativoConteoRetiro({getComparativoMensual}){
 }
 
 function SeguimientoConteos({quincenas}){
-  const NSEM=10;
+  const NSEM=26; // ~6 meses de historial
+  const [mesSel,setMesSel]=useState('todos');
   function mondayOf(d){const x=new Date(d);const day=(x.getDay()+6)%7;x.setDate(x.getDate()-day);x.setHours(0,0,0,0);return x;}
   const hoy=new Date();hoy.setHours(0,0,0,0);
   const lunesActual=mondayOf(hoy);
@@ -1347,23 +1348,65 @@ function SeguimientoConteos({quincenas}){
     const esFutura=start>hoy;
     let status=esFutura?'futura':diasConConteo>=2?'ok':diasConConteo===1?'warning':'missing';
     if(esActual&&status!=='ok')status='curso';
-    semanas.push({start,fin,dias,diasConConteo,status,esActual});
+    const mesKey=start.getFullYear()+'-'+String(start.getMonth()+1).padStart(2,'0');
+    semanas.push({start,fin,dias,diasConConteo,status,esActual,mesKey});
   }
   const evaluables=semanas.filter(s=>!s.esActual&&s.status!=='futura');
   const cumplidas=evaluables.filter(s=>s.status==='ok').length;
   const pct=evaluables.length?Math.round(cumplidas/evaluables.length*100):0;
   const statusColor={ok:'var(--green)',warning:'var(--amber)',missing:'var(--red)',curso:'var(--blue)',futura:'var(--text3)'};
   const statusLabel={ok:'✓ Cumplida',warning:'⚠ Incompleta (1/2)',missing:'✕ Sin conteos',curso:'● En curso',futura:'—'};
+
+  // Resumen de cumplimiento por mes (una semana se asigna al mes de su lunes)
+  const mesesMap={};
+  semanas.forEach(s=>{
+    if(!mesesMap[s.mesKey])mesesMap[s.mesKey]={semanas:[],label:s.start.toLocaleDateString('es-PE',{month:'short',year:'numeric'})};
+    mesesMap[s.mesKey].semanas.push(s);
+  });
+  const meses=Object.keys(mesesMap).sort().map(k=>{
+    const m=mesesMap[k];
+    const label=m.label[0].toUpperCase()+m.label.slice(1);
+    const evalM=m.semanas.filter(s=>!s.esActual&&s.status!=='futura');
+    const cumpM=evalM.filter(s=>s.status==='ok').length;
+    const pctM=evalM.length?Math.round(cumpM/evalM.length*100):null;
+    return{key:k,label,totalSemanas:m.semanas.length,evaluables:evalM.length,cumplidas:cumpM,pct:pctM};
+  });
+  const semanasFiltradas=mesSel==='todos'?semanas:semanas.filter(s=>s.mesKey===mesSel);
+
   return <>
     <div className="metrics3">
       <div className="metric"><span className="ml">Cumplimiento ({evaluables.length} sem.)</span><span className="mv" style={{color:pct>=80?'var(--green)':pct>=50?'var(--amber)':'var(--red)'}}>{pct}%</span></div>
       <div className="metric"><span className="ml">Semanas cumplidas</span><span className="mv cg">{cumplidas}</span></div>
       <div className="metric"><span className="ml">Semanas incumplidas</span><span className="mv cr">{evaluables.length-cumplidas}</span></div>
     </div>
+
     <div className="chcard">
-      <div className="chtitle">Seguimiento semanal — se requieren mínimo 2 conteos por semana</div>
+      <div className="chtitle">% de cumplimiento por mes · clic en un mes para ver sus semanas</div>
       <div style={{display:'flex',flexDirection:'column',gap:6}}>
-        {semanas.map((s,i)=><div key={i} style={{display:'grid',gridTemplateColumns:'100px repeat(7,24px) 1fr auto',gap:8,alignItems:'center',padding:'6px 8px',borderRadius:6,borderLeft:`3px solid ${statusColor[s.status]}`,background:s.esActual?'var(--bg3)':'transparent'}}>
+        {meses.map(m=>{
+          const sel=mesSel===m.key;
+          return <div key={m.key} onClick={()=>setMesSel(sel?'todos':m.key)} style={{display:'grid',gridTemplateColumns:'90px 1fr 70px 90px',gap:10,alignItems:'center',cursor:'pointer',padding:'5px 8px',margin:'-5px -8px',borderRadius:6,background:sel?'var(--bg3)':'transparent'}}>
+            <span style={{fontSize:12,fontWeight:sel?700:500,color:sel?'var(--blue)':'var(--text)'}}>{m.label}</span>
+            <div style={{height:14,background:'var(--bg4)',borderRadius:4,overflow:'hidden'}}>
+              {m.pct!==null&&<div style={{height:'100%',width:`${m.pct}%`,background:m.pct>=80?'var(--green)':m.pct>=50?'var(--amber)':'var(--red)',borderRadius:4}}/>}
+            </div>
+            <span className="mono" style={{fontSize:11,textAlign:'right',color:'var(--text2)'}}>{m.cumplidas}/{m.evaluables||'—'}</span>
+            <span className="mono" style={{fontSize:12,textAlign:'right',fontWeight:600,color:m.pct===null?'var(--text3)':m.pct>=80?'var(--green)':m.pct>=50?'var(--amber)':'var(--red)'}}>{m.pct===null?'—':`${m.pct}%`}</span>
+          </div>;
+        })}
+      </div>
+    </div>
+
+    <div className="chcard">
+      <div className="chrow">
+        <div className="chtitle" style={{margin:0}}>Seguimiento semanal — se requieren mínimo 2 conteos por semana</div>
+        <select value={mesSel} onChange={e=>setMesSel(e.target.value)} style={{minWidth:150,width:'auto',fontSize:12}}>
+          <option value="todos">Todos los meses</option>
+          {[...meses].reverse().map(m=><option key={m.key} value={m.key}>{m.label}</option>)}
+        </select>
+      </div>
+      <div style={{display:'flex',flexDirection:'column',gap:6,marginTop:'1rem'}}>
+        {semanasFiltradas.map((s,i)=><div key={i} style={{display:'grid',gridTemplateColumns:'100px repeat(7,24px) 1fr auto',gap:8,alignItems:'center',padding:'6px 8px',borderRadius:6,borderLeft:`3px solid ${statusColor[s.status]}`,background:s.esActual?'var(--bg3)':'transparent'}}>
           <span style={{fontSize:11,color:'var(--text2)'}}>{fmtDia(s.start)}–{fmtDia(s.fin)}</span>
           {s.dias.map((d,j)=>{
             let col='var(--bg4)',icon='';
@@ -1375,6 +1418,7 @@ function SeguimientoConteos({quincenas}){
           <span style={{fontSize:11,color:'var(--text3)'}}>{s.diasConConteo}/7 días con conteo</span>
           <span style={{fontSize:11,fontWeight:500,color:statusColor[s.status],whiteSpace:'nowrap'}}>{statusLabel[s.status]}</span>
         </div>)}
+        {!semanasFiltradas.length&&<div className="nodata">Sin semanas para este mes</div>}
       </div>
       <div style={{display:'flex',gap:14,marginTop:12,fontSize:11,color:'var(--text2)',flexWrap:'wrap'}}>
         <span><span style={{display:'inline-block',width:10,height:10,borderRadius:3,background:'var(--green)',marginRight:4}}/>Validado</span>
