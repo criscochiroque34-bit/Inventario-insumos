@@ -427,6 +427,24 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
     if(error)return error.message;
     await load();return null;
   }
+  async function updateCostosBulk(cambios){
+    const histRows=[];
+    const hoy=new Date().toISOString().slice(0,10);
+    cambios.forEach(({id,costo})=>{
+      const actual=getCosto(id);
+      if(costo!==null&&costo!==undefined&&parseFloat(costo)!==actual){
+        histRows.push({product_id:id,costo:parseFloat(costo),fecha_desde:hoy});
+      }
+    });
+    if(histRows.length){
+      const {error:eh}=await sb.from('cost_history').insert(histRows);
+      if(eh)return eh.message;
+    }
+    const {error}=await sb.from('products').upsert(cambios.map(({id,costo})=>({id,costo_unitario:costo})));
+    if(error)return error.message;
+    await logAction('Actualizó costos',`${cambios.length} producto${cambios.length>1?'s':''}`);
+    await load();return null;
+  }
   const consumoMensualData=useMemo(()=>{
     const qs=[...quincenasWithInv].filter(q=>q.status==='validated'||q.status===null||q.status===undefined).sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
     const meses={};
@@ -477,6 +495,25 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
       return{q:label[0].toUpperCase()+label.slice(1),v:Math.round((consumoMensualData[k].unidades[pid]||0)*10)/10};
     }).filter(x=>x.v>0);
   }
+  function getComparativoMensual(){
+    const resumen=getResumenMensual();
+    const porConteo={};resumen.forEach(m=>{porConteo[m.key]={u:m.unidades,g:m.gasto};});
+    const porRetiro={};
+    (salidas||[]).filter(s=>s.status==='approved').forEach(s=>{
+      const f=new Date(s.fecha+'T12:00:00');
+      const key=f.getFullYear()+'-'+String(f.getMonth()+1).padStart(2,'0');
+      if(!porRetiro[key])porRetiro[key]={u:0,g:0};
+      porRetiro[key].u+=s.cantidad;
+      porRetiro[key].g+=s.cantidad*getCostoEn(s.product_id,s.fecha);
+    });
+    const keys=[...new Set([...Object.keys(porConteo),...Object.keys(porRetiro)])].sort();
+    return keys.map(k=>{
+      const [y,mo]=k.split('-');
+      const label=new Date(parseInt(y),parseInt(mo)-1,1).toLocaleDateString('es-PE',{month:'short',year:'numeric'});
+      const cU=porConteo[k]?.u||0,cG=porConteo[k]?.g||0,rU=porRetiro[k]?.u||0,rG=porRetiro[k]?.g||0;
+      return{key:k,label:label[0].toUpperCase()+label.slice(1),conteoU:cU,conteoG:cG,retiroU:rU,retiroG:rG,brechaU:Math.round((cU-rU)*10)/10,brechaG:cG-rG};
+    });
+  }
   function getConsumoLabel(pid){
     const cd=getConsumoDiario(pid);
     if(!cd)return null;
@@ -493,7 +530,7 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
 
   function getAnomalias(){
     const anomalias=[];
-    const sorted=[...quincenasWithInv].sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
+    const sorted=quincenasWithInv.filter(q=>q.status!=='rejected').sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
     products.forEach(p=>{
       const avg=getConsumo(p.id);
       for(let i=1;i<sorted.length;i++){
@@ -544,12 +581,24 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
   }
   async function updateQ(qid,label,fecha,inv){
     if(!Object.keys(inv).length)return 'No hay productos para guardar — el conteo quedaría vacío.';
+    const oldItems={};
+    qItems.filter(it=>it.quincena_id===qid).forEach(it=>{oldItems[it.product_id]=it.cantidad;});
+    const cambios=[];
+    Object.entries(inv).forEach(([pid,cant])=>{
+      const pidN=parseInt(pid);
+      const antes=oldItems[pidN];
+      if(antes!==cant){
+        const p=products.find(x=>x.id===pidN);
+        cambios.push(`${p?.nombre||pidN}: ${antes??'—'}→${cant}`);
+      }
+    });
     const {error:e1}=await sb.from('quincenas').update({label,fecha}).eq('id',qid);
     if(e1)return e1.message;
     await sb.from('quincena_items').delete().eq('quincena_id',qid);
     const items=Object.entries(inv).map(([pid,cantidad])=>({quincena_id:qid,product_id:parseInt(pid),cantidad}));
     if(items.length){const {error}=await sb.from('quincena_items').insert(items);if(error)return error.message;}
-    await logAction('Editó conteo',label);await load();return null;
+    const detalle=cambios.length?`${label} — ${cambios.join(', ')}`:`${label} — sin cambios en cantidades`;
+    await logAction('Editó conteo',detalle);await load();return null;
   }
   async function validarQ(qid,label){
     const {error}=await sb.from('quincenas').update({status:'validated',validated_by:userEmail,validated_at:new Date().toISOString()}).eq('id',qid);
@@ -614,7 +663,7 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
   function csvInventario(){const rows=[['Clase','Código','Nombre','Unidad','Stock','Consumo/día','Días','Estado']];products.forEach(p=>{const e=getEstado(p.id);const cl=getClasificacion(p.id);const cd=getConsumoDiario(p.id);rows.push([cl,p.codigo,p.nombre,p.unidad,getStock(p.id),cd?Math.round(cd*10)/10:0,getDias(p.id)===999?'Sin hist.':getDias(p.id),e==='critico'?'Crítico':e==='alerta'?'Alerta':'En stock'])});dl(rows,'inventario');}
   function csvLista(){const rows=[['Código','Nombre','Stock','Consumo/día','Pedir','Unidad','Días']];getLista().forEach(p=>{const cd=getConsumoDiario(p.id);const consumoDia=cd?Math.round(cd*10)/10:0;rows.push([p.codigo,p.nombre,p.stock,consumoDia,p.pedir,p.unidad,p.dias===999?'Sin hist.':p.dias])});dl(rows,'lista-compra');}
   function csvConsolidado(){const qs=[...quincenasWithInv].sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));const headers=['Código','Nombre','Unidad',...qs.map(q=>q.label)];const rows=[headers];products.forEach(p=>{rows.push([p.codigo,p.nombre,p.unidad,...qs.map(q=>q.inventario[p.id]??'')]);});dl(rows,'consolidado-conteos');}
-  return <Ctx.Provider value={{products,quincenas:quincenasWithInv,ingresos,salidas,actLog,usuariosList,loading,error,userEmail,isSupervisor,onLogout,getStock,getStockDisponible,getConsumo,getConsumoDiario,getConsumoLabel,getClasificacion,getCosto,getCostoEn,getDiasEntrega,getGastoMensual,getValorInventario,getGastoMensualTotal,getResumenMensual,getConsumoMensualProducto,updateConfig,getDias,getEstado,getLista,getAnomalias,addProd,updateProd,delProd,addQ,updateQ,validarQ,rechazarQ,delQuincena,addIng,aprobarIngreso,rechazarIngreso,updateIngreso,addSalida,aprobarSalida,rechazarSalida,updateSalida,csvInventario,csvLista,csvConsolidado}}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{products,quincenas:quincenasWithInv,ingresos,salidas,actLog,usuariosList,loading,error,userEmail,isSupervisor,onLogout,getStock,getStockDisponible,getConsumo,getConsumoDiario,getConsumoLabel,getClasificacion,getCosto,getCostoEn,getDiasEntrega,getGastoMensual,getValorInventario,getGastoMensualTotal,getResumenMensual,getConsumoMensualProducto,getComparativoMensual,updateConfig,updateCostosBulk,getDias,getEstado,getLista,getAnomalias,addProd,updateProd,delProd,addQ,updateQ,validarQ,rechazarQ,delQuincena,addIng,aprobarIngreso,rechazarIngreso,updateIngreso,addSalida,aprobarSalida,rechazarSalida,updateSalida,csvInventario,csvLista,csvConsolidado}}>{children}</Ctx.Provider>;
 }
 const useApp=()=>useContext(Ctx);
 
@@ -1087,7 +1136,7 @@ function Ingresos(){
 }
 
 function Graficos(){
-  const {products,quincenas,salidas,ingresos,usuariosList,getStock,getConsumo,getConsumoLabel,getDias,getEstado,getResumenMensual,getConsumoMensualProducto,getCosto,getCostoEn}=useApp();
+  const {products,quincenas,salidas,ingresos,usuariosList,getStock,getConsumo,getConsumoLabel,getDias,getEstado,getResumenMensual,getConsumoMensualProducto,getCosto,getCostoEn,getComparativoMensual}=useApp();
   const [vistaConsumo,setVistaConsumo]=useState('conteo');
   const [mesSel,setMesSel]=useState(null);
   const areaColors=['#00c97d','#4d9eff','#f0a500','#ff5050'];
@@ -1108,7 +1157,7 @@ function Graficos(){
   }
   return <div className="page">
     <div className="ph"><div><h1 className="pt">Gráficos</h1><p className="ps">Análisis de consumo y proyección</p></div></div>
-    <div className="ptabs"><button className={`ptab${tab==='c'?' on':''}`} onClick={()=>setTab('c')}>Consumo y proyección</button><button className={`ptab${tab==='m'?' on':''}`} onClick={()=>setTab('m')}>Resumen mensual</button><button className={`ptab${tab==='a'?' on':''}`} onClick={()=>setTab('a')}>Por área</button><button className={`ptab${tab==='s'?' on':''}`} onClick={()=>setTab('s')}>Seguimiento de conteos</button></div>
+    <div className="ptabs"><button className={`ptab${tab==='c'?' on':''}`} onClick={()=>setTab('c')}>Consumo y proyección</button><button className={`ptab${tab==='m'?' on':''}`} onClick={()=>setTab('m')}>Resumen mensual</button><button className={`ptab${tab==='a'?' on':''}`} onClick={()=>setTab('a')}>Por área</button><button className={`ptab${tab==='s'?' on':''}`} onClick={()=>setTab('s')}>Seguimiento de conteos</button><button className={`ptab${tab==='b'?' on':''}`} onClick={()=>setTab('b')}>Conteo vs retiro</button></div>
     {tab==='c'&&<>
       <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:'1rem'}}><label style={{fontSize:12,color:'var(--text2)'}}>Producto</label><select value={sid??''} onChange={e=>setSid(parseInt(e.target.value))} style={{minWidth:220,width:'auto'}}>{products.map(p=><option key={p.id} value={p.id}>{p.nombre}</option>)}</select></div>
       {prod&&<>
@@ -1227,7 +1276,53 @@ function Graficos(){
     })()}
     {tab==='a'&&<AreaTab salidas={salidas||[]} products={products} areaColors={areaColors}/>}
     {tab==='s'&&<SeguimientoConteos quincenas={quincenas}/>}
+    {tab==='b'&&<ComparativoConteoRetiro getComparativoMensual={getComparativoMensual}/>}
   </div>;
+}
+
+function ComparativoConteoRetiro({getComparativoMensual}){
+  const datos=getComparativoMensual();
+  const fmtS=n=>'S/ '+(Number(n)||0).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});
+  if(!datos.length)return <div className="nodata">Aún no hay suficientes conteos y/o retiros para comparar.</div>;
+  const hayCostos=datos.some(m=>m.conteoG>0||m.retiroG>0);
+  const maxV=Math.max(...datos.map(m=>hayCostos?Math.max(m.conteoG,m.retiroG):Math.max(m.conteoU,m.retiroU)),1);
+  const totalBrecha=datos.reduce((s,m)=>s+(hayCostos?m.brechaG:m.brechaU),0);
+  return <>
+    <div style={{fontSize:12,color:'var(--text2)',marginBottom:'1.25rem',lineHeight:1.5}}>
+      El <strong>conteo</strong> mide todo lo que desapareció del inventario (incluye mermas y errores). El <strong>retiro</strong> es solo lo que se registró formalmente con área. La <strong>brecha</strong> es lo que se perdió sin pasar por un retiro.
+    </div>
+    <div className="metrics3">
+      <div className="metric"><span className="ml">Meses comparados</span><span className="mv">{datos.length}</span></div>
+      <div className="metric" style={{borderColor:'rgba(240,165,0,.2)'}}><span className="ml">Brecha acumulada</span><span className="mv" style={{color:totalBrecha>0?'var(--amber)':'var(--green)',fontFamily:'DM Mono,monospace',fontSize:22}}>{hayCostos?fmtS(totalBrecha):`${Math.round(totalBrecha)} und`}</span></div>
+      <div className="metric"><span className="ml">Último mes</span><span className="mv" style={{fontSize:18}}>{datos[datos.length-1].label}</span></div>
+    </div>
+    <div className="chcard">
+      <div className="chtitle">Por mes — {hayCostos?'gasto estimado (S/)':'unidades'} · conteo vs. retiro registrado</div>
+      <div style={{display:'flex',flexDirection:'column',gap:10}}>
+        {datos.map(m=>{
+          const cV=hayCostos?m.conteoG:m.conteoU,rV=hayCostos?m.retiroG:m.retiroU;
+          const brecha=hayCostos?m.brechaG:m.brechaU;
+          const fmt=v=>hayCostos?fmtS(v):`${Math.round(v*10)/10} und`;
+          return <div key={m.key} style={{padding:'8px 10px',background:'var(--bg3)',borderRadius:8}}>
+            <div style={{display:'flex',justifyContent:'space-between',fontSize:12,marginBottom:6}}>
+              <span style={{fontWeight:500}}>{m.label}</span>
+              <span style={{color:brecha>0?'var(--amber)':brecha<0?'var(--blue)':'var(--text2)'}}>{brecha>0?`⚠ Brecha: ${fmt(brecha)}`:brecha<0?`Retiro > conteo: ${fmt(Math.abs(brecha))}`:'Sin brecha'}</span>
+            </div>
+            <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
+              <span style={{fontSize:10,color:'var(--text3)',width:48}}>Conteo</span>
+              <div style={{flex:1,height:14,background:'var(--bg4)',borderRadius:4,overflow:'hidden'}}><div style={{height:'100%',width:`${Math.round(cV/maxV*100)}%`,background:'#00c97d'}}/></div>
+              <span className="mono" style={{fontSize:11,width:90,textAlign:'right'}}>{fmt(cV)}</span>
+            </div>
+            <div style={{display:'flex',alignItems:'center',gap:8}}>
+              <span style={{fontSize:10,color:'var(--text3)',width:48}}>Retiro</span>
+              <div style={{flex:1,height:14,background:'var(--bg4)',borderRadius:4,overflow:'hidden'}}><div style={{height:'100%',width:`${Math.round(rV/maxV*100)}%`,background:'#4d9eff'}}/></div>
+              <span className="mono" style={{fontSize:11,width:90,textAlign:'right'}}>{fmt(rV)}</span>
+            </div>
+          </div>;
+        })}
+      </div>
+    </div>
+  </>;
 }
 
 function SeguimientoConteos({quincenas}){
@@ -1875,7 +1970,7 @@ function MisMovimientos(){
 }
 
 function Ajustes(){
-  const {products,getStock,getConsumoLabel,getClasificacion,getCosto,getGastoMensual,getValorInventario,getGastoMensualTotal,updateConfig}=useApp();
+  const {products,getStock,getConsumoLabel,getClasificacion,getCosto,getGastoMensual,getValorInventario,getGastoMensualTotal,updateCostosBulk}=useApp();
   const [bus,setBus]=useState('');
   const [draft,setDraft]=useState({});
   const [saving,setSaving]=useState(false);
@@ -1901,11 +1996,9 @@ function Ajustes(){
       }
     }
     setSaving(true);
-    for(const [pid,raw] of cambios){
-      const num=raw===''?null:parseFloat(raw);
-      const e=await updateConfig(parseInt(pid),{costo_unitario:num});
-      if(e){setMsg({text:e,type:'err'});setSaving(false);return;}
-    }
+    const payload=cambios.map(([pid,raw])=>({id:parseInt(pid),costo:raw===''?null:parseFloat(raw)}));
+    const e=await updateCostosBulk(payload);
+    if(e){setMsg({text:e,type:'err'});setSaving(false);return;}
     setDraft({});
     setMsg({text:`${cambios.length} costo${cambios.length>1?'s':''} guardado${cambios.length>1?'s':''} ✓`,type:'ok'});
     setTimeout(()=>setMsg({text:'',type:'ok'}),3000);
