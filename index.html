@@ -85,7 +85,7 @@ button{font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border:non
 .metrics3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:1.25rem}
 .metric{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.25rem;display:flex;flex-direction:column;gap:6px}
 .ml{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--text2)}
-.mv{font-size:28px;font-weight:500}
+.mv{font-size:28px;font-weight:500;font-variant-numeric:tabular-nums}
 .cr{color:var(--red)!important}.ca{color:var(--amber)!important}.cg{color:var(--green)!important}
 .card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:1rem}
 .card-red{border-left:3px solid var(--red);background:linear-gradient(90deg,rgba(255,80,80,.04),var(--bg2) 40%)}
@@ -134,7 +134,7 @@ button{font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;border:non
 .t-log .thead,.t-log .trow{grid-template-columns:140px 1fr 2fr}
 .pname{display:block;font-size:13px;font-weight:500}
 .pdesc{display:block;font-size:11px;color:var(--text3);margin-top:2px}
-.mono{font-family:'DM Mono',monospace;font-size:13px}
+.mono{font-family:'DM Mono',monospace;font-size:13px;font-variant-numeric:tabular-nums}
 .mono small{font-size:10px;color:var(--text2)}
 .chip{font-size:11px;background:var(--bg4);padding:3px 8px;border-radius:99px;color:var(--text2);display:inline-block}
 .cbadge{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;font-size:11px;font-weight:600}
@@ -302,6 +302,7 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
   const [salidas,setSalidas]=useState([]);
   const [actLog,setActLog]=useState([]);
   const [usuariosList,setUsuariosList]=useState([]);
+  const [costHistory,setCostHistory]=useState([]);
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState(null);
 
@@ -322,7 +323,7 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
 
   const load=useCallback(async()=>{
     try{
-      const [p,q,qi,i,sal,al,u]=await Promise.all([
+      const [p,q,qi,i,sal,al,u,ch]=await Promise.all([
         fetchAll('products',{order:'id'}),
         fetchAll('quincenas',{order:'fecha'}),
         fetchAll('quincena_items'),
@@ -330,9 +331,10 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
         fetchAll('salidas',{order:'created_at',ascending:false}),
         sb.from('activity_log').select('*').order('created_at',{ascending:false}).limit(100),
         fetchAll('usuarios',{select:'dni,nombre,area'}),
+        fetchAll('cost_history',{order:'fecha_desde'}).catch(()=>({data:[]})),
       ]);
       if(p.error)throw p.error;
-      setProducts(p.data||[]);setQuincenas(q.data||[]);setQItems(qi.data||[]);setIngresos(i.data||[]);setSalidas(sal.data||[]);setActLog(al.data||[]);setUsuariosList(u.data||[]);
+      setProducts(p.data||[]);setQuincenas(q.data||[]);setQItems(qi.data||[]);setIngresos(i.data||[]);setSalidas(sal.data||[]);setActLog(al.data||[]);setUsuariosList(u.data||[]);setCostHistory(ch.data||[]);
     }catch(e){setError(String(e.message||e||'Error de conexión'));}
     setLoading(false);
   },[]);
@@ -394,13 +396,53 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
     return clasifMap[pid]||'C';
   }
   function getCosto(pid){const p=products.find(x=>x.id===pid);const v=parseFloat(p?.costo_unitario);return isNaN(v)?0:v;}
+  const costHistoryByProd=useMemo(()=>{
+    const m={};
+    costHistory.forEach(c=>{(m[c.product_id]||(m[c.product_id]=[])).push(c);});
+    Object.values(m).forEach(arr=>arr.sort((a,b)=>new Date(a.fecha_desde)-new Date(b.fecha_desde)));
+    return m;
+  },[costHistory]);
+  function getCostoEn(pid,fecha){
+    const hist=costHistoryByProd[pid];
+    if(!hist||!hist.length)return getCosto(pid);
+    let vigente=null;
+    for(const c of hist){if(new Date(c.fecha_desde)<=new Date(fecha))vigente=c.costo;else break;}
+    return vigente===null?getCosto(pid):parseFloat(vigente);
+  }
   function getDiasEntrega(pid){const p=products.find(x=>x.id===pid);const v=parseInt(p?.dias_entrega);return isNaN(v)?0:v;}
   function getGastoMensual(pid){const cd=getConsumoDiario(pid);const co=getCosto(pid);return cd&&co?cd*30*co:0;}
   function getValorInventario(){return products.reduce((s,p)=>s+getStock(p.id)*getCosto(p.id),0);}
   function getGastoMensualTotal(){return products.reduce((s,p)=>s+getGastoMensual(p.id),0);}
   async function updateConfig(id,campos){
+    if('costo_unitario' in campos){
+      const nuevo=campos.costo_unitario;
+      const actual=getCosto(id);
+      const cambia=nuevo!==null&&nuevo!==undefined&&parseFloat(nuevo)!==actual;
+      if(cambia){
+        const {error:eh}=await sb.from('cost_history').insert([{product_id:id,costo:parseFloat(nuevo),fecha_desde:new Date().toISOString().slice(0,10)}]);
+        if(eh)return eh.message;
+      }
+    }
     const {error}=await sb.from('products').update(campos).eq('id',id);
     if(error)return error.message;
+    await load();return null;
+  }
+  async function updateCostosBulk(cambios){
+    const histRows=[];
+    const hoy=new Date().toISOString().slice(0,10);
+    cambios.forEach(({id,costo})=>{
+      const actual=getCosto(id);
+      if(costo!==null&&costo!==undefined&&parseFloat(costo)!==actual){
+        histRows.push({product_id:id,costo:parseFloat(costo),fecha_desde:hoy});
+      }
+    });
+    if(histRows.length){
+      const {error:eh}=await sb.from('cost_history').insert(histRows);
+      if(eh)return eh.message;
+    }
+    const {error}=await sb.from('products').upsert(cambios.map(({id,costo})=>({id,costo_unitario:costo})));
+    if(error)return error.message;
+    await logAction('Actualizó costos',`${cambios.length} producto${cambios.length>1?'s':''}`);
     await load();return null;
   }
   const consumoMensualData=useMemo(()=>{
@@ -421,25 +463,25 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
         for(let t=1;t<=dias;t++){
           const f=new Date(d0);f.setDate(f.getDate()+t);
           const key=f.getFullYear()+'-'+String(f.getMonth()+1).padStart(2,'0');
-          if(!meses[key])meses[key]={unidades:{},totalU:0};
+          if(!meses[key])meses[key]={unidades:{},totalU:0,gasto:0};
           meses[key].unidades[p.id]=(meses[key].unidades[p.id]||0)+porDia;
           meses[key].totalU+=porDia;
+          meses[key].gasto+=porDia*getCostoEn(p.id,f.toISOString().slice(0,10));
         }
       });
     }
     return meses;
-  },[products,quincenasWithInv,ingresos]);
+  },[products,quincenasWithInv,ingresos,costHistoryByProd]);
   function getResumenMensual(){
     const keys=Object.keys(consumoMensualData).sort();
     return keys.map((k,idx)=>{
       const m=consumoMensualData[k];
-      const gasto=Object.entries(m.unidades).reduce((s,[pid,u])=>s+u*getCosto(parseInt(pid)),0);
+      const gasto=m.gasto;
       const [y,mo]=k.split('-');
       const label=new Date(parseInt(y),parseInt(mo)-1,1).toLocaleDateString('es-PE',{month:'short',year:'numeric'});
       let variacion=null;
       if(idx>0){
-        const prev=consumoMensualData[keys[idx-1]];
-        const gPrev=Object.entries(prev.unidades).reduce((s,[pid,u])=>s+u*getCosto(parseInt(pid)),0);
+        const gPrev=consumoMensualData[keys[idx-1]].gasto;
         if(gPrev>0)variacion=Math.round(((gasto-gPrev)/gPrev)*100);
       }
       return{key:k,label:label[0].toUpperCase()+label.slice(1),unidades:Math.round(m.totalU),gasto,variacion,porProducto:m.unidades};
@@ -452,6 +494,25 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
       const label=new Date(parseInt(y),parseInt(mo)-1,1).toLocaleDateString('es-PE',{month:'short'});
       return{q:label[0].toUpperCase()+label.slice(1),v:Math.round((consumoMensualData[k].unidades[pid]||0)*10)/10};
     }).filter(x=>x.v>0);
+  }
+  function getComparativoMensual(){
+    const resumen=getResumenMensual();
+    const porConteo={};resumen.forEach(m=>{porConteo[m.key]={u:m.unidades,g:m.gasto};});
+    const porRetiro={};
+    (salidas||[]).filter(s=>s.status==='approved').forEach(s=>{
+      const f=new Date(s.fecha+'T12:00:00');
+      const key=f.getFullYear()+'-'+String(f.getMonth()+1).padStart(2,'0');
+      if(!porRetiro[key])porRetiro[key]={u:0,g:0};
+      porRetiro[key].u+=s.cantidad;
+      porRetiro[key].g+=s.cantidad*getCostoEn(s.product_id,s.fecha);
+    });
+    const keys=[...new Set([...Object.keys(porConteo),...Object.keys(porRetiro)])].sort();
+    return keys.map(k=>{
+      const [y,mo]=k.split('-');
+      const label=new Date(parseInt(y),parseInt(mo)-1,1).toLocaleDateString('es-PE',{month:'short',year:'numeric'});
+      const cU=porConteo[k]?.u||0,cG=porConteo[k]?.g||0,rU=porRetiro[k]?.u||0,rG=porRetiro[k]?.g||0;
+      return{key:k,label:label[0].toUpperCase()+label.slice(1),conteoU:cU,conteoG:cG,retiroU:rU,retiroG:rG,brechaU:Math.round((cU-rU)*10)/10,brechaG:cG-rG};
+    });
   }
   function getConsumoLabel(pid){
     const cd=getConsumoDiario(pid);
@@ -469,7 +530,7 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
 
   function getAnomalias(){
     const anomalias=[];
-    const sorted=[...quincenasWithInv].sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
+    const sorted=quincenasWithInv.filter(q=>q.status!=='rejected').sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
     products.forEach(p=>{
       const avg=getConsumo(p.id);
       for(let i=1;i<sorted.length;i++){
@@ -520,12 +581,24 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
   }
   async function updateQ(qid,label,fecha,inv){
     if(!Object.keys(inv).length)return 'No hay productos para guardar — el conteo quedaría vacío.';
+    const oldItems={};
+    qItems.filter(it=>it.quincena_id===qid).forEach(it=>{oldItems[it.product_id]=it.cantidad;});
+    const cambios=[];
+    Object.entries(inv).forEach(([pid,cant])=>{
+      const pidN=parseInt(pid);
+      const antes=oldItems[pidN];
+      if(antes!==cant){
+        const p=products.find(x=>x.id===pidN);
+        cambios.push(`${p?.nombre||pidN}: ${antes??'—'}→${cant}`);
+      }
+    });
     const {error:e1}=await sb.from('quincenas').update({label,fecha}).eq('id',qid);
     if(e1)return e1.message;
     await sb.from('quincena_items').delete().eq('quincena_id',qid);
     const items=Object.entries(inv).map(([pid,cantidad])=>({quincena_id:qid,product_id:parseInt(pid),cantidad}));
     if(items.length){const {error}=await sb.from('quincena_items').insert(items);if(error)return error.message;}
-    await logAction('Editó conteo',label);await load();return null;
+    const detalle=cambios.length?`${label} — ${cambios.join(', ')}`:`${label} — sin cambios en cantidades`;
+    await logAction('Editó conteo',detalle);await load();return null;
   }
   async function validarQ(qid,label){
     const {error}=await sb.from('quincenas').update({status:'validated',validated_by:userEmail,validated_at:new Date().toISOString()}).eq('id',qid);
@@ -590,7 +663,7 @@ function Store({user,userEmail,isSupervisor,onLogout,children}){
   function csvInventario(){const rows=[['Clase','Código','Nombre','Unidad','Stock','Consumo/día','Días','Estado']];products.forEach(p=>{const e=getEstado(p.id);const cl=getClasificacion(p.id);const cd=getConsumoDiario(p.id);rows.push([cl,p.codigo,p.nombre,p.unidad,getStock(p.id),cd?Math.round(cd*10)/10:0,getDias(p.id)===999?'Sin hist.':getDias(p.id),e==='critico'?'Crítico':e==='alerta'?'Alerta':'En stock'])});dl(rows,'inventario');}
   function csvLista(){const rows=[['Código','Nombre','Stock','Consumo/día','Pedir','Unidad','Días']];getLista().forEach(p=>{const cd=getConsumoDiario(p.id);const consumoDia=cd?Math.round(cd*10)/10:0;rows.push([p.codigo,p.nombre,p.stock,consumoDia,p.pedir,p.unidad,p.dias===999?'Sin hist.':p.dias])});dl(rows,'lista-compra');}
   function csvConsolidado(){const qs=[...quincenasWithInv].sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));const headers=['Código','Nombre','Unidad',...qs.map(q=>q.label)];const rows=[headers];products.forEach(p=>{rows.push([p.codigo,p.nombre,p.unidad,...qs.map(q=>q.inventario[p.id]??'')]);});dl(rows,'consolidado-conteos');}
-  return <Ctx.Provider value={{products,quincenas:quincenasWithInv,ingresos,salidas,actLog,usuariosList,loading,error,userEmail,isSupervisor,onLogout,getStock,getStockDisponible,getConsumo,getConsumoDiario,getConsumoLabel,getClasificacion,getCosto,getDiasEntrega,getGastoMensual,getValorInventario,getGastoMensualTotal,getResumenMensual,getConsumoMensualProducto,updateConfig,getDias,getEstado,getLista,getAnomalias,addProd,updateProd,delProd,addQ,updateQ,validarQ,rechazarQ,delQuincena,addIng,aprobarIngreso,rechazarIngreso,updateIngreso,addSalida,aprobarSalida,rechazarSalida,updateSalida,csvInventario,csvLista,csvConsolidado}}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{products,quincenas:quincenasWithInv,ingresos,salidas,actLog,usuariosList,loading,error,userEmail,isSupervisor,onLogout,getStock,getStockDisponible,getConsumo,getConsumoDiario,getConsumoLabel,getClasificacion,getCosto,getCostoEn,getDiasEntrega,getGastoMensual,getValorInventario,getGastoMensualTotal,getResumenMensual,getConsumoMensualProducto,getComparativoMensual,updateConfig,updateCostosBulk,getDias,getEstado,getLista,getAnomalias,addProd,updateProd,delProd,addQ,updateQ,validarQ,rechazarQ,delQuincena,addIng,aprobarIngreso,rechazarIngreso,updateIngreso,addSalida,aprobarSalida,rechazarSalida,updateSalida,csvInventario,csvLista,csvConsolidado}}>{children}</Ctx.Provider>;
 }
 const useApp=()=>useContext(Ctx);
 
@@ -602,12 +675,17 @@ function Msg({text,type}){return text?<div className={`smsg ${type||'ok'}`}>{tex
 function BarChartSVG({data,color='#00c97d',height=160}){
   if(!data||!data.length)return <div className="nodata">Sin datos suficientes</div>;
   const max=Math.max(...data.map(d=>d.v),1);
-  const W=500,H=height,pad={l:36,r:10,t:10,b:28};
+  const W=500,H=height;
+  const padL=36,padR=10,padT=10;
+  const cW0=W-padL-padR;
+  const gap0=cW0/data.length;
+  const apretado=gap0<34||data.some(d=>String(d.q).length>6);
+  const pad={l:padL,r:padR,t:padT,b:apretado?38:28};
   const cW=W-pad.l-pad.r,cH=H-pad.t-pad.b;
   const bW=Math.min(36,cW/data.length*0.6),gap=cW/data.length;
   return(<div className="chart-wrap"><svg viewBox={`0 0 ${W} ${H}`} className="svg-chart" style={{height}}>
     {[0,.25,.5,.75,1].map(t=>{const y=pad.t+cH*(1-t);return <g key={t}><line x1={pad.l} y1={y} x2={W-pad.r} y2={y} stroke="rgba(255,255,255,0.05)" strokeWidth="1"/><text x={pad.l-4} y={y+4} textAnchor="end" fontSize="9" fill="#555">{Math.round(max*t)}</text></g>;})}
-    {data.map((d,i)=>{const x=pad.l+gap*i+gap/2,bH=Math.max(2,(d.v/max)*cH),y=pad.t+cH-bH;return <g key={i}><rect x={x-bW/2} y={y} width={bW} height={bH} fill={color} opacity="0.85" rx="3"/><text x={x} y={H-pad.b+14} textAnchor="middle" fontSize="9" fill="#555">{d.q}</text><text x={x} y={y-4} textAnchor="middle" fontSize="9" fill="#888">{d.v}</text></g>;})}
+    {data.map((d,i)=>{const x=pad.l+gap*i+gap/2,bH=Math.max(2,(d.v/max)*cH),y=pad.t+cH-bH;const q=String(d.q).length>10?String(d.q).slice(0,9)+'…':d.q;return <g key={i}><rect x={x-bW/2} y={y} width={bW} height={bH} fill={color} opacity="0.85" rx="3"/><text x={x} y={H-pad.b+14} textAnchor={apretado?'end':'middle'} fontSize="9" fill="#555" transform={apretado?`rotate(-40 ${x} ${H-pad.b+14})`:undefined}>{q}</text><text x={x} y={y-4} textAnchor="middle" fontSize="9" fill="#888">{d.v}</text></g>;})}
   </svg></div>);
 }
 
@@ -1058,7 +1136,7 @@ function Ingresos(){
 }
 
 function Graficos(){
-  const {products,quincenas,salidas,ingresos,usuariosList,getStock,getConsumo,getConsumoLabel,getDias,getEstado,getResumenMensual,getConsumoMensualProducto,getCosto}=useApp();
+  const {products,quincenas,salidas,ingresos,usuariosList,getStock,getConsumo,getConsumoLabel,getDias,getEstado,getResumenMensual,getConsumoMensualProducto,getCosto,getCostoEn,getComparativoMensual}=useApp();
   const [vistaConsumo,setVistaConsumo]=useState('conteo');
   const [mesSel,setMesSel]=useState(null);
   const areaColors=['#00c97d','#4d9eff','#f0a500','#ff5050'];
@@ -1070,11 +1148,16 @@ function Graficos(){
   const [tab,setTab]=useState('c');
   const prod=products.find(p=>p.id===sid);
   const avg=getConsumo(sid),stock=getStock(sid),dias=getDias(sid),est=getEstado(sid),consumoLabel=getConsumoLabel(sid);
-  const qs=[...quincenas].sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
-  const cd=[];for(let i=1;i<qs.length;i++){const p=qs[i-1].inventario[sid]??0,c=qs[i].inventario[sid]??0;cd.push({q:qs[i].label,v:Math.max(0,p-c)});}
+  const qsValidados=quincenas.filter(q=>q.status==='validated'||q.status===null||q.status===undefined);
+  const qs=[...qsValidados].sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
+  const cd=[];for(let i=1;i<qs.length;i++){
+    const p=qs[i-1].inventario[sid]??0,c=qs[i].inventario[sid]??0;
+    const ing=(ingresos||[]).filter(x=>x.product_id===sid&&(x.status==='approved'||x.status===null||x.status===undefined)&&new Date(x.fecha)>=new Date(qs[i-1].fecha)&&new Date(x.fecha)<new Date(qs[i].fecha)).reduce((t,x)=>t+x.cantidad,0);
+    cd.push({q:qs[i].label,v:Math.max(0,p+ing-c)});
+  }
   return <div className="page">
     <div className="ph"><div><h1 className="pt">Gráficos</h1><p className="ps">Análisis de consumo y proyección</p></div></div>
-    <div className="ptabs"><button className={`ptab${tab==='c'?' on':''}`} onClick={()=>setTab('c')}>Consumo y proyección</button><button className={`ptab${tab==='m'?' on':''}`} onClick={()=>setTab('m')}>Resumen mensual</button><button className={`ptab${tab==='a'?' on':''}`} onClick={()=>setTab('a')}>Por área</button></div>
+    <div className="ptabs"><button className={`ptab${tab==='c'?' on':''}`} onClick={()=>setTab('c')}>Consumo y proyección</button><button className={`ptab${tab==='m'?' on':''}`} onClick={()=>setTab('m')}>Resumen mensual</button><button className={`ptab${tab==='a'?' on':''}`} onClick={()=>setTab('a')}>Por área</button><button className={`ptab${tab==='s'?' on':''}`} onClick={()=>setTab('s')}>Seguimiento de conteos</button><button className={`ptab${tab==='b'?' on':''}`} onClick={()=>setTab('b')}>Conteo vs retiro</button></div>
     {tab==='c'&&<>
       <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:'1rem'}}><label style={{fontSize:12,color:'var(--text2)'}}>Producto</label><select value={sid??''} onChange={e=>setSid(parseInt(e.target.value))} style={{minWidth:220,width:'auto'}}>{products.map(p=><option key={p.id} value={p.id}>{p.nombre}</option>)}</select></div>
       {prod&&<>
@@ -1180,19 +1263,127 @@ function Graficos(){
             <span className="mono" style={{fontSize:15,fontWeight:600,color:'var(--green)'}}>{fmtS(mesVisto.gasto)}</span>
           </div>
           <div style={{display:'flex',flexDirection:'column',gap:6}}>
-            {Object.entries(mesVisto.porProducto).map(([pid,u])=>({pid,u,p:products.find(x=>x.id===parseInt(pid)),g:u*getCosto(parseInt(pid))})).filter(x=>x.p&&x.g>0).sort((a,b)=>b.g-a.g).slice(0,10).map(x=>
+            {Object.entries(mesVisto.porProducto).map(([pid,u])=>({pid,u,p:products.find(x=>x.id===parseInt(pid)),g:u*getCostoEn(parseInt(pid),mesVisto.key+'-15')})).filter(x=>x.p&&x.g>0).sort((a,b)=>b.g-a.g).slice(0,10).map(x=>
               <div key={x.pid} style={{display:'flex',justifyContent:'space-between',fontSize:12,padding:'5px 0',borderBottom:'1px solid var(--border)'}}>
                 <span>{x.p.nombre.length>32?x.p.nombre.slice(0,32)+'…':x.p.nombre}<span style={{color:'var(--text3)',marginLeft:8}}>{Math.round(x.u*10)/10} und</span></span>
                 <span className="mono" style={{color:'var(--green)'}}>{fmtS(x.g)}</span>
               </div>
             )}
-            {Object.entries(mesVisto.porProducto).filter(([pid,u])=>{const g=u*getCosto(parseInt(pid));return g>0;}).length===0&&<div className="nodata">Sin productos con costo configurado en este mes</div>}
+            {Object.entries(mesVisto.porProducto).filter(([pid,u])=>{const g=u*getCostoEn(parseInt(pid),mesVisto.key+'-15');return g>0;}).length===0&&<div className="nodata">Sin productos con costo configurado en este mes</div>}
           </div>
         </div>}
       </>;
     })()}
     {tab==='a'&&<AreaTab salidas={salidas||[]} products={products} areaColors={areaColors}/>}
+    {tab==='s'&&<SeguimientoConteos quincenas={quincenas}/>}
+    {tab==='b'&&<ComparativoConteoRetiro getComparativoMensual={getComparativoMensual}/>}
   </div>;
+}
+
+function ComparativoConteoRetiro({getComparativoMensual}){
+  const datos=getComparativoMensual();
+  const fmtS=n=>'S/ '+(Number(n)||0).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});
+  if(!datos.length)return <div className="nodata">Aún no hay suficientes conteos y/o retiros para comparar.</div>;
+  const hayCostos=datos.some(m=>m.conteoG>0||m.retiroG>0);
+  const maxV=Math.max(...datos.map(m=>hayCostos?Math.max(m.conteoG,m.retiroG):Math.max(m.conteoU,m.retiroU)),1);
+  const totalBrecha=datos.reduce((s,m)=>s+(hayCostos?m.brechaG:m.brechaU),0);
+  return <>
+    <div style={{fontSize:12,color:'var(--text2)',marginBottom:'1.25rem',lineHeight:1.5}}>
+      El <strong>conteo</strong> mide todo lo que desapareció del inventario (incluye mermas y errores). El <strong>retiro</strong> es solo lo que se registró formalmente con área. La <strong>brecha</strong> es lo que se perdió sin pasar por un retiro.
+    </div>
+    <div className="metrics3">
+      <div className="metric"><span className="ml">Meses comparados</span><span className="mv">{datos.length}</span></div>
+      <div className="metric" style={{borderColor:'rgba(240,165,0,.2)'}}><span className="ml">Brecha acumulada</span><span className="mv" style={{color:totalBrecha>0?'var(--amber)':'var(--green)',fontFamily:'DM Mono,monospace',fontSize:22}}>{hayCostos?fmtS(totalBrecha):`${Math.round(totalBrecha)} und`}</span></div>
+      <div className="metric"><span className="ml">Último mes</span><span className="mv" style={{fontSize:18}}>{datos[datos.length-1].label}</span></div>
+    </div>
+    <div className="chcard">
+      <div className="chtitle">Por mes — {hayCostos?'gasto estimado (S/)':'unidades'} · conteo vs. retiro registrado</div>
+      <div style={{display:'flex',flexDirection:'column',gap:10}}>
+        {datos.map(m=>{
+          const cV=hayCostos?m.conteoG:m.conteoU,rV=hayCostos?m.retiroG:m.retiroU;
+          const brecha=hayCostos?m.brechaG:m.brechaU;
+          const fmt=v=>hayCostos?fmtS(v):`${Math.round(v*10)/10} und`;
+          return <div key={m.key} style={{padding:'8px 10px',background:'var(--bg3)',borderRadius:8}}>
+            <div style={{display:'flex',justifyContent:'space-between',fontSize:12,marginBottom:6}}>
+              <span style={{fontWeight:500}}>{m.label}</span>
+              <span style={{color:brecha>0?'var(--amber)':brecha<0?'var(--blue)':'var(--text2)'}}>{brecha>0?`⚠ Brecha: ${fmt(brecha)}`:brecha<0?`Retiro > conteo: ${fmt(Math.abs(brecha))}`:'Sin brecha'}</span>
+            </div>
+            <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
+              <span style={{fontSize:10,color:'var(--text3)',width:48}}>Conteo</span>
+              <div style={{flex:1,height:14,background:'var(--bg4)',borderRadius:4,overflow:'hidden'}}><div style={{height:'100%',width:`${Math.round(cV/maxV*100)}%`,background:'#00c97d'}}/></div>
+              <span className="mono" style={{fontSize:11,width:90,textAlign:'right'}}>{fmt(cV)}</span>
+            </div>
+            <div style={{display:'flex',alignItems:'center',gap:8}}>
+              <span style={{fontSize:10,color:'var(--text3)',width:48}}>Retiro</span>
+              <div style={{flex:1,height:14,background:'var(--bg4)',borderRadius:4,overflow:'hidden'}}><div style={{height:'100%',width:`${Math.round(rV/maxV*100)}%`,background:'#4d9eff'}}/></div>
+              <span className="mono" style={{fontSize:11,width:90,textAlign:'right'}}>{fmt(rV)}</span>
+            </div>
+          </div>;
+        })}
+      </div>
+    </div>
+  </>;
+}
+
+function SeguimientoConteos({quincenas}){
+  const NSEM=10;
+  function mondayOf(d){const x=new Date(d);const day=(x.getDay()+6)%7;x.setDate(x.getDate()-day);x.setHours(0,0,0,0);return x;}
+  const hoy=new Date();hoy.setHours(0,0,0,0);
+  const lunesActual=mondayOf(hoy);
+  const diaCorta=['L','M','X','J','V','S','D'];
+  const fmtDia=d=>d.toLocaleDateString('es-PE',{day:'2-digit',month:'short'});
+  const semanas=[];
+  for(let i=NSEM-1;i>=0;i--){
+    const start=new Date(lunesActual);start.setDate(start.getDate()-i*7);
+    const fin=new Date(start);fin.setDate(fin.getDate()+6);
+    const dias=[];
+    for(let d=0;d<7;d++){
+      const dia=new Date(start);dia.setDate(dia.getDate()+d);
+      const dstr=dia.toLocaleDateString('en-CA');
+      dias.push({dstr,dia,qs:(quincenas||[]).filter(q=>q.fecha===dstr)});
+    }
+    const diasConConteo=dias.filter(d=>d.qs.length>0).length;
+    const esActual=start.getTime()===lunesActual.getTime();
+    const esFutura=start>hoy;
+    let status=esFutura?'futura':diasConConteo>=2?'ok':diasConConteo===1?'warning':'missing';
+    if(esActual&&status!=='ok')status='curso';
+    semanas.push({start,fin,dias,diasConConteo,status,esActual});
+  }
+  const evaluables=semanas.filter(s=>!s.esActual&&s.status!=='futura');
+  const cumplidas=evaluables.filter(s=>s.status==='ok').length;
+  const pct=evaluables.length?Math.round(cumplidas/evaluables.length*100):0;
+  const statusColor={ok:'var(--green)',warning:'var(--amber)',missing:'var(--red)',curso:'var(--blue)',futura:'var(--text3)'};
+  const statusLabel={ok:'✓ Cumplida',warning:'⚠ Incompleta (1/2)',missing:'✕ Sin conteos',curso:'● En curso',futura:'—'};
+  return <>
+    <div className="metrics3">
+      <div className="metric"><span className="ml">Cumplimiento ({evaluables.length} sem.)</span><span className="mv" style={{color:pct>=80?'var(--green)':pct>=50?'var(--amber)':'var(--red)'}}>{pct}%</span></div>
+      <div className="metric"><span className="ml">Semanas cumplidas</span><span className="mv cg">{cumplidas}</span></div>
+      <div className="metric"><span className="ml">Semanas incumplidas</span><span className="mv cr">{evaluables.length-cumplidas}</span></div>
+    </div>
+    <div className="chcard">
+      <div className="chtitle">Seguimiento semanal — se requieren mínimo 2 conteos por semana</div>
+      <div style={{display:'flex',flexDirection:'column',gap:6}}>
+        {semanas.map((s,i)=><div key={i} style={{display:'grid',gridTemplateColumns:'100px repeat(7,24px) 1fr auto',gap:8,alignItems:'center',padding:'6px 8px',borderRadius:6,borderLeft:`3px solid ${statusColor[s.status]}`,background:s.esActual?'var(--bg3)':'transparent'}}>
+          <span style={{fontSize:11,color:'var(--text2)'}}>{fmtDia(s.start)}–{fmtDia(s.fin)}</span>
+          {s.dias.map((d,j)=>{
+            let col='var(--bg4)',icon='';
+            if(d.qs.some(q=>q.status==='validated')){col='var(--green)';icon='✓';}
+            else if(d.qs.some(q=>!q.status||q.status==='pending')){col='var(--amber)';icon='●';}
+            else if(d.qs.some(q=>q.status==='rejected')){col='var(--red)';icon='✕';}
+            return <span key={j} title={`${diaCorta[j]} ${d.dstr}${d.qs.length?` · ${d.qs.length} conteo(s)`:' · sin conteo'}`} style={{width:16,height:16,borderRadius:4,background:col,justifySelf:'center',opacity:d.qs.length?1:.35,display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,color:'#000',fontWeight:700,lineHeight:1}}>{icon}</span>;
+          })}
+          <span style={{fontSize:11,color:'var(--text3)'}}>{s.diasConConteo}/7 días con conteo</span>
+          <span style={{fontSize:11,fontWeight:500,color:statusColor[s.status],whiteSpace:'nowrap'}}>{statusLabel[s.status]}</span>
+        </div>)}
+      </div>
+      <div style={{display:'flex',gap:14,marginTop:12,fontSize:11,color:'var(--text2)',flexWrap:'wrap'}}>
+        <span><span style={{display:'inline-block',width:10,height:10,borderRadius:3,background:'var(--green)',marginRight:4}}/>Validado</span>
+        <span><span style={{display:'inline-block',width:10,height:10,borderRadius:3,background:'var(--amber)',marginRight:4}}/>Pendiente</span>
+        <span><span style={{display:'inline-block',width:10,height:10,borderRadius:3,background:'var(--red)',marginRight:4}}/>Rechazado</span>
+        <span><span style={{display:'inline-block',width:10,height:10,borderRadius:3,background:'var(--bg4)',marginRight:4,opacity:.5}}/>Sin conteo</span>
+      </div>
+    </div>
+  </>;
 }
 
 function AreaTab({salidas,products,areaColors}){
@@ -1779,7 +1970,7 @@ function MisMovimientos(){
 }
 
 function Ajustes(){
-  const {products,getStock,getConsumoLabel,getClasificacion,getCosto,getGastoMensual,getValorInventario,getGastoMensualTotal,updateConfig}=useApp();
+  const {products,getStock,getConsumoLabel,getClasificacion,getCosto,getGastoMensual,getValorInventario,getGastoMensualTotal,updateCostosBulk}=useApp();
   const [bus,setBus]=useState('');
   const [draft,setDraft]=useState({});
   const [saving,setSaving]=useState(false);
@@ -1805,11 +1996,9 @@ function Ajustes(){
       }
     }
     setSaving(true);
-    for(const [pid,raw] of cambios){
-      const num=raw===''?null:parseFloat(raw);
-      const e=await updateConfig(parseInt(pid),{costo_unitario:num});
-      if(e){setMsg({text:e,type:'err'});setSaving(false);return;}
-    }
+    const payload=cambios.map(([pid,raw])=>({id:parseInt(pid),costo:raw===''?null:parseFloat(raw)}));
+    const e=await updateCostosBulk(payload);
+    if(e){setMsg({text:e,type:'err'});setSaving(false);return;}
     setDraft({});
     setMsg({text:`${cambios.length} costo${cambios.length>1?'s':''} guardado${cambios.length>1?'s':''} ✓`,type:'ok'});
     setTimeout(()=>setMsg({text:'',type:'ok'}),3000);
